@@ -1,5 +1,5 @@
 name = "armamods-api"
-main = "src/index.ts"
+main = "worker-src/index.ts"
 compatibility_date = "2024-03-24"
 
 # DB connection (will need actual database_id after user creates it)
