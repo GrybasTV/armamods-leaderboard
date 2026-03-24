@@ -146,44 +146,50 @@ async function runCollector(env: Bindings) {
 
     const data: any = JSON.parse(bodyText);
     const servers = data.data || [];
-    
     console.log(`📡 RECEIVED ${servers.length} SERVERS`);
+
+    const statements: any[] = [];
+    const modMap = new Map();
 
     for (const server of servers) {
       const { id, attributes } = server;
       const reforgerMods = attributes.details?.reforger?.mods || [];
       
-      // Update Server in D1
-      await env.DB.prepare(`
+      // Server statement
+      statements.push(env.DB.prepare(`
         INSERT INTO Server (id, name, ip, port, players, maxPlayers, updatedAt)
         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET 
           name=excluded.name, ip=excluded.ip, port=excluded.port, 
           players=excluded.players, maxPlayers=excluded.maxPlayers, 
           updatedAt=excluded.updatedAt
-      `).bind(id, attributes.name, attributes.ip || '', attributes.port || 0, attributes.players, attributes.maxPlayers).run();
+      `).bind(id, attributes.name, attributes.ip || '', attributes.port || 0, attributes.players, attributes.maxPlayers));
 
       // Process Mods for this server
       for (const sm of reforgerMods) {
-        const modId = sm.modId;
-        const modName = sm.name || "Unknown Module";
-        
-        // Upsert Mod
-        await env.DB.prepare(`
-          INSERT INTO Mod (id, modId, name, thumbnail, createdAt, updatedAt)
-          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          ON CONFLICT(modId) DO UPDATE SET name=excluded.name, updatedAt=excluded.updatedAt
-        `).bind(crypto.randomUUID(), modId, modName, null).run();
-
-        // Link ServerMod
-        const dbMod: any = await env.DB.prepare("SELECT id FROM Mod WHERE modId = ?").bind(modId).first();
-        if (dbMod) {
-          await env.DB.prepare(`
-            INSERT INTO ServerMod (serverId, modId)
-            VALUES (?, ?)
-            ON CONFLICT(serverId, modId) DO NOTHING
-          `).bind(id, dbMod.id).run();
+        if (!modMap.has(sm.modId)) {
+          modMap.set(sm.modId, sm.name);
+          statements.push(env.DB.prepare(`
+            INSERT INTO Mod (id, modId, name, thumbnail, createdAt, updatedAt)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(modId) DO UPDATE SET name=excluded.name, updatedAt=excluded.updatedAt
+          `).bind(crypto.randomUUID(), sm.modId, sm.name || "Unknown Module", null));
         }
+
+        // Link ServerMod using subquery to find internal Mod.id
+        statements.push(env.DB.prepare(`
+          INSERT INTO ServerMod (serverId, modId)
+          VALUES (?, (SELECT id FROM Mod WHERE modId = ? LIMIT 1))
+          ON CONFLICT(serverId, modId) DO NOTHING
+        `).bind(id, sm.modId));
+      }
+    }
+
+    console.log(`📦 PREPARED ${statements.length} STATEMENTS`);
+    if (statements.length > 0) {
+      // Execute in chunks of 50
+      for (let i = 0; i < statements.length; i += 50) {
+        await env.DB.batch(statements.slice(i, i + 50));
       }
     }
 
