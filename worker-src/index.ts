@@ -129,7 +129,7 @@ async function runCollector(env: Bindings) {
   const game = 'reforger';
   
   console.log("🚀 CLOUDFLARE_COLLECTOR: STARTING IMPORT");
-  const url = `https://api.battlemetrics.com/servers?filter[game]=${game}&page[size]=100&include=mod`;
+  const url = `https://api.battlemetrics.com/servers?filter[game]=${game}&filter[features][modded]=true&page[size]=100`;
   
   try {
     console.log("📡 FETCHING:", url);
