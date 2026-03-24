@@ -230,10 +230,10 @@ async function runCollector(env: Bindings) {
   }
 }
 
-// Collector entry point (Cron Trigger)
+// Worker Entry Point
 export default {
-  fetch: app.fetch,
-  async scheduled(event: any, env: Bindings, ctx: any) {
+  fetch: (request: any, env: any, ctx: any) => app.fetch(request, env, ctx),
+  async scheduled(event: any, env: any, ctx: any) {
     ctx.waitUntil(runCollector(env));
   },
 };
