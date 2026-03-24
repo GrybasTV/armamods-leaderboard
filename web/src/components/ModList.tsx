@@ -99,9 +99,9 @@ export function ModList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filteredMods.map((mod) => (
             <ModCard 
-              key={mod.modId} 
+              key={mod.id} 
               mod={mod} 
-              rank={(mod as any).global_rank} 
+              rank={mod.overallRank} 
             />
           ))}
         </div>

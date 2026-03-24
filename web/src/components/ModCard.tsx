@@ -23,7 +23,7 @@ export function ModCard({ mod, rank }: ModCardProps) {
             <div className="flex items-center gap-3">
                <div className={`w-1 h-1 rounded-full ${isTop3 ? 'bg-tactical-orange animate-pulse' : 'bg-gray-700'}`}></div>
                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 group-hover:text-tactical-orange transition-colors">
-                 [ ASSET_{mod.modId.slice(0, 4)} ]
+                 [ ASSET_{mod.id.slice(0, 4)} ]
                </span>
             </div>
             {isTop3 && (
@@ -33,7 +33,7 @@ export function ModCard({ mod, rank }: ModCardProps) {
             )}
           </div>
 
-          <Link to={`/mod/${mod.modId}`}>
+          <Link to={`/mod/${mod.id}`}>
             <h3 className="text-2xl font-black text-white leading-[1.1] uppercase tracking-tight group-hover:translate-x-1 transition-transform hover:text-tactical-orange" title={mod.name}>
               {mod.name}
             </h3>
@@ -44,23 +44,23 @@ export function ModCard({ mod, rank }: ModCardProps) {
         <div className="grid grid-cols-2 gap-4 border-y border-white/5 py-6">
           <div className="space-y-1">
             <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.3em] font-mono italic">Personnel</p>
-            <p className="text-2xl font-black text-white group-hover:text-tactical-orange transition-colors">{(mod.total_players || 0).toLocaleString()}</p>
+            <p className="text-2xl font-black text-white group-hover:text-tactical-orange transition-colors">{(mod.totalPlayers || 0).toLocaleString()}</p>
           </div>
           <div className="space-y-1 border-l border-white/5 pl-4">
             <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.3em] font-mono italic">Deployments</p>
-            <p className="text-2xl font-black text-white transition-colors">{mod.server_count}</p>
+            <p className="text-2xl font-black text-white transition-colors">{mod.serverCount}</p>
           </div>
         </div>
 
         <div className="flex items-center justify-between gap-4 pt-2">
            <Link 
-            to={`/mod/${mod.modId}`}
+            to={`/mod/${mod.id}`}
             className="flex-1 px-6 py-4 bg-zinc-900 border border-white/5 text-center text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
            >
              Full Intel →
            </Link>
            <a 
-            href={`https://reforger.armaplatform.com/workshop/${mod.modId}`}
+            href={`https://reforger.armaplatform.com/workshop/${mod.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="px-6 py-4 bg-white/5 border border-white/5 text-[9px] font-black text-gray-600 uppercase tracking-widest hover:bg-white hover:text-black transition-all"

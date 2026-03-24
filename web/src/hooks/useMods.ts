@@ -56,7 +56,7 @@ export function useMods() {
 
     if (playerFilter !== 'all') {
       filtered = filtered.filter(mod => {
-        const players = mod.total_players || 0;
+        const players = mod.totalPlayers || 0;
         if (playerFilter === 'high') return players >= 500;
         if (playerFilter === 'medium') return players >= 100 && players < 500;
         if (playerFilter === 'low') return players < 100;

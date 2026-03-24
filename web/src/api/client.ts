@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Mod, Server, ApiResponse } from './types';
+import type { Mod, Server, ApiResponse } from '../types';
 
 const API_BASE = 'https://armamods-leaderboard.pauliusmed.workers.dev/api';
 

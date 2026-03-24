@@ -14,8 +14,8 @@ app.get('/', (c) => c.text('ARMAMODS Leaderboard API - Online'));
 // API Endpoints (Hono + D1)
 app.get('/api/collect', async (c) => {
   try {
-    await runCollector(c.env);
-    return c.json({ success: true, message: "Collector executed (check logs if possible)" });
+    const stats = await runCollector(c.env);
+    return c.json({ success: true, ...stats });
   } catch (err) {
     return c.json({ success: false, error: String(err) }, 500);
   }
@@ -126,38 +126,53 @@ app.get('/api/servers/:serverId', async (c) => {
 
 // Collector Service for D1
 async function runCollector(env: Bindings) {
-  const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6ImM1YzczMGM5YmU0MWQ1YzAiLCJpYXQiOjE3NzQzNTkyNDYsIm5iZiI6MTc3NDM1OTI0NiwiaXNzIjoiaHR0cHM6Ly93d3cuYmF0dGxlbWV0cmljcy5jb20iLCJzdWIiOiJ1cm46dXNlcjoxMTM0ODY0In0.Lq9f8sDqtL3THGZftjbG0Dx4xvwEhaGTqyBtZ6e1fSc";
   const game = 'reforger';
-  
+
   console.log("🚀 CLOUDFLARE_COLLECTOR: STARTING IMPORT");
-  const url = `https://api.battlemetrics.com/servers?filter[game]=${game}&filter[features][modded]=true&page[size]=100`;
-  
+
+  const allServers: any[] = [];
+  let url = `https://api.battlemetrics.com/servers?filter[game]=${game}&page[size]=100`;
+  let pageCount = 0;
+  const MAX_PAGES = 10; // Limit to 10 pages (1000 servers) to fit in Worker time limits
+
   try {
-    console.log("📡 FETCHING:", url);
-    const response = await fetch(url, {
-      headers: { 
-        'Authorization': `Bearer ${API_KEY}`,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    // Fetch servers with pagination (limited to MAX_PAGES)
+    while (url && pageCount < MAX_PAGES) {
+      console.log(`📡 FETCHING PAGE ${pageCount + 1}: ${url}`);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'ReforgerMods/1.0'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    });
-    
-    console.log("📥 STATUS:", response.status, response.statusText);
-    const bodyText = await response.text();
-    
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${bodyText.substring(0, 100)}`);
+
+      const data = await response.json();
+      const servers = data.data || [];
+      allServers.push(...servers);
+      console.log(`📡 PAGE ${pageCount + 1}: ${servers.length} servers | TOTAL: ${allServers.length}`);
+
+      // Get next page
+      url = data.links?.next || '';
+      pageCount++;
+
+      // Rate limiting without API key: 60 req/min (1 second delay)
+      if (url) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
-    const data: any = JSON.parse(bodyText);
-    const servers = data.data || [];
-    console.log(`📡 RECEIVED ${servers.length} SERVERS`);
+    console.log(`✅ FETCHED ${allServers.length} TOTAL SERVERS`);
 
     const statements: any[] = [];
     const modMap = new Map();
 
-    for (const server of servers) {
+    for (const server of allServers) {
       const { id, attributes } = server;
       const reforgerMods = attributes.details?.reforger?.mods || [];
+      if (pageCount < 3) console.log(`📡 SERVER ${attributes.name} HAS ${reforgerMods.length} MODS`);
       
       // Server statement
       statements.push(env.DB.prepare(`
@@ -171,19 +186,17 @@ async function runCollector(env: Bindings) {
 
       // Process Mods for this server
       for (const sm of reforgerMods) {
-        if (!modMap.has(sm.modId)) {
-          modMap.set(sm.modId, sm.name);
-          statements.push(env.DB.prepare(`
-            INSERT INTO Mod (id, modId, name, thumbnail, createdAt, updatedAt)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ON CONFLICT(modId) DO UPDATE SET name=excluded.name, updatedAt=excluded.updatedAt
-          `).bind(crypto.randomUUID(), sm.modId, sm.name || "Unknown Module", null));
-        }
+        // Insert Mod (Upsert using modId as primary key id)
+        statements.push(env.DB.prepare(`
+          INSERT INTO Mod (id, name, thumbnail, createdAt, updatedAt)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT(id) DO UPDATE SET name = excluded.name, updatedAt = CURRENT_TIMESTAMP
+        `).bind(sm.modId, sm.name || "Unknown Module", null));
 
-        // Link ServerMod using subquery to find internal Mod.id
+        // Link ServerMod (Now just using IDs directly)
         statements.push(env.DB.prepare(`
           INSERT INTO ServerMod (serverId, modId)
-          VALUES (?, (SELECT id FROM Mod WHERE modId = ? LIMIT 1))
+          VALUES (?, ?)
           ON CONFLICT(serverId, modId) DO NOTHING
         `).bind(id, sm.modId));
       }
@@ -191,7 +204,7 @@ async function runCollector(env: Bindings) {
 
     console.log(`📦 PREPARED ${statements.length} STATEMENTS`);
     if (statements.length > 0) {
-      // Execute in chunks of 50
+      // Execute in chunks
       for (let i = 0; i < statements.length; i += 50) {
         await env.DB.batch(statements.slice(i, i + 50));
       }
@@ -200,33 +213,34 @@ async function runCollector(env: Bindings) {
     // Recalculate Stats & Ranks
     console.log("📊 CALCULATING RANKS...");
     
-    // 1. Reset all stats
+    // 1. Reset all stats before re-calculating
     await env.DB.prepare("UPDATE Mod SET serverCount = 0, totalPlayers = 0").run();
 
     // 2. Aggregate stats
     await env.DB.prepare(`
-      UPDATE Mod SET 
-        serverCount = (SELECT COUNT(*) FROM ServerMod WHERE modId = Mod.id),
-        totalPlayers = (SELECT SUM(s.players) FROM Server s JOIN ServerMod sm ON s.id = sm.serverId WHERE sm.modId = Mod.id)
+        UPDATE Mod SET 
+          serverCount = (SELECT COUNT(*) FROM ServerMod WHERE modId = Mod.id),
+          totalPlayers = COALESCE((SELECT SUM(s.players) FROM Server s JOIN ServerMod sm ON s.id = sm.serverId WHERE sm.modId = Mod.id), 0)
     `).run();
 
-    // 3. Final Overall Rank Calculation (Complex for SQL, simplified version)
-    // We'll just order by players/servers and assign sequence
-    const { results: rankedMods } = await env.DB.prepare(`
-      SELECT id, 
-             (RANK() OVER (ORDER BY totalPlayers DESC)) as pRank,
-             (RANK() OVER (ORDER BY serverCount DESC)) as sRank
-      FROM Mod WHERE serverCount > 0
-    `).all();
-
-    for (const m of rankedMods) {
-      const overall = Math.floor((Number(m.pRank) + Number(m.sRank)) / 2);
-      await env.DB.prepare("UPDATE Mod SET overallRank = ? WHERE id = ?").bind(overall, m.id).run();
-    }
+    // 3. Simple Overall Rank update based on totalPlayers
+    await env.DB.prepare(`
+      UPDATE Mod SET overallRank = (
+        SELECT rank FROM (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY totalPlayers DESC, serverCount DESC) as rank FROM Mod
+        ) r WHERE r.id = Mod.id
+      )
+    `).run();
 
     console.log("✅ CLOUDFLARE_COLLECTOR: COMPLETE");
+    return {
+      servers: allServers.length,
+      ops: statements.length,
+      timestamp: new Date().toISOString()
+    };
   } catch (err) {
     console.error("❌ COLLECTOR_ERROR:", err);
+    throw err;
   }
 }
 
