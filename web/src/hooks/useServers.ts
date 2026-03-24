@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { serversApi } from '../api/client';
+import { serversApi, modsApi } from '../api/client';
 import type { Server } from '../types';
 
 export type StatusFilter = 'all' | 'full' | 'active' | 'available' | 'low';
@@ -7,6 +7,8 @@ export type ServerSortBy = 'players' | 'name' | 'mods';
 
 export function useServers() {
   const [servers, setServers] = useState<Server[]>([]);
+  const [totalServers, setTotalServers] = useState(0);
+  const [globalStats, setGlobalStats] = useState({ totalPlayers: 0, fullServers: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,8 +21,22 @@ export function useServers() {
   const loadServers = async () => {
     try {
       setLoading(true);
-      const data = await serversApi.getList(1000); // Load more for local filtering
-      setServers(data.data);
+      const [serversData, statsData] = await Promise.all([
+        serversApi.getList(1000),
+        modsApi.getGlobalStats()
+      ]);
+      setServers(serversData.data);
+      setTotalServers(serversData.meta.total);
+
+      // Calculate full servers from loaded sample (more accurate)
+      const fullCount = serversData.data.filter((s: Server) => (s.players / s.maxPlayers) >= 0.8).length;
+      const fullRatio = fullCount / serversData.data.length;
+      const estimatedFull = Math.round(serversData.meta.total * fullRatio);
+
+      setGlobalStats({
+        totalPlayers: statsData.totalPlayers || 0,
+        fullServers: estimatedFull
+      });
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load servers');
@@ -66,11 +82,11 @@ export function useServers() {
   const totalPages = Math.ceil(filteredServers.length / itemsPerPage);
 
   const stats = useMemo(() => ({
-    totalServers: filteredServers.length,
-    totalPlayers: servers.reduce((sum, s) => sum + s.players, 0),
-    fullServers: servers.filter(s => (s.players / s.maxPlayers) >= 0.8).length,
+    totalServers: totalServers,
+    totalPlayers: globalStats.totalPlayers,
+    fullServers: globalStats.fullServers,
     totalPages
-  }), [servers, filteredServers.length, totalPages]);
+  }), [totalServers, globalStats, totalPages]);
 
   const resetFilters = () => {
     setSearchQuery('');
