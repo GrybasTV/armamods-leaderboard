@@ -1,0 +1,17 @@
+name = "armamods-api"
+main = "src/index.ts"
+compatibility_date = "2024-03-24"
+
+# DB connection (will need actual database_id after user creates it)
+[[d1_databases]]
+binding = "DB"
+database_name = "armamods-db"
+database_id = "bb802671-d28d-4e92-9427-7c29cd83735c"
+
+# Collector Cron (every 1 hour)
+[triggers]
+crons = ["0 * * * *"]
+
+# Env vars
+[vars]
+ENVIRONMENT = "production"
