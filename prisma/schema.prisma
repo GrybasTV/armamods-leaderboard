@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Server {
+  id          String   @id
+  name        String
+  ip          String?
+  port        Int?
+  players     Int
+  maxPlayers  Int
+  updatedAt   DateTime @updatedAt
+  mods        ServerMod[]
+
+  @@index([players])
+  @@index([name])
+}
+
+model Mod {
+  id          String   @id @default(cuid())
+  modId       String   @unique
+  name        String
+  author      String?
+  description String?
+  thumbnail   String?
+  
+  // Pre-calculated stats for performance
+  totalPlayers Int      @default(0)
+  serverCount  Int      @default(0)
+  overallRank  Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  servers     ServerMod[]
+
+  @@index([name])
+  @@index([totalPlayers])
+  @@index([serverCount])
+  @@index([overallRank])
+}
+
+model ServerMod {
+  serverId    String
+  modId       String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  mod         Mod      @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@id([serverId, modId])
+  @@index([modId])
+  @@index([serverId])
+}

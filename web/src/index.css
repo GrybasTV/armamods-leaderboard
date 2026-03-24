@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-military-green: #3a4d39;
+  --color-military-dark: #121510;
+  --color-tactical-orange: #ff6b00;
+}
+
+body {
+  margin: 0;
+  background-color: #0f110c;
+  color: #d1d5db;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Scanline effect for that terminal look */
+body::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+  z-index: 9999;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  opacity: 0.3;
+}

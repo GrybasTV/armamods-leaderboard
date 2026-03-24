@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npx prisma migrate dev --name init)",
+      "Bash(npm run dev)",
+      "Bash(curl -s http://localhost:3000/health)",
+      "Bash(curl -s http://localhost:3000/api/servers?limit=3)",
+      "Bash(curl -s http://localhost:3000/api/mods?limit=5)",
+      "Bash(curl -s \"https://api.battlemetrics.com/servers?filter[game]=reforger&page[size]=1\")",
+      "Bash(node test-bm-api.js)",
+      "Bash(npm create vite@latest web -- --template react-ts)",
+      "Bash(npm install axios)",
+      "Bash(curl -s \"http://localhost:3000/api/mods?limit=3\")",
+      "Bash(npm run seed)",
+      "Bash(npx prisma migrate dev --name auto_id)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /F /PID 21852)",
+      "Bash(PORT=3001 npm run dev)",
+      "Bash(curl -s \"http://localhost:3001/api/mods?limit=3\")",
+      "Bash(curl -s \"http://localhost:3001/health\")",
+      "Bash(curl -s \"http://localhost:3001/api/servers?limit=2\")",
+      "Bash(npm install react-router-dom)",
+      "Bash(npx prisma db execute --stdin)",
+      "Bash(taskkill //F //PID 46696)",
+      "Bash(curl -s \"http://localhost:3001/api/servers?limit=1000\")",
+      "Bash(curl -s \"http://localhost:3001/api/servers?limit=1\")",
+      "Bash(curl -s \"http://localhost:3001/api/mods?limit=1000\")",
+      "Bash(taskkill //F //PID 45428)",
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(tasklist)",
+      "Bash(npx tsx scripts/seed-full.ts)",
+      "Bash(curl -s \"http://localhost:3001/api/mods?limit=1\")",
+      "Bash(npx tsx -e \":*)",
+      "Bash(npm start:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
