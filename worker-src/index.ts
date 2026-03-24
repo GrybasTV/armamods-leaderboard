@@ -146,7 +146,20 @@ async function runCollector(env: Bindings) {
 
     const data: any = JSON.parse(bodyText);
     const servers = data.data || [];
-    console.log(`📡 RECEIVED ${servers.length} SERVERS`);
+    const included = data.included || [];
+    
+    // Map of mod details from included data
+    const modDetails = new Map();
+    included.forEach((item: any) => {
+      if (item.type === 'mod') {
+        modDetails.set(item.id, {
+          name: item.attributes?.name || "Unknown Module",
+          thumbnail: item.attributes?.thumbnailUrl || null
+        });
+      }
+    });
+
+    console.log(`📡 RECEIVED ${servers.length} SERVERS AND ${modDetails.size} MOD DETAILS`);
 
     for (const server of servers) {
       const { id, attributes, relationships } = server;
@@ -165,14 +178,14 @@ async function runCollector(env: Bindings) {
       const serverMods = relationships?.mods?.data || [];
       for (const sm of serverMods) {
         const modId = sm.id;
-        const modName = sm.attributes?.name || "Unknown Module";
+        const detail = modDetails.get(modId) || { name: "Unknown Module", thumbnail: null };
         
         // Upsert Mod
         await env.DB.prepare(`
           INSERT INTO Mod (id, modId, name, thumbnail, createdAt, updatedAt)
           VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          ON CONFLICT(modId) DO UPDATE SET name=excluded.name, updatedAt=excluded.updatedAt
-        `).bind(crypto.randomUUID(), modId, modName, sm.attributes?.thumbnailUrl || null).run();
+          ON CONFLICT(modId) DO UPDATE SET name=excluded.name, updatedAt=excluded.updatedAt, thumbnail=excluded.thumbnail
+        `).bind(crypto.randomUUID(), modId, detail.name, detail.thumbnail).run();
 
         // Link ServerMod
         const dbMod: any = await env.DB.prepare("SELECT id FROM Mod WHERE modId = ?").bind(modId).first();
