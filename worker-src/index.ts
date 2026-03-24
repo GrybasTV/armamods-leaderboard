@@ -12,10 +12,14 @@ app.use('*', cors());
 
 // API Endpoints (Hono + D1)
 app.get('/api/stats', async (c) => {
-  const stats = await c.env.DB.prepare(
-    "SELECT (SELECT COUNT(*) FROM Mod WHERE serverCount > 0) as totalMods, (SELECT SUM(players) FROM Server) as totalPlayers, (SELECT COUNT(*) FROM Server) as totalServers"
-  ).first();
-  return c.json(stats);
+  try {
+    const stats: any = await c.env.DB.prepare(
+      "SELECT COALESCE((SELECT COUNT(*) FROM Mod WHERE serverCount > 0), 0) as totalMods, COALESCE((SELECT SUM(players) FROM Server), 0) as totalPlayers, COALESCE((SELECT COUNT(*) FROM Server), 0) as totalServers"
+    ).first();
+    return c.json(stats || { totalMods: 0, totalPlayers: 0, totalServers: 0 });
+  } catch (err) {
+    return c.json({ totalMods: 0, totalPlayers: 0, totalServers: 0, error: String(err) });
+  }
 });
 
 // All Active Mods
@@ -38,15 +42,20 @@ app.get('/api/mods', async (c) => {
   else if (sortBy === 'servers') order = "ORDER BY serverCount DESC";
   else if (sortBy === 'name') order = "ORDER BY name ASC";
 
-  const { results: data } = await c.env.DB.prepare(
-    `SELECT * FROM Mod ${where} ${order} LIMIT ? OFFSET ?`
-  ).bind(...params, limit, offset).all();
+  try {
+    const { results: data } = await c.env.DB.prepare(
+      `SELECT * FROM Mod ${where} ${order} LIMIT ? OFFSET ?`
+    ).bind(...params, limit, offset).all();
 
-  const { count: total }: any = await c.env.DB.prepare(
-    `SELECT COUNT(*) as count FROM Mod ${where}`
-  ).bind(...params).first();
+    const stats: any = await c.env.DB.prepare(
+      `SELECT COUNT(*) as count FROM Mod ${where}`
+    ).bind(...params).first();
+    const total = stats?.count || 0;
 
-  return c.json({ data, meta: { total, limit, offset } });
+    return c.json({ data: data || [], meta: { total, limit, offset } });
+  } catch (err) {
+    return c.json({ data: [], meta: { total: 0, limit, offset, error: String(err) } });
+  }
 });
 
 // Single Mod Detail
@@ -76,15 +85,20 @@ app.get('/api/servers', async (c) => {
     params.push(`%${search}%`);
   }
 
-  const { results: data } = await c.env.DB.prepare(
-    `SELECT * FROM Server ${where} ORDER BY players DESC LIMIT ? OFFSET ?`
-  ).bind(...params, limit, offset).all();
+  try {
+    const { results: data } = await c.env.DB.prepare(
+      `SELECT * FROM Server ${where} ORDER BY players DESC LIMIT ? OFFSET ?`
+    ).bind(...params, limit, offset).all();
 
-  const { count: total }: any = await c.env.DB.prepare(
-    `SELECT COUNT(*) as count FROM Server ${where}`
-  ).bind(...params).first();
+    const stats: any = await c.env.DB.prepare(
+      `SELECT COUNT(*) as count FROM Server ${where}`
+    ).bind(...params).first();
+    const total = stats?.count || 0;
 
-  return c.json({ data, meta: { total, limit, offset } });
+    return c.json({ data: data || [], meta: { total, limit, offset } });
+  } catch (err) {
+    return c.json({ data: [], meta: { total: 0, limit, offset, error: String(err) } });
+  }
 });
 
 // Single Server Detail
