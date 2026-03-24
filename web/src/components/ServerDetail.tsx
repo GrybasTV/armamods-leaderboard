@@ -37,30 +37,30 @@ export function ServerDetail() {
 
   const sortedAndFilteredMods = useMemo(() => {
     if (!server?.mods) return [];
-    
-    let filtered = server.mods.filter((m: any) => 
-      (m.name.toLowerCase().includes(modSearch.toLowerCase()) || 
-       m.modId.toLowerCase().includes(modSearch.toLowerCase())) &&
+
+    let filtered = server.mods.filter((m: any) =>
+      (m.name.toLowerCase().includes(modSearch.toLowerCase()) ||
+       m.id.toLowerCase().includes(modSearch.toLowerCase())) &&
       (
         personnelFilter === 'all' ||
-        (personnelFilter === 'high' && m.total_players >= 500) ||
-        (personnelFilter === 'medium' && m.total_players >= 100 && m.total_players < 500) ||
-        (personnelFilter === 'low' && m.total_players < 100)
+        (personnelFilter === 'high' && m.totalPlayers >= 500) ||
+        (personnelFilter === 'medium' && m.totalPlayers >= 100 && m.totalPlayers < 500) ||
+        (personnelFilter === 'low' && m.totalPlayers < 100)
       ) &&
       (
         rankFilter === 'all' ||
-        (rankFilter === 'top100' && m.rank <= 100) ||
-        (rankFilter === 'top500' && m.rank <= 500) ||
-        (rankFilter === 'top1000' && m.rank <= 1000)
+        (rankFilter === 'top100' && m.overallRank <= 100) ||
+        (rankFilter === 'top500' && m.overallRank <= 500) ||
+        (rankFilter === 'top1000' && m.overallRank <= 1000)
       )
     );
 
     return filtered.sort((a: any, b: any) => {
       if (modSort === 'name') return a.name.localeCompare(b.name);
-      if (modSort === 'rank') return a.rank - b.rank;
-      return b.total_players - a.total_players;
+      if (modSort === 'rank') return a.overallRank - b.overallRank;
+      return b.totalPlayers - a.totalPlayers;
     });
-  }, [server?.mods, modSearch, modSort]);
+  }, [server?.mods, modSearch, modSort, personnelFilter, rankFilter]);
 
   if (loading) return <StatusState type="loading" />;
   if (error || !server) return (
@@ -174,42 +174,42 @@ export function ServerDetail() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sortedAndFilteredMods.map((mod: any) => (
-              <Card key={mod.modId} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group overflow-hidden">
+              <Card key={mod.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group overflow-hidden">
                 <CardContent className="p-8 space-y-6 relative">
-                  <span className="absolute top-4 right-6 text-[40px] font-black text-white/5 italic">#{mod.rank}</span>
-                  
+                  <span className="absolute top-4 right-6 text-[40px] font-black text-white/5 italic">#{mod.overallRank}</span>
+
                   <div className="space-y-2">
-                    <Link to={`/mod/${mod.modId}`}>
+                    <Link to={`/mod/${mod.id}`}>
                       <h3 className="text-lg font-black text-white uppercase leading-tight group-hover:text-tactical-orange transition-colors pr-12">
                         {mod.name}
                       </h3>
                     </Link>
                     <div className="flex items-center gap-4 text-[9px] font-mono font-bold uppercase tracking-widest">
-                       <span className="text-gray-600 truncate max-w-[120px]">{mod.modId}</span>
-                       <span className="text-tactical-orange">| Rank #{mod.rank}</span>
+                       <span className="text-gray-600 truncate max-w-[120px]">{mod.id}</span>
+                       <span className="text-tactical-orange">| Rank #{mod.overallRank}</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
                      <div className="space-y-1">
                         <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Personnel</p>
-                        <p className="text-xs font-black text-white font-mono">{mod.total_players.toLocaleString()}</p>
+                        <p className="text-xs font-black text-white font-mono">{(mod.totalPlayers || 0).toLocaleString()}</p>
                      </div>
                      <div className="space-y-1">
                         <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Deployments</p>
-                        <p className="text-xs font-black text-white font-mono">{mod.server_count.toLocaleString()}</p>
+                        <p className="text-xs font-black text-white font-mono">{mod.serverCount || 0}</p>
                      </div>
                   </div>
-                  
+
                   <div className="flex gap-4 pt-2">
-                    <Link 
-                      to={`/mod/${mod.modId}`}
+                    <Link
+                      to={`/mod/${mod.id}`}
                       className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-[9px] font-black text-gray-400 text-center uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
                     >
                       Module Intel
                     </Link>
-                    <a 
-                      href={`https://reforger.armaplatform.com/workshop/${mod.modId}`}
+                    <a
+                      href={`https://reforger.armaplatform.com/workshop/${mod.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-4 py-3 bg-white/5 border border-white/10 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-white hover:text-black transition-all"
