@@ -11,6 +11,15 @@ const app = new Hono<{ Bindings: Bindings }>();
 app.use('*', cors());
 
 // API Endpoints (Hono + D1)
+app.get('/api/collect', async (c) => {
+  try {
+    await runCollector(c.env);
+    return c.json({ success: true, message: "Collector executed (check logs if possible)" });
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500);
+  }
+});
+
 app.get('/api/stats', async (c) => {
   try {
     const stats: any = await c.env.DB.prepare(
@@ -120,13 +129,24 @@ async function runCollector(env: Bindings) {
   const game = 'reforger';
   
   console.log("🚀 CLOUDFLARE_COLLECTOR: STARTING IMPORT");
-
+  const url = `https://api.battlemetrics.com/servers?filter[game]=${game}&page[size]=100&include=mod`;
+  
   try {
-    const response = await fetch(`https://api.battlemetrics.com/servers?filter[game]=${game}&page[size]=100`, {
+    console.log("📡 FETCHING:", url);
+    const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${API_KEY}` }
     });
-    const data: any = await response.json();
+    
+    console.log("📥 STATUS:", response.status, response.statusText);
+    const bodyText = await response.text();
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${bodyText.substring(0, 100)}`);
+    }
+
+    const data: any = JSON.parse(bodyText);
     const servers = data.data || [];
+    console.log(`📡 RECEIVED ${servers.length} SERVERS`);
 
     for (const server of servers) {
       const { id, attributes, relationships } = server;
