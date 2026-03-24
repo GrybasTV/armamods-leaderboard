@@ -71,12 +71,12 @@ app.get('/api/mods', async (c) => {
 // Single Mod Detail
 app.get('/api/mods/:modId', async (c) => {
   const modId = c.req.param('modId');
-  const mod: any = await c.env.DB.prepare("SELECT * FROM Mod WHERE modId = ?").bind(modId).first();
+  const mod: any = await c.env.DB.prepare("SELECT * FROM Mod WHERE id = ?").bind(modId).first();
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
   // Get servers for this mod
   const { results: servers } = await c.env.DB.prepare(
-    "SELECT s.* FROM Server s JOIN ServerMod sm ON s.id = sm.serverId WHERE sm.modId = (SELECT id FROM Mod WHERE modId = ?) ORDER BY s.players DESC"
+    "SELECT s.* FROM Server s JOIN ServerMod sm ON s.id = sm.serverId WHERE sm.modId = ? ORDER BY s.players DESC"
   ).bind(modId).all();
 
   return c.json({ data: { ...mod, stats: mod, servers } });
