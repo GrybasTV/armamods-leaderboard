@@ -9,6 +9,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 // Basic CORS to allow website communication
 app.use('*', cors());
+app.get('/', (c) => c.text('ARMAMODS Leaderboard API - Online'));
 
 // API Endpoints (Hono + D1)
 app.get('/api/collect', async (c) => {
