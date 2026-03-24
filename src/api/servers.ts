@@ -43,7 +43,15 @@ export async function getServers(req: Request, res: Response) {
         players: s.players,
         maxPlayers: s.maxPlayers,
         modCount: s.mods.length,
-        mods: s.mods.slice(0, 5).map(sm => sm.mod),
+        mods: s.mods.slice(0, 5).map(sm => ({
+          id: sm.mod.modId,
+          name: sm.mod.name,
+          author: sm.mod.author,
+          thumbnail: sm.mod.thumbnail,
+          totalPlayers: sm.mod.totalPlayers,
+          serverCount: sm.mod.serverCount,
+          overallRank: sm.mod.overallRank || 9999
+        })),
       })),
       meta: {
         total,
@@ -85,13 +93,13 @@ export async function getServerDetails(req: Request, res: Response) {
     const mods = server.mods.map((sm) => {
       const m = sm.mod;
       return {
-        modId: m.modId,
+        id: m.modId,
         name: m.name,
         author: m.author,
         thumbnail: m.thumbnail,
-        total_players: m.totalPlayers,
-        server_count: m.serverCount,
-        rank: m.overallRank || 9999
+        totalPlayers: m.totalPlayers,
+        serverCount: m.serverCount,
+        overallRank: m.overallRank || 9999
       };
     });
 
@@ -104,7 +112,7 @@ export async function getServerDetails(req: Request, res: Response) {
         players: server.players,
         maxPlayers: server.maxPlayers,
         modCount: server.mods.length,
-        mods: mods.sort((a, b) => b.total_players - a.total_players),
+        mods: mods.sort((a, b) => b.totalPlayers - a.totalPlayers),
       },
     });
   } catch (error) {

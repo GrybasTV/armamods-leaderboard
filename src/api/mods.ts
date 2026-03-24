@@ -37,13 +37,13 @@ export async function getPopularMods(req: Request, res: Response) {
     // We already have the rank correctly calculated and stored
     const modsWithRank = mods.map((m) => {
       return {
-        modId: m.modId,
+        id: m.modId,
         name: m.name,
         author: m.author,
         thumbnail: m.thumbnail,
-        server_count: m.serverCount,
-        total_players: m.totalPlayers,
-        global_rank: m.overallRank || 9999
+        serverCount: m.serverCount,
+        totalPlayers: m.totalPlayers,
+        overallRank: m.overallRank || 9999
       };
     });
 

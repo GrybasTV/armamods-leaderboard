@@ -43,7 +43,7 @@ app.get('/api/mods', async (c) => {
   const params: any[] = [];
 
   if (search) {
-    where += " AND (name LIKE ? OR modId LIKE ?)";
+    where += " AND (name LIKE ? OR id LIKE ?)";
     params.push(`%${search}%`, `%${search}%`);
   }
 
