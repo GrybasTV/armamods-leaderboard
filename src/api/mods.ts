@@ -3,7 +3,7 @@ import { prisma } from '../lib/db.js';
 
 export async function getPopularMods(req: Request, res: Response) {
   try {
-    const limit = parseInt(req.query.limit as string) || 50;
+    const limit = Math.min(parseInt(req.query.limit as string) || 1000, 1000);
     const offset = parseInt(req.query.offset as string) || 0;
     const search = req.query.search as string;
     const sortBy = (req.query.sortBy as string) || 'overall';

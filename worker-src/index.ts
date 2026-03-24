@@ -34,7 +34,7 @@ app.get('/api/stats', async (c) => {
 
 // All Active Mods
 app.get('/api/mods', async (c) => {
-  const limit = Math.min(parseInt(c.req.query('limit') || '50'), 100);
+  const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
   const offset = parseInt(c.req.query('offset') || '0');
   const sortBy = c.req.query('sortBy') || 'overall';
   const search = c.req.query('search') || '';
@@ -84,7 +84,7 @@ app.get('/api/mods/:modId', async (c) => {
 
 // All Servers
 app.get('/api/servers', async (c) => {
-  const limit = Math.min(parseInt(c.req.query('limit') || '50'), 100);
+  const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
   const offset = parseInt(c.req.query('offset') || '0');
   const search = c.req.query('search') || '';
 
