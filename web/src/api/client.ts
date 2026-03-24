@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Mod, Server, ApiResponse } from './types';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'https://armamods-leaderboard.pauliusmed.workers.dev/api';
 
 export const api = axios.create({
   baseURL: API_BASE,
