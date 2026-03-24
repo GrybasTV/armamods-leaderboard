@@ -95,6 +95,21 @@ export async function getModDetails(req: Request, res: Response) {
       }
     });
 
+    // Calculate individual ranks
+    const allModsByPlayers = await prisma.mod.findMany({
+      where: { serverCount: { gt: 0 } },
+      select: { id: true, totalPlayers: true },
+      orderBy: { totalPlayers: 'desc' }
+    });
+    const playerRank = allModsByPlayers.findIndex(m => m.id === mod.id) + 1;
+
+    const allModsByServers = await prisma.mod.findMany({
+      where: { serverCount: { gt: 0 } },
+      select: { id: true, serverCount: true },
+      orderBy: { serverCount: 'desc' }
+    });
+    const serverRank = allModsByServers.findIndex(m => m.id === mod.id) + 1;
+
     res.json({
       data: {
         modId: mod.modId,
@@ -107,6 +122,8 @@ export async function getModDetails(req: Request, res: Response) {
           totalPlayers: mod.totalPlayers,
           averagePlayers: parseFloat(averagePlayers as string),
           overallRank: mod.overallRank || 9999,
+          playerRank: playerRank || 9999,
+          serverRank: serverRank || 9999,
           totalMods: totalActiveMods
         },
         servers: mod.servers.map(sm => ({

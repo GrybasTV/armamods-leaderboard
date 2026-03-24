@@ -62,16 +62,16 @@ export function ModDetail() {
           </div>
           <div className="flex gap-4">
              <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
-                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Overall Rank</p>
+                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Total Rank</p>
                 <p className="text-3xl font-black text-tactical-orange">#{mod.stats?.overallRank || mod.overallRank || '-'}</p>
              </div>
              <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
-                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Total Players</p>
-                <p className="text-3xl font-black text-white">{(mod.stats?.totalPlayers || mod.totalPlayers || 0).toLocaleString()}</p>
+                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Rank Players</p>
+                <p className="text-3xl font-black text-white">#{mod.stats?.playerRank || '-'}</p>
              </div>
              <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
-                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Server Count</p>
-                <p className="text-3xl font-black text-white">{mod.stats?.serverCount || mod.serverCount || 0}</p>
+                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Rank Servers</p>
+                <p className="text-3xl font-black text-white">#{mod.stats?.serverRank || '-'}</p>
              </div>
           </div>
         </div>
@@ -81,19 +81,8 @@ export function ModDetail() {
         stats={[
           { label: 'Total Personnel', value: mod.stats?.totalPlayers || mod.totalPlayers || 0 },
           { label: 'Deployed Servers', value: mod.stats?.serverCount || mod.serverCount || 0 },
-          {
-            label: 'AVG Personnel/SRV',
-            value: mod.stats?.averagePlayers ||
-              (mod.stats?.serverCount && mod.stats?.serverCount > 0
-                ? ((mod.stats?.totalPlayers || 0) / mod.stats?.serverCount).toFixed(1)
-                : ((mod.totalPlayers || 0) / (mod.serverCount || 1)).toFixed(1))
-          },
-          {
-            label: 'Market Share',
-            value: mod.stats?.totalMods
-              ? `${(((mod.stats?.serverCount || 0) / mod.stats?.totalMods) * 100).toFixed(2)}%`
-              : '-'
-          }
+          { label: 'Players Rank', value: `#${mod.stats?.playerRank || '-'}` },
+          { label: 'Servers Rank', value: `#${mod.stats?.serverRank || '-'}` }
         ]}
         title="Tactical Analytics"
         subtitle="Real-time module performance tracking across global network"

@@ -60,7 +60,11 @@
       "Bash(curl -s \"http://localhost:3001/api/mods/629B2BA37EFFD577\")",
       "Bash(curl -k -s \"https://armamods-leaderboard.pauliusmed.workers.dev/api/mods/629B2BA37EFFD577\")",
       "Bash(git add worker-src/index.ts)",
-      "Bash(curl -k -s \"https://armamods-leaderboard.pauliusmed.workers.dev/api/servers?limit=1000\")"
+      "Bash(curl -k -s \"https://armamods-leaderboard.pauliusmed.workers.dev/api/servers?limit=1000\")",
+      "Bash(git add web/src/components/ModDetail.tsx)",
+      "Bash(curl -s \"http://localhost:3001/api/stats\")",
+      "Bash(git add web/src/hooks/useServers.ts)",
+      "Bash(git add web/src/components/ServerDetail.tsx)"
     ]
   }
 }

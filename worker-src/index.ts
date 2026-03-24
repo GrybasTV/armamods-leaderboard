@@ -79,7 +79,28 @@ app.get('/api/mods/:modId', async (c) => {
     "SELECT s.* FROM Server s JOIN ServerMod sm ON s.id = sm.serverId WHERE sm.modId = ? ORDER BY s.players DESC"
   ).bind(modId).all();
 
-  return c.json({ data: { ...mod, stats: mod, servers } });
+  // Calculate individual ranks
+  const allModsByPlayers = await c.env.DB.prepare(
+    "SELECT id, ROW_NUMBER() OVER (ORDER BY totalPlayers DESC) as rank FROM Mod WHERE serverCount > 0"
+  ).all();
+  const playerRank = allModsByPlayers.results?.find((m: any) => m.id === modId)?.rank || 9999;
+
+  const allModsByServers = await c.env.DB.prepare(
+    "SELECT id, ROW_NUMBER() OVER (ORDER BY serverCount DESC) as rank FROM Mod WHERE serverCount > 0"
+  ).all();
+  const serverRank = allModsByServers.results?.find((m: any) => m.id === modId)?.rank || 9999;
+
+  return c.json({
+    data: {
+      ...mod,
+      stats: {
+        ...mod,
+        playerRank,
+        serverRank
+      },
+      servers
+    }
+  });
 });
 
 // All Servers
