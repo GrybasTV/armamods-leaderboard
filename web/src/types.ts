@@ -5,7 +5,8 @@ export interface Mod {
   thumbnail: string | null;
   serverCount: number;
   totalPlayers: number;
-  overallRank: number;
+  playerRank: number;
+  serverRank: number;
 }
 
 export interface Server {
@@ -17,8 +18,12 @@ export interface Server {
   maxPlayers: number;
   modCount: number;
   mods: Array<{
-    modId: string;
+    id: string;
     name: string;
+    playerRank: number;
+    serverRank: number;
+    serverCount: number;
+    totalPlayers: number;
   }>;
 }
 
@@ -36,7 +41,8 @@ export interface TrendingMod {
   name: string;
   serverCount: number;
   totalPlayers: number;
-  overallRank: number;
+  playerRank: number;
+  serverRank: number;
   changePlayers?: number;
   changeServers?: number;
   prevRank?: number;

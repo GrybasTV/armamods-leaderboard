@@ -3,7 +3,7 @@ import { modsApi } from '../api/client';
 import type { Mod } from '../types';
 
 export type PlayerFilter = 'all' | 'high' | 'medium' | 'low';
-export type ModSortBy = 'players' | 'servers' | 'name' | 'overall';
+export type ModSortBy = 'players' | 'servers' | 'name';
 
 export function useMods() {
   const [mods, setMods] = useState<Mod[]>([]);
@@ -14,7 +14,7 @@ export function useMods() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [playerFilter, setPlayerFilter] = useState<PlayerFilter>('all');
-  const [sortBy, setSortBy] = useState<ModSortBy>('overall');
+  const [sortBy, setSortBy] = useState<ModSortBy>('players');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24;
 
@@ -70,7 +70,7 @@ export function useMods() {
   const resetFilters = () => {
     setSearchQuery('');
     setPlayerFilter('all');
-    setSortBy('overall');
+    setSortBy('players');
     setCurrentPage(1);
   };
 

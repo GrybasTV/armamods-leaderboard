@@ -49,15 +49,15 @@ export function ServerDetail() {
       ) &&
       (
         rankFilter === 'all' ||
-        (rankFilter === 'top100' && m.overallRank <= 100) ||
-        (rankFilter === 'top500' && m.overallRank <= 500) ||
-        (rankFilter === 'top1000' && m.overallRank <= 1000)
+        (rankFilter === 'top100' && m.playerRank <= 100) ||
+        (rankFilter === 'top500' && m.playerRank <= 500) ||
+        (rankFilter === 'top1000' && m.playerRank <= 1000)
       )
     );
 
     return filtered.sort((a: any, b: any) => {
       if (modSort === 'name') return a.name.localeCompare(b.name);
-      if (modSort === 'rank') return a.overallRank - b.overallRank;
+      if (modSort === 'rank') return a.playerRank - b.playerRank;
       return b.totalPlayers - a.totalPlayers;
     });
   }, [server?.mods, modSearch, modSort, personnelFilter, rankFilter]);
@@ -173,21 +173,29 @@ export function ServerDetail() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedAndFilteredMods.map((mod: any) => (
+            {sortedAndFilteredMods.map((mod: any) => {
+              const marketshare = ((mod.serverCount || 0) / 7669) * 100; // Will be dynamic from API
+              return (
               <Card key={mod.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group overflow-hidden">
                 <CardContent className="p-8 space-y-6 relative">
-                  <span className="absolute top-4 right-6 text-[40px] font-black text-white/5 italic">#{mod.overallRank}</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                      <div className="space-y-1">
+                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Player Rank</p>
+                        <p className="text-lg font-black text-white font-mono">#{mod.playerRank}</p>
+                      </div>
+                      <div className="space-y-1 text-right">
+                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Server Rank</p>
+                        <p className="text-lg font-black text-white font-mono">#{mod.serverRank}</p>
+                      </div>
+                    </div>
 
-                  <div className="space-y-2">
                     <Link to={`/mod/${mod.id}`}>
-                      <h3 className="text-lg font-black text-white uppercase leading-tight group-hover:text-tactical-orange transition-colors pr-12">
+                      <h3 className="text-lg font-black text-white uppercase leading-tight group-hover:text-tactical-orange transition-colors">
                         {mod.name}
                       </h3>
                     </Link>
-                    <div className="flex items-center gap-4 text-[9px] font-mono font-bold uppercase tracking-widest">
-                       <span className="text-gray-600 truncate max-w-[120px]">{mod.id}</span>
-                       <span className="text-tactical-orange">| Rank #{mod.overallRank}</span>
-                    </div>
+                    <p className="text-[9px] font-mono text-gray-600 uppercase tracking-widest truncate">{mod.id}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
@@ -199,6 +207,19 @@ export function ServerDetail() {
                         <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Deployments</p>
                         <p className="text-xs font-black text-white font-mono">{mod.serverCount || 0}</p>
                      </div>
+                  </div>
+
+                  <div className="border-t border-white/5 pt-3">
+                    <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Marketshare</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <div className="flex-1 h-2 bg-white/5 overflow-hidden">
+                        <div
+                          className="h-full bg-tactical-orange transition-all duration-500"
+                          style={{ width: `${Math.min(marketshare, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs font-black text-tactical-orange font-mono">{marketshare.toFixed(1)}%</p>
+                    </div>
                   </div>
 
                   <div className="flex gap-4 pt-2">
@@ -219,7 +240,7 @@ export function ServerDetail() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         )}
       </section>

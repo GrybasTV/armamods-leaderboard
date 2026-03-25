@@ -9,28 +9,30 @@ interface ModCardProps {
 
 export function ModCard({ mod, rank }: ModCardProps) {
   const isTop3 = rank && rank <= 3;
+  const playerRank = mod.playerRank ?? rank;
+  const serverRank = mod.serverRank ?? rank;
 
   return (
     <Card className="group relative border-white/5 border-l-2 border-l-zinc-700 hover:border-l-tactical-orange transition-all overflow-hidden bg-black/40">
-      {/* Background rank - more subtle and integrated */}
-      <span className="absolute -top-4 -right-2 text-[90px] font-black text-white/[0.03] italic select-none pointer-events-none group-hover:text-tactical-orange/[0.06] transition-all duration-700 -rotate-12 z-0">
-        #{rank}
-      </span>
-      
       <CardContent className="p-8 space-y-6 relative z-10">
         <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <div className="flex items-center gap-3">
                <div className={`w-1 h-1 rounded-full ${isTop3 ? 'bg-tactical-orange animate-pulse' : 'bg-gray-700'}`}></div>
                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 group-hover:text-tactical-orange transition-colors">
                  [ ASSET_{mod.id.slice(0, 4)} ]
                </span>
             </div>
-            {isTop3 && (
-              <span className="px-3 py-1 bg-tactical-orange/10 border border-tactical-orange/20 text-tactical-orange font-black text-[9px] uppercase tracking-widest italic">
-                Elite Cluster
-              </span>
-            )}
+            <div className="flex gap-4">
+              <div className="text-right">
+                <p className="text-[7px] text-gray-700 font-black uppercase tracking-[0.2em]">Players</p>
+                <p className="text-sm font-black text-white">#{playerRank}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[7px] text-gray-700 font-black uppercase tracking-[0.2em]">Servers</p>
+                <p className="text-sm font-black text-white">#{serverRank}</p>
+              </div>
+            </div>
           </div>
 
           <Link to={`/mod/${mod.id}`}>
@@ -53,13 +55,13 @@ export function ModCard({ mod, rank }: ModCardProps) {
         </div>
 
         <div className="flex items-center justify-between gap-4 pt-2">
-           <Link 
+           <Link
             to={`/mod/${mod.id}`}
             className="flex-1 px-6 py-4 bg-zinc-900 border border-white/5 text-center text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
            >
              Full Intel →
            </Link>
-           <a 
+           <a
             href={`https://reforger.armaplatform.com/workshop/${mod.id}`}
             target="_blank"
             rel="noopener noreferrer"

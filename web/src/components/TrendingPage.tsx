@@ -161,9 +161,15 @@ export function TrendingPage() {
 
                     {/* Rank Badge */}
                     <div className="flex items-center justify-between border-t border-white/5 pt-4">
-                      <div className="space-y-1">
-                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Global Rank</p>
-                        <p className="text-2xl font-black text-tactical-orange">#{mod.overallRank}</p>
+                      <div className="flex gap-4">
+                        <div className="space-y-1">
+                          <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Player Rank</p>
+                          <p className="text-xl font-black text-white">#{mod.playerRank}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Server Rank</p>
+                          <p className="text-xl font-black text-white">#{mod.serverRank}</p>
+                        </div>
                       </div>
                       {activeCategory !== 'new' && mod.prevRank !== undefined && (
                         <div className="text-right">

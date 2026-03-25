@@ -62,16 +62,12 @@ export function ModDetail() {
           </div>
           <div className="flex gap-4">
              <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
-                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Total Rank</p>
-                <p className="text-3xl font-black text-tactical-orange">#{mod.stats?.overallRank || mod.overallRank || '-'}</p>
+                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Player Rank</p>
+                <p className="text-3xl font-black text-white">#{mod.stats?.playerRank || mod.playerRank || '-'}</p>
              </div>
              <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
-                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Rank Players</p>
-                <p className="text-3xl font-black text-white">#{mod.stats?.playerRank || '-'}</p>
-             </div>
-             <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
-                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Rank Servers</p>
-                <p className="text-3xl font-black text-white">#{mod.stats?.serverRank || '-'}</p>
+                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Server Rank</p>
+                <p className="text-3xl font-black text-white">#{mod.stats?.serverRank || mod.serverRank || '-'}</p>
              </div>
           </div>
         </div>
