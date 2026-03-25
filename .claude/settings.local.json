@@ -64,7 +64,24 @@
       "Bash(git add web/src/components/ModDetail.tsx)",
       "Bash(curl -s \"http://localhost:3001/api/stats\")",
       "Bash(git add web/src/hooks/useServers.ts)",
-      "Bash(git add web/src/components/ServerDetail.tsx)"
+      "Bash(git add web/src/components/ServerDetail.tsx)",
+      "Bash(npx wrangler kv:namespace create \"trending_snapshots\")",
+      "Bash(npx wrangler kv namespace create \"trending_snapshots\")",
+      "Bash(npx wrangler kv namespace create \"trending_snapshots\" --preview)",
+      "Bash(curl -s \"https://armamods-leaderboard.pauliusmed.workers.dev/api/trending/snapshot\")",
+      "Bash(curl -k -s \"https://armamods-leaderboard.pauliusmed.workers.dev/api/trending/snapshot\" --max-time 60)",
+      "Bash(curl -k -s \"https://armamods-leaderboard.pauliusmed.workers.dev/api/trending\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(npx wrangler:*)",
+      "Bash(curl -s \"https://armamods-leaderboard.pauliusmed.workers.dev/\")",
+      "Bash(curl:*)",
+      "WebSearch",
+      "Bash(node -e \":*)",
+      "Bash(npx tsx:*)",
+      "Bash(git add .github/ scripts/collector.ts wrangler.toml worker-src/index.ts package.json)",
+      "Bash(git add web/src/)",
+      "Bash(git add scripts/collector.ts web/src/components/ModCard.tsx web/src/components/ModDetail.tsx web/src/components/ModList.tsx web/src/components/ServerDetail.tsx web/src/components/TrendingPage.tsx web/src/hooks/useMods.ts web/src/types.ts)"
     ]
   }
 }

@@ -125,8 +125,6 @@ async function runCollector() {
         server.mods.push({
           id: mod.id,
           name: mod.name,
-          playerRank: mod.playerRank,
-          serverRank: mod.serverRank,
           serverCount: mod.serverCount,
           totalPlayers: mod.totalPlayers,
         });
@@ -149,7 +147,20 @@ async function runCollector() {
     totalPlayers: m.totalPlayers,
     playerRank: playerRanks.get(m.id)!,
     serverRank: serverRanks.get(m.id)!,
+    overallRank: Math.floor((playerRanks.get(m.id)! + serverRanks.get(m.id)!) / 2),
   }));
+
+  // Update server mods with ranks
+  for (const server of serverList) {
+    for (const mod of server.mods) {
+      const fullMod = modList.find(m => m.id === mod.id);
+      if (fullMod) {
+        mod.playerRank = fullMod.playerRank;
+        mod.serverRank = fullMod.serverRank;
+        mod.overallRank = fullMod.overallRank;
+      }
+    }
+  }
 
   // Global stats
   const totalMods = mods.length;
@@ -162,7 +173,7 @@ async function runCollector() {
   console.log(`  - ${currentPlayers} current players`);
 
   // Split mods into chunks (KV limit is 25MB)
-  const CHUNK_SIZE = 2500; // Increased from 1000 for better performance
+  const CHUNK_SIZE = 1800; // Reduced to fit overallRank field
   const modChunks = [];
   for (let i = 0; i < modList.length; i += CHUNK_SIZE) {
     modChunks.push(modList.slice(i, i + CHUNK_SIZE));
@@ -245,6 +256,7 @@ async function runTrendingSnapshot() {
           totalPlayers: currentMod.totalPlayers,
           playerRank: currentMod.playerRank,
           serverRank: currentMod.serverRank,
+          overallRank: currentMod.overallRank,
           changePlayers: currentMod.totalPlayers,
           changeServers: currentMod.serverCount,
         });
@@ -260,6 +272,7 @@ async function runTrendingSnapshot() {
             totalPlayers: currentMod.totalPlayers,
             playerRank: currentMod.playerRank,
             serverRank: currentMod.serverRank,
+            overallRank: currentMod.overallRank,
             changePlayers: playerChange,
             changeServers: serverChange,
           });
@@ -273,6 +286,7 @@ async function runTrendingSnapshot() {
             totalPlayers: currentMod.totalPlayers,
             playerRank: currentMod.playerRank,
             serverRank: currentMod.serverRank,
+            overallRank: currentMod.overallRank,
             changePlayers: playerChange,
             changeServers: serverChange,
           });
@@ -288,6 +302,7 @@ async function runTrendingSnapshot() {
         totalPlayers: mod.totalPlayers,
         playerRank: mod.playerRank,
         serverRank: mod.serverRank,
+        overallRank: mod.overallRank,
         changePlayers: mod.totalPlayers,
         changeServers: mod.serverCount,
       });

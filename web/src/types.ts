@@ -7,6 +7,7 @@ export interface Mod {
   totalPlayers: number;
   playerRank: number;
   serverRank: number;
+  overallRank: number;
 }
 
 export interface Server {
@@ -22,6 +23,7 @@ export interface Server {
     name: string;
     playerRank: number;
     serverRank: number;
+    overallRank: number;
     serverCount: number;
     totalPlayers: number;
   }>;
@@ -43,6 +45,7 @@ export interface TrendingMod {
   totalPlayers: number;
   playerRank: number;
   serverRank: number;
+  overallRank: number;
   changePlayers?: number;
   changeServers?: number;
   prevRank?: number;
