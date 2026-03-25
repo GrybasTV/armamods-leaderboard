@@ -3,6 +3,7 @@ import { ModList } from './components/ModList';
 import { ServerList } from './components/ServerList';
 import { ServerDetail } from './components/ServerDetail';
 import { ModDetail } from './components/ModDetail';
+import { TrendingPage } from './components/TrendingPage';
 import { Layout } from './components/Layout';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Route path="/servers" element={<ServerList />} />
           <Route path="/server/:serverId" element={<ServerDetail />} />
           <Route path="/mod/:modId" element={<ModDetail />} />
+          <Route path="/trending" element={<TrendingPage />} />
         </Routes>
       </Layout>
     </Router>

@@ -8,10 +8,20 @@ binding = "DB"
 database_name = "armamods-db"
 database_id = "bb802671-d28d-4e92-9427-7c29cd83735c"
 
-# Collector Cron (every 1 hour)
-[triggers]
-crons = ["0 * * * *"]
+# KV for trending snapshots
+[[kv_namespaces]]
+binding = "TRENDING_KV"
+id = "a8f21c595e39452e95e7e41e3d812013"
+preview_id = "0a5d2870e2114b1783fb607c35d78751"
+
+# Cron jobs DISABLED - using external collector (GitHub Actions/local) instead
+# Worker collector gets 403 from BattleMetrics and exceeds D1 limits
+# [triggers]
+# crons = ["0 * * * *", "0 3 * * *"]
 
 # Env vars
 [vars]
 ENVIRONMENT = "production"
+
+# Webhook secret for cron-job.org
+WEBHOOK_SECRET = "arma-collector-2025-secret-key-xk9m2p8"

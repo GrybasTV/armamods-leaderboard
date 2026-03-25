@@ -1,4 +1,3 @@
-import React from 'react';
 import { useMods } from '../hooks/useMods';
 import { ModCard } from './ModCard';
 import { StatusState } from './ui/StatusState';

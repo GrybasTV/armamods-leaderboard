@@ -48,6 +48,9 @@ export function Layout({ children }: LayoutProps) {
             <Link to="/servers" className={navItemClass('/servers')}>
               [ 🖥️ Active Servers ]
             </Link>
+            <Link to="/trending" className={navItemClass('/trending')}>
+              [ 📈 Trending Intel ]
+            </Link>
           </nav>
 
           <div className="hidden lg:flex px-8 border-l border-white/5 items-center gap-4">

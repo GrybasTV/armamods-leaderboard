@@ -9,16 +9,22 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "collect": "tsx scripts/collector.ts collect",
+    "collect:push": "tsx scripts/collector.ts collect",
+    "trending": "tsx scripts/collector.ts trending",
+    "trending:push": "tsx scripts/collector.ts trending"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
     "express": "^4.19.2",
     "hono": "^4.12.9",
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260317.1",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^22.7.5",

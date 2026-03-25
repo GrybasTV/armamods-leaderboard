@@ -30,3 +30,30 @@ export interface ApiResponse<T> {
     offset: number;
   };
 }
+
+export interface TrendingMod {
+  id: string;
+  name: string;
+  serverCount: number;
+  totalPlayers: number;
+  overallRank: number;
+  changePlayers?: number;
+  changeServers?: number;
+  prevRank?: number;
+  currentRank?: number;
+}
+
+export interface TrendingData {
+  rising: TrendingMod[];
+  falling: TrendingMod[];
+  new: TrendingMod[];
+}
+
+export interface TrendingResponse {
+  data: TrendingData;
+  meta: {
+    lastUpdated: string | null;
+    snapshotDate?: string;
+    error?: string;
+  };
+}

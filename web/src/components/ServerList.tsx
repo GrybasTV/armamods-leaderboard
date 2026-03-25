@@ -32,7 +32,6 @@ export function ServerList() {
       <StatsHero
         title="Active Server Network"
         subtitle="Real-time monitoring of all community and official servers using mods."
-        gradient="from-purple-600 via-pink-600 to-red-600"
         stats={[
           { label: 'Active Servers', value: stats.totalServers },
           { label: 'Total Players', value: stats.totalPlayers },

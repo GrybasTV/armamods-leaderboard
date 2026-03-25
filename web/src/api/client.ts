@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Mod, Server, ApiResponse } from '../types';
+import type { Mod, Server, ApiResponse, TrendingResponse } from '../types';
 
 const API_BASE = 'https://armamods-leaderboard.pauliusmed.workers.dev/api';
 
@@ -37,6 +37,13 @@ export const serversApi = {
 
   getById: async (serverId: string) => {
     const response = await api.get<{ data: Server }>(`/servers/${serverId}`);
+    return response.data;
+  },
+};
+
+export const trendingApi = {
+  getTrending: async () => {
+    const response = await api.get<TrendingResponse>('/trending');
     return response.data;
   },
 };
