@@ -86,17 +86,25 @@ export function Layout({ children }: LayoutProps) {
                 </h3>
               </div>
               <p className="text-gray-500 text-sm font-medium leading-[2] max-w-lg uppercase tracking-wider">
-                This platform provides strategic overview of the Arma Reforger ecosystem. We track 
-                server telemetry and player deployment across various custom modules. 
-                Data synchronized every 600 seconds.
+                This platform provides strategic overview of the Arma Reforger ecosystem. We track
+                server telemetry and player deployment across various custom modules.
+                Data synchronized every 1 hour via external collector.
               </p>
+              <a
+                href="https://www.paypal.com/paypalme/sachta2023"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-tactical-orange/10 border border-tactical-orange/20 text-tactical-orange hover:bg-tactical-orange hover:text-black text-[10px] font-black uppercase tracking-widest transition-all"
+              >
+                Support Development (€500 goal)
+              </a>
             </div>
             
             <div className="space-y-6">
               <h3 className="font-black text-white uppercase tracking-[0.3em] text-[10px] border-b border-white/10 pb-4">Telecommunication</h3>
               <div className="space-y-4">
-                <a href="#" className="block text-gray-500 hover:text-tactical-orange font-bold text-xs uppercase tracking-widest transition-colors tracking-[0.2em]">// External GitHub</a>
-                <a href="#" className="block text-gray-500 hover:text-tactical-orange font-bold text-xs uppercase tracking-widest transition-colors tracking-[0.2em]">// Secure Discord</a>
+                <a href="https://github.com/GrybasTV/armamods-leaderboard" target="_blank" rel="noopener noreferrer" className="block text-gray-500 hover:text-tactical-orange font-bold text-xs uppercase tracking-widest transition-colors tracking-[0.2em]">// External GitHub</a>
+                <a href="https://www.paypal.com/paypalme/sachta2023" target="_blank" rel="noopener noreferrer" className="block text-gray-500 hover:text-tactical-orange font-bold text-xs uppercase tracking-widest transition-colors tracking-[0.2em]">// Support Project</a>
               </div>
             </div>
 
