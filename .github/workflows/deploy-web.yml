@@ -3,10 +3,8 @@ name: Deploy Frontend to Cloudflare Pages
 on:
   push:
     branches:
-      - main
-    paths:
-      - 'web/**'          # Tik kai pasikeičia web failai
-  workflow_dispatch:       # Rankinis paleidimas
+      - main        # Kiekvienas push į main atnaujina frontend
+  workflow_dispatch: # Rankinis paleidimas iš GitHub UI
 
 jobs:
   deploy:
@@ -16,6 +14,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Check secrets
+        run: |
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "❌ CLOUDFLARE_API_TOKEN secret is NOT set!"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_API_TOKEN is set"
+          fi
+          if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "❌ CLOUDFLARE_ACCOUNT_ID secret is NOT set!"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_ACCOUNT_ID is set"
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,10 +44,13 @@ jobs:
       - name: Build frontend
         working-directory: web
         run: npm run build
+        env:
+          NODE_ENV: production
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web/dist --project-name=armamods-web --commit-dirty=true
+          command: pages deploy dist --project-name=armamods-web --commit-dirty=true
+          workingDirectory: web
