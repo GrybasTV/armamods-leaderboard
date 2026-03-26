@@ -29,7 +29,7 @@ export function useMods() {
         modsApi.getGlobalStats()
       ]);
 
-      setMods(listData?.data || []);
+      setMods(Array.isArray(listData?.data) ? listData.data : []);
       setTotalMods(listData?.meta?.total || 0);
       setGlobalStats(statsData || { totalPlayers: 0, totalServers: 0, totalMods: 0 });
       setError(null);

@@ -25,17 +25,21 @@ export function useServers() {
         serversApi.getList(1000),
         modsApi.getGlobalStats()
       ]);
-      setServers(serversData.data);
-      setTotalServers(serversData.meta.total);
+      const fetchedServers = serversData?.data || [];
+      setServers(fetchedServers);
+      setTotalServers(serversData?.meta?.total || 0);
 
       // Calculate full servers from loaded sample (more accurate)
-      const fullCount = serversData.data.filter((s: Server) => (s.players / s.maxPlayers) >= 0.8).length;
-      const fullRatio = fullCount / serversData.data.length;
-      const estimatedFull = Math.round(serversData.meta.total * fullRatio);
+      const fullCount = fetchedServers.length > 0
+        ? fetchedServers.filter((s: Server) => s.maxPlayers > 0 && (s.players / s.maxPlayers) >= 0.8).length
+        : 0;
+      
+      const fullRatio = fetchedServers.length > 0 ? fullCount / fetchedServers.length : 0;
+      const estimatedFull = Math.round((serversData?.meta?.total || 0) * fullRatio);
 
       setGlobalStats({
-        totalPlayers: statsData.totalPlayers || 0,
-        fullServers: estimatedFull
+        totalPlayers: statsData?.totalPlayers || 0,
+        fullServers: estimatedFull || 0
       });
       setError(null);
     } catch (err) {

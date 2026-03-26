@@ -4,10 +4,11 @@ import { serversApi } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
+import type { Server, Mod } from '../types';
 
 export function ServerDetail() {
   const { serverId } = useParams<{ serverId: string }>();
-  const [server, setServer] = useState<any>(null);
+  const [server, setServer] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,9 +39,10 @@ export function ServerDetail() {
   const sortedAndFilteredMods = useMemo(() => {
     if (!server?.mods || !Array.isArray(server.mods)) return [];
 
-    let filtered = server.mods.filter((m: any) =>
+    const filtered = (server?.mods || []).filter((m: any) =>
       (m.name.toLowerCase().includes(modSearch.toLowerCase()) ||
        m.id.toLowerCase().includes(modSearch.toLowerCase())) &&
+       // ...
       (
         personnelFilter === 'all' ||
         (personnelFilter === 'high' && m.totalPlayers >= 500) ||
@@ -55,10 +57,10 @@ export function ServerDetail() {
       )
     );
 
-    return filtered.sort((a: any, b: any) => {
+    return [...filtered].sort((a: any, b: any) => {
       if (modSort === 'name') return a.name.localeCompare(b.name);
       if (modSort === 'rank') return a.playerRank - b.playerRank;
-      return b.totalPlayers - a.totalPlayers;
+      return (b.totalPlayers || 0) - (a.totalPlayers || 0);
     });
   }, [server?.mods, modSearch, modSort, personnelFilter, rankFilter]);
 
@@ -111,11 +113,11 @@ export function ServerDetail() {
         </div>
       </header>
 
-      <StatsHero 
+      <StatsHero
         stats={[
-          { label: 'Personnel Present', value: `${server.players} / ${server.maxPlayers}` },
-          { label: 'Module Count', value: server.mods.length },
-          { label: 'Capacity Used', value: `${Math.round(fillPercent)}%` },
+          { label: 'Personnel Present', value: `${server.players || 0} / ${server.maxPlayers || 0}` },
+          { label: 'Module Count', value: server?.mods?.length || 0 },
+          { label: 'Capacity Used', value: `${Math.round(fillPercent || 0)}%` },
           { label: 'Encryption', value: 'AES-256' }
         ]}
         title="Field Intelligence Report"
@@ -182,7 +184,7 @@ export function ServerDetail() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {sortedAndFilteredMods.map((mod: any) => {
+            {sortedAndFilteredMods.map((mod: Mod) => {
               const marketshare = ((mod.serverCount || 0) / 7669) * 100;
               return (
               <Card key={mod.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group overflow-hidden">

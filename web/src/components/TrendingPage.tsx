@@ -23,8 +23,14 @@ export function TrendingPage() {
     try {
       setLoading(true);
       const data = await trendingApi.getTrending();
-      setTrending(data.data);
-      setLastUpdated(data.meta.lastUpdated);
+      if (data?.data) {
+        setTrending({
+          rising: data.data.rising || [],
+          falling: data.data.falling || [],
+          new: data.data.new || []
+        });
+      }
+      setLastUpdated(data?.meta?.lastUpdated || null);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load trending data');
@@ -35,7 +41,7 @@ export function TrendingPage() {
 
   useEffect(() => {
     loadTrending();
-  }, []);
+  }, [loadTrending]);
 
   if (loading) return <StatusState type="loading" />;
   if (error) return (
@@ -104,9 +110,9 @@ export function TrendingPage() {
 
       <StatsHero
         stats={[
-          { label: 'Rising Mods', value: trending.rising.length },
-          { label: 'Falling Mods', value: trending.falling.length },
-          { label: 'New Mods', value: trending.new.length },
+          { label: 'Rising Mods', value: trending?.rising?.length || 0 },
+          { label: 'Falling Mods', value: trending?.falling?.length || 0 },
+          { label: 'New Mods', value: trending?.new?.length || 0 },
           { label: 'Analysis Period', value: '24 Hours' }
         ]}
         title="Network Movement Overview"
