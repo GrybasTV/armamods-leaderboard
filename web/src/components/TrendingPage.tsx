@@ -21,18 +21,29 @@ export function TrendingPage() {
 
   const loadTrending = useCallback(async () => {
     try {
+      console.log("Starting loadTrending...");
       setLoading(true);
       const data = await trendingApi.getTrending();
-      if (data?.data) {
+      console.log("API Response received:", data);
+      
+      if (!data) {
+        console.warn("API returned no data object");
+        return;
+      }
+
+      if (data.data) {
         setTrending({
           rising: data.data.rising || [],
           falling: data.data.falling || [],
           new: data.data.new || []
         });
       }
-      setLastUpdated(data?.meta?.lastUpdated || null);
+      
+      const lu = (data && data.meta) ? data.meta.lastUpdated : null;
+      setLastUpdated(lu || null);
       setError(null);
     } catch (err) {
+      console.error("Error in loadTrending:", err);
       setError(err instanceof Error ? err.message : 'Failed to load trending data');
     } finally {
       setLoading(false);
