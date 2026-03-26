@@ -297,6 +297,9 @@ async function runCollector(env: Bindings) {
           updatedAt=excluded.updatedAt
       `).bind(id, attributes.name, attributes.ip || '', attributes.port || 0, attributes.players, attributes.maxPlayers));
 
+      // Clean up old server mods before adding current ones
+      statements.push(env.DB.prepare(`DELETE FROM ServerMod WHERE serverId = ?`).bind(id));
+
       // Process mods
       for (const sm of reforgerMods) {
         modMap.set(sm.modId, {
