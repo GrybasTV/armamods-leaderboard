@@ -4,7 +4,7 @@ import { serversApi } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
-import type { Server, Mod } from '../types';
+import type { Server } from '../types';
 
 export function ServerDetail() {
   const { serverId } = useParams<{ serverId: string }>();
