@@ -124,7 +124,7 @@ export function Layout({ children }: LayoutProps) {
               © 2026 COMMUNITY INTELLIGENCE PROJECT. NOT PART OF BOHEMIA INTERACTIVE.
             </p>
             <p className="text-gray-600 font-bold text-[9px] uppercase tracking-[0.4em]">
-              EST: ALPHA-0.2
+              EST: ALPHA-0.3
             </p>
           </div>
         </div>
