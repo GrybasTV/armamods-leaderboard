@@ -8,4 +8,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://armamods-leaderboard.pauliusmed.workers.dev',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  }
 })
