@@ -1,4 +1,4 @@
-name = "armamods-leaderboard"
+name = "armamods-mods-web"
 main = "worker-src/index.ts"
 compatibility_date = "2024-03-24"
 
