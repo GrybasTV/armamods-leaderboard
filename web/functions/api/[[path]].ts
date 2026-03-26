@@ -17,20 +17,53 @@ export async function onRequest(context) {
   // Forward API requests to the Worker
   const workerUrl = `https://armamods-leaderboard.pauliusmed.workers.dev${url.pathname}${url.search}`;
 
-  const response = await fetch(workerUrl, {
-    method: request.method,
-    headers: request.headers,
-    body: request.body,
-  });
+  try {
+    const response = await fetch(workerUrl, {
+      method: request.method,
+      headers: request.headers,
+      body: request.body,
+    });
 
-  // Add CORS headers to response
-  const newResponse = new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  });
-  
-  newResponse.headers.set('Access-Control-Allow-Origin', '*');
+    // Handle error responses - return proper JSON structure
+    if (!response.ok) {
+      const errorBody = await response.text();
+      return new Response(JSON.stringify({ 
+        error: `Worker API error: ${response.status}`, 
+        details: errorBody,
+        data: null,
+        meta: null
+      }), {
+        status: response.status,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
 
-  return newResponse;
+    // Add CORS headers to response
+    const newResponse = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+    
+    newResponse.headers.set('Access-Control-Allow-Origin', '*');
+
+    return newResponse;
+  } catch (error) {
+    // Handle network errors
+    return new Response(JSON.stringify({ 
+      error: 'Worker unreachable', 
+      details: error instanceof Error ? error.message : 'Unknown error',
+      data: null,
+      meta: null
+    }), {
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
 }
