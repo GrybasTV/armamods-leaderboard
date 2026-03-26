@@ -163,20 +163,17 @@ export function TrendingPage() {
                     <div className="flex items-center justify-between border-t border-white/5 pt-4">
                       <div className="flex gap-4">
                         <div className="space-y-1">
-                          <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Player Rank</p>
-                          <p className="text-xl font-black text-white">#{mod.playerRank}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Server Rank</p>
-                          <p className="text-xl font-black text-white">#{mod.serverRank}</p>
+                          <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Overall Rank</p>
+                          <p className="text-xl font-black text-white">#{mod.overallRank}</p>
                         </div>
                       </div>
                       {activeCategory !== 'new' && mod.prevRank !== undefined && (
                         <div className="text-right">
                           <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Rank Change</p>
                           <p className={`text-sm font-black ${mod.currentRank! < mod.prevRank ? 'text-green-500' : 'text-red-500'}`}>
-                            {mod.currentRank! < mod.prevRank ? '↑' : '↓'} {Math.abs(mod.currentRank! - mod.prevRank)}
+                            {mod.currentRank! < mod.prevRank ? '↑' : '↓'} {Math.abs(mod.currentRank! - mod.prevRank)} positions
                           </p>
+                          <p className="text-[8px] text-gray-700 font-mono">#{mod.prevRank} → #{mod.currentRank}</p>
                         </div>
                       )}
                     </div>
@@ -185,25 +182,11 @@ export function TrendingPage() {
                     <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
                       <div className="space-y-1">
                         <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Personnel</p>
-                        <p className="text-sm font-black text-white font-mono">
-                          {mod.totalPlayers.toLocaleString()}
-                          {activeCategory !== 'new' && mod.changePlayers !== undefined && (
-                            <span className={`ml-2 text-xs ${mod.changePlayers > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              ({mod.changePlayers > 0 ? '+' : ''}{mod.changePlayers})
-                            </span>
-                          )}
-                        </p>
+                        <p className="text-sm font-black text-white font-mono">{mod.totalPlayers.toLocaleString()}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Deployments</p>
-                        <p className="text-sm font-black text-white font-mono">
-                          {mod.serverCount}
-                          {activeCategory !== 'new' && mod.changeServers !== undefined && (
-                            <span className={`ml-2 text-xs ${mod.changeServers > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              ({mod.changeServers > 0 ? '+' : ''}{mod.changeServers})
-                            </span>
-                          )}
-                        </p>
+                        <p className="text-sm font-black text-white font-mono">{mod.serverCount}</p>
                       </div>
                     </div>
 

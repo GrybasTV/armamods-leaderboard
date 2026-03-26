@@ -261,10 +261,13 @@ async function runTrendingSnapshot() {
           changeServers: currentMod.serverCount,
         });
       } else {
+        const prevOverallRank = prevMod.overallRank;
+        const currentOverallRank = currentMod.overallRank;
+        const rankImprovement = prevOverallRank - currentOverallRank; // Positive = improved (lower rank number)
         const playerChange = currentMod.totalPlayers - prevMod.totalPlayers;
         const serverChange = currentMod.serverCount - prevMod.serverCount;
 
-        if (playerChange > 50 || serverChange > 5) {
+        if (rankImprovement > 0) {
           rising.push({
             id: currentMod.id,
             name: currentMod.name,
@@ -275,10 +278,12 @@ async function runTrendingSnapshot() {
             overallRank: currentMod.overallRank,
             changePlayers: playerChange,
             changeServers: serverChange,
+            prevRank: prevOverallRank,
+            currentRank: currentOverallRank,
           });
         }
 
-        if (playerChange < -50 || serverChange < -5) {
+        if (rankImprovement < 0) {
           falling.push({
             id: currentMod.id,
             name: currentMod.name,
@@ -289,6 +294,8 @@ async function runTrendingSnapshot() {
             overallRank: currentMod.overallRank,
             changePlayers: playerChange,
             changeServers: serverChange,
+            prevRank: prevOverallRank,
+            currentRank: currentOverallRank,
           });
         }
       }
@@ -309,8 +316,8 @@ async function runTrendingSnapshot() {
     }
   }
 
-  rising.sort((a, b) => b.changePlayers - a.changePlayers);
-  falling.sort((a, b) => a.changePlayers - b.changePlayers);
+  rising.sort((a, b) => (b.prevRank - b.currentRank) - (a.prevRank - a.currentRank));
+  falling.sort((a, b) => (a.prevRank - a.currentRank) - (b.prevRank - b.currentRank));
   newMods.sort((a, b) => b.totalPlayers - a.totalPlayers);
 
   const today = new Date().toISOString().split('T')[0];
