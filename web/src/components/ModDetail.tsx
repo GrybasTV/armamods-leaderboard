@@ -90,17 +90,17 @@ export function ModDetail() {
             📡 Active Deployed Servers
           </h2>
           <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-            Displaying {mod.servers.length} Intel Nodes
+            Displaying {(mod.servers || []).length} Intel Nodes
           </span>
         </div>
 
-        {mod.servers.length === 0 ? (
+        {!mod.servers || mod.servers.length === 0 ? (
           <div className="p-20 text-center border-2 border-dashed border-white/5">
             <p className="text-xl font-black text-gray-700 uppercase tracking-widest">No active deployments detected</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mod.servers.map((server: any) => (
+            {(mod.servers || []).map((server: any) => (
               <Card key={server.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all">
                 <CardContent className="p-8 space-y-6">
                   <div className="space-y-2">

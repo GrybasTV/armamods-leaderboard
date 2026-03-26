@@ -36,7 +36,7 @@ export function ServerDetail() {
   }, [serverId, loadServer]);
 
   const sortedAndFilteredMods = useMemo(() => {
-    if (!server?.mods) return [];
+    if (!server?.mods || !Array.isArray(server.mods)) return [];
 
     let filtered = server.mods.filter((m: any) =>
       (m.name.toLowerCase().includes(modSearch.toLowerCase()) ||
