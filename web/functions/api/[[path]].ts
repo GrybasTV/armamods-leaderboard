@@ -14,8 +14,12 @@ export async function onRequest(context) {
     });
   }
 
-  // Forward API requests to the Worker
+  // Forward API requests
+  console.log(`[Proxy] Incoming request for: ${url.pathname}`);
+  
+  // Clean up the path - if we are in /api/[[path]], url.pathname already has it
   const workerUrl = `https://armamods-leaderboard.pauliusmed.workers.dev${url.pathname}${url.search}`;
+  console.log(`[Proxy] Forwarding to: ${workerUrl}`);
 
   try {
     const response = await fetch(workerUrl, {
