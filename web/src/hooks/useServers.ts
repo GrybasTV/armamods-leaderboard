@@ -50,6 +50,8 @@ export function useServers() {
   }, []);
 
   const filteredServers = useMemo(() => {
+    if (!Array.isArray(servers)) return [];
+
     return servers.filter(server => {
       // Search
       if (searchQuery && !server.name.toLowerCase().includes(searchQuery.toLowerCase())) {
