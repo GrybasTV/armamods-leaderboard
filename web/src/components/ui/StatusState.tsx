@@ -12,43 +12,72 @@ export function StatusState({ type, message, details, onAction, actionText }: St
   const getIcon = () => {
     switch (type) {
       case 'loading': return (
-        <div className="relative h-20 w-20 mx-auto">
-          <div className="absolute inset-0 rounded-full border-4 border-blue-100 scale-125 animate-ping opacity-20"></div>
-          <div className="absolute inset-0 rounded-full border-b-2 border-r-2 border-blue-600 animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center text-blue-600 font-bold text-xs uppercase tracking-widest animate-pulse">Load</div>
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-3 h-3 bg-tactical-orange animate-pulse"></div>
+            <div className="w-2 h-2 bg-tactical-orange/60 animate-pulse delay-100"></div>
+            <div className="w-2 h-2 bg-tactical-orange/40 animate-pulse delay-200"></div>
+            <div className="w-1 h-1 bg-tactical-orange/20 animate-pulse delay-300"></div>
+          </div>
+          <div className="text-[8px] text-gray-600 font-mono uppercase tracking-[0.3em] space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-tactical-orange">▸</span>
+              <span>Establishing Uplink...</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-tactical-orange">▸</span>
+              <span>Fetching Telemetry...</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-tactical-orange animate-pulse">▸</span>
+              <span className="animate-pulse">Processing Intel...</span>
+            </div>
+          </div>
         </div>
       );
-      case 'error': return <div className="text-6xl text-red-100 flex items-center justify-center p-8 rounded-full border-4 border-red-50 mb-6 bg-red-600/10">❌</div>;
-      case 'empty': return <div className="text-6xl text-yellow-100 flex items-center justify-center p-8 rounded-full border-4 border-yellow-50 mb-6 bg-yellow-600/10">🔍</div>;
+      case 'error': return (
+        <div className="text-6xl mb-6">
+          <div className="w-24 h-24 border-4 border-red-900/30 rounded-lg flex items-center justify-center bg-red-950/20">
+            <span className="text-red-500">⚠</span>
+          </div>
+        </div>
+      );
+      case 'empty': return (
+        <div className="text-6xl mb-6">
+          <div className="w-24 h-24 border-4 border-yellow-900/30 rounded-lg flex items-center justify-center bg-yellow-950/20">
+            <span className="text-yellow-500">Ø</span>
+          </div>
+        </div>
+      );
     }
   };
 
   const colors = {
-    loading: 'text-blue-600',
-    error: 'text-red-700',
-    empty: 'text-yellow-700'
+    loading: 'text-tactical-orange',
+    error: 'text-red-500',
+    empty: 'text-yellow-500'
   };
 
-  const bgGradient = {
-    loading: 'from-blue-50 to-white',
-    error: 'from-red-50 to-white',
-    empty: 'from-yellow-50 to-white'
+  const borderColor = {
+    loading: 'border-tactical-orange/20',
+    error: 'border-red-900/30',
+    empty: 'border-yellow-900/30'
   };
 
   return (
     <div className={`
-      flex flex-col items-center justify-center min-h-[500px] w-full 
-      bg-gradient-to-b ${bgGradient[type]} border-2 border-gray-100 rounded-3xl p-16
-      shadow-2xl shadow-gray-200/50 backdrop-blur-sm
+      flex flex-col items-center justify-center min-h-[500px] w-full
+      bg-zinc-900/50 backdrop-blur-sm border-2 ${borderColor[type]} rounded-lg p-16
+      shadow-2xl shadow-black/50
     `}>
-      <div className="transform hover:scale-110 transition-transform duration-500 mb-8">
+      <div className="mb-8">
         {getIcon()}
       </div>
-      <h3 className={`text-4xl font-black ${colors[type]} mb-4 drop-shadow-sm`}>
-        {message || (type === 'loading' ? 'Gathering Data' : type === 'error' ? 'Connection Problem' : 'No Results Found')}
+      <h3 className={`text-3xl font-black ${colors[type]} mb-4 uppercase tracking-widest`}>
+        {message || (type === 'loading' ? 'LOADING INTEL' : type === 'error' ? 'CONNECTION FAILED' : 'NO DATA FOUND')}
       </h3>
       {details && (
-        <p className="text-gray-500 max-w-md mx-auto mb-10 text-lg font-medium italic leading-relaxed">
+        <p className="text-gray-500 max-w-md mx-auto mb-10 text-sm font-medium uppercase tracking-wider text-center">
           {details}
         </p>
       )}
@@ -56,9 +85,9 @@ export function StatusState({ type, message, details, onAction, actionText }: St
         <button
           onClick={onAction}
           className={`
-            px-12 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl 
-            hover:shadow-2xl hover:shadow-blue-200 transition-all font-black uppercase tracking-widest text-sm
-            hover:-translate-y-1 active:translate-y-0
+            px-8 py-4 bg-tactical-orange text-black border-2 border-tactical-orange/40
+            hover:bg-white hover:border-tactical-orange transition-all font-black uppercase tracking-widest text-xs
+            hover:shadow-[0_0_20px_rgba(255,107,0,0.3)]
           `}
         >
           {actionText}
