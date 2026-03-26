@@ -1,11 +1,12 @@
 import axios from 'axios';
 import type { Mod, Server, ApiResponse, TrendingResponse } from '../types';
 
-const API_BASE = 'https://armamods-leaderboard.pauliusmed.workers.dev/api';
+// Use relative path - API requests will be proxied via Cloudflare Pages Functions
+const API_BASE = '/api';
 
 export const api = axios.create({
   baseURL: API_BASE,
-  timeout: 10000,
+  timeout: 30000, // Increased timeout for proxy
 });
 
 export const modsApi = {

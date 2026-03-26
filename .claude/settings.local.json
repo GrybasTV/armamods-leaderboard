@@ -81,7 +81,9 @@
       "Bash(npx tsx:*)",
       "Bash(git add .github/ scripts/collector.ts wrangler.toml worker-src/index.ts package.json)",
       "Bash(git add web/src/)",
-      "Bash(git add scripts/collector.ts web/src/components/ModCard.tsx web/src/components/ModDetail.tsx web/src/components/ModList.tsx web/src/components/ServerDetail.tsx web/src/components/TrendingPage.tsx web/src/hooks/useMods.ts web/src/types.ts)"
+      "Bash(git add scripts/collector.ts web/src/components/ModCard.tsx web/src/components/ModDetail.tsx web/src/components/ModList.tsx web/src/components/ServerDetail.tsx web/src/components/TrendingPage.tsx web/src/hooks/useMods.ts web/src/types.ts)",
+      "Bash(git add pages.config.js)",
+      "Bash(bun install)"
     ]
   }
 }

@@ -5,11 +5,11 @@ import { StatsHero } from './ui/StatsHero';
 import { DonationCard } from './DonationCard';
 
 export function ModList() {
-  const { 
-    filteredMods, 
-    loading, 
-    error, 
-    searchQuery, 
+  const {
+    filteredMods,
+    loading,
+    error,
+    searchQuery,
     setSearchQuery,
     playerFilter,
     setPlayerFilter,
@@ -24,13 +24,13 @@ export function ModList() {
   } = useMods();
 
   if (loading && filteredMods.length === 0) return <StatusState type="loading" />;
-  
+
   if (error) return (
-    <StatusState 
-      type="error" 
-      message={error} 
-      onAction={refresh} 
-      actionText="Retry Connection" 
+    <StatusState
+      type="error"
+      message={error}
+      onAction={refresh}
+      actionText="Retry Connection"
     />
   );
 
@@ -47,14 +47,12 @@ export function ModList() {
         ]}
       />
 
-      <DonationCard />
-
       {/* Sleeker Glassmorphic Filter Bar */}
       <div className="sticky top-4 z-50 mb-12">
         <div className="p-2 bg-zinc-950/60 backdrop-blur-md border border-white/5 flex flex-col md:flex-row items-center gap-4 transition-all">
           <div className="relative flex-1 w-full flex items-center px-4">
              <span className="text-gray-700 font-mono text-xs mr-4">📡</span>
-            <input 
+            <input
               type="text"
               placeholder="SCAN FOR TITLES..."
               value={searchQuery}
@@ -62,9 +60,9 @@ export function ModList() {
               className="w-full py-3 bg-transparent text-[11px] font-bold text-white uppercase tracking-widest outline-none transition-all placeholder:text-gray-800 font-mono"
             />
           </div>
-          
+
           <div className="flex items-center gap-2 w-full md:w-auto pr-2">
-            <select 
+            <select
               value={playerFilter}
               onChange={(e) => setPlayerFilter(e.target.value as any)}
               className="px-4 py-3 bg-white/5 border border-white/5 text-[9px] font-black text-gray-500 uppercase tracking-widest cursor-pointer hover:bg-white/10 hover:text-white transition-all outline-none"
@@ -85,7 +83,7 @@ export function ModList() {
               <option value="name" className="bg-zinc-900 text-white">SORT: NAME</option>
             </select>
 
-            <button 
+            <button
               onClick={resetFilters}
               className="px-6 py-3 border border-white/5 hover:bg-white/5 text-[9px] font-black text-gray-700 hover:text-tactical-orange uppercase tracking-widest transition-all italic"
             >
@@ -100,12 +98,19 @@ export function ModList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filteredMods.map((mod) => (
-            <ModCard 
-              key={mod.id} 
-              mod={mod} 
-              rank={mod.overallRank} 
+            <ModCard
+              key={mod.id}
+              mod={mod}
+              rank={mod.overallRank}
             />
           ))}
+        </div>
+      )}
+
+      {/* Donation Section - after user sees the content */}
+      {filteredMods.length > 0 && (
+        <div className="mt-20">
+          <DonationCard />
         </div>
       )}
 

@@ -84,38 +84,38 @@ export function ModDetail() {
         subtitle="Real-time module performance tracking across global network"
       />
 
-      <section className="space-y-8">
-        <div className="flex items-center justify-between border-b border-white/5 pb-6">
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">
+      <section className="space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
+          <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter">
             📡 Active Deployed Servers
           </h2>
-          <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+          <span className="text-[9px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">
             Displaying {(mod.servers || []).length} Intel Nodes
           </span>
         </div>
 
         {!mod.servers || mod.servers.length === 0 ? (
-          <div className="p-20 text-center border-2 border-dashed border-white/5">
-            <p className="text-xl font-black text-gray-700 uppercase tracking-widest">No active deployments detected</p>
+          <div className="p-12 sm:p-20 text-center border-2 border-dashed border-white/5">
+            <p className="text-lg sm:text-xl font-black text-gray-700 uppercase tracking-widest">No active deployments detected</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {(mod.servers || []).map((server: any) => (
               <Card key={server.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all">
-                <CardContent className="p-8 space-y-6">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-black text-white uppercase truncate">{server.name}</h3>
-                    <p className="text-[9px] font-mono text-gray-600 font-bold uppercase tracking-widest">{server.ip}:{server.port}</p>
+                <CardContent className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+                  <div className="space-y-2 sm:space-y-3">
+                    <h3 className="text-base sm:text-lg font-black text-white uppercase truncate">{server.name}</h3>
+                    <p className="text-[8px] sm:text-[9px] font-mono text-gray-600 font-bold uppercase tracking-widest">{server.ip}:{server.port}</p>
                   </div>
-                  
-                  <div className="flex justify-between items-end">
+
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
                     <div className="space-y-1">
-                       <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest">Loadout Status</p>
-                       <p className="text-xl font-black text-white">{server.players} / {server.maxPlayers}</p>
+                       <p className="text-[7px] sm:text-[8px] text-gray-600 font-black uppercase tracking-widest">Loadout Status</p>
+                       <p className="text-base sm:text-xl font-black text-white">{server.players} / {server.maxPlayers}</p>
                     </div>
-                    <Link 
+                    <Link
                       to={`/server/${server.id}`}
-                      className="px-6 py-3 bg-white/5 border border-white/10 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
+                      className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-white/5 border border-white/10 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all text-center"
                     >
                       Inspect →
                     </Link>

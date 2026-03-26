@@ -124,46 +124,55 @@ export function ServerDetail() {
 
       <section className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-8">
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter whitespace-nowrap">
+          <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter whitespace-nowrap">
             📦 Installed Mod Stack
           </h2>
-          
-          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-            <input 
+
+          <div className="flex flex-col gap-3 w-full md:w-auto">
+            <input
               type="text"
               placeholder="Filter modules..."
               value={modSearch}
               onChange={(e) => setModSearch(e.target.value)}
-              className="px-6 py-3 bg-black/40 border border-white/10 text-[10px] font-black text-white uppercase tracking-widest outline-none focus:border-tactical-orange transition-all min-w-[200px]"
+              className="px-4 py-3 bg-black/40 border border-white/10 text-[10px] font-black text-white uppercase tracking-widest outline-none focus:border-tactical-orange transition-all w-full"
             />
-            <select 
-              value={personnelFilter}
-              onChange={(e) => setPersonnelFilter(e.target.value as any)}
-              className="px-6 py-3 bg-zinc-900 border border-white/10 text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all"
-            >
-              <option value="all" className="bg-zinc-900 text-white">Personnel: All</option>
-              <option value="high" className="bg-zinc-900 text-white">Personnel: High (500+)</option>
-              <option value="medium" className="bg-zinc-900 text-white">Personnel: Med (100+)</option>
-              <option value="low" className="bg-zinc-900 text-white">Personnel: New/Low</option>
-            </select>
-            <select 
-              value={rankFilter}
-              onChange={(e) => setRankFilter(e.target.value as any)}
-              className="px-6 py-3 bg-zinc-900 border border-white/10 text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all"
-            >
-              <option value="all" className="bg-zinc-900 text-white">Rank: All</option>
-              <option value="top100" className="bg-zinc-900 text-white">Global Top 100</option>
-              <option value="top500" className="bg-zinc-900 text-white">Global Top 500</option>
-              <option value="top1000" className="bg-zinc-900 text-white">Global Top 1000</option>
-            </select>
-            <select 
-              value={modSort}
-              onChange={(e) => setModSort(e.target.value as any)}
-              className="px-6 py-3 bg-zinc-900 border border-white/10 text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all"
-            >
-              <option value="players" className="bg-zinc-900 text-white">Best Played</option>
-              <option value="rank" className="bg-zinc-900 text-white">Global Rank</option>
-            </select>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <select
+                value={personnelFilter}
+                onChange={(e) => setPersonnelFilter(e.target.value as any)}
+                className="px-2 py-3 bg-zinc-900 border border-white/10 text-[8px] sm:text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all"
+              >
+                <option value="all" className="bg-zinc-900 text-white">Personnel: All</option>
+                <option value="high" className="bg-zinc-900 text-white">High (500+)</option>
+                <option value="medium" className="bg-zinc-900 text-white">Med (100+)</option>
+                <option value="low" className="bg-zinc-900 text-white">New/Low</option>
+              </select>
+              <select
+                value={rankFilter}
+                onChange={(e) => setRankFilter(e.target.value as any)}
+                className="px-2 py-3 bg-zinc-900 border border-white/10 text-[8px] sm:text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all"
+              >
+                <option value="all" className="bg-zinc-900 text-white">Rank: All</option>
+                <option value="top100" className="bg-zinc-900 text-white">Top 100</option>
+                <option value="top500" className="bg-zinc-900 text-white">Top 500</option>
+                <option value="top1000" className="bg-zinc-900 text-white">Top 1000</option>
+              </select>
+              <select
+                value={modSort}
+                onChange={(e) => setModSort(e.target.value as any)}
+                className="px-2 py-3 bg-zinc-900 border border-white/10 text-[8px] sm:text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all col-span-2 sm:col-span-1"
+              >
+                <option value="players" className="bg-zinc-900 text-white">Best Played</option>
+                <option value="rank" className="bg-zinc-900 text-white">Global Rank</option>
+                <option value="name" className="bg-zinc-900 text-white">Name</option>
+              </select>
+              <button
+                onClick={() => { setModSearch(''); setPersonnelFilter('all'); setRankFilter('all'); setModSort('players'); }}
+                className="px-2 py-3 border border-white/10 text-[8px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-tactical-orange transition-all"
+              >
+                Reset
+              </button>
+            </div>
           </div>
         </div>
 
@@ -172,60 +181,60 @@ export function ServerDetail() {
             <p className="text-xl font-black text-gray-700 uppercase tracking-widest">No modules matching scan parameters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {sortedAndFilteredMods.map((mod: any) => {
-              const marketshare = ((mod.serverCount || 0) / 7669) * 100; // Will be dynamic from API
+              const marketshare = ((mod.serverCount || 0) / 7669) * 100;
               return (
               <Card key={mod.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group overflow-hidden">
-                <CardContent className="p-8 space-y-6 relative">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                      <div className="space-y-1">
-                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Player Rank</p>
-                        <p className="text-lg font-black text-white font-mono">#{mod.playerRank}</p>
+                <CardContent className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 relative">
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2 sm:pb-3">
+                      <div className="space-y-0.5 sm:space-y-1">
+                        <p className="text-[7px] sm:text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Player Rank</p>
+                        <p className="text-base sm:text-lg font-black text-white font-mono">#{mod.playerRank}</p>
                       </div>
-                      <div className="space-y-1 text-right">
-                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Server Rank</p>
-                        <p className="text-lg font-black text-white font-mono">#{mod.serverRank}</p>
+                      <div className="space-y-0.5 sm:space-y-1 text-right">
+                        <p className="text-[7px] sm:text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Server Rank</p>
+                        <p className="text-base sm:text-lg font-black text-white font-mono">#{mod.serverRank}</p>
                       </div>
                     </div>
 
                     <Link to={`/mod/${mod.id}`}>
-                      <h3 className="text-lg font-black text-white uppercase leading-tight group-hover:text-tactical-orange transition-colors">
+                      <h3 className="text-base sm:text-lg font-black text-white uppercase leading-tight group-hover:text-tactical-orange transition-colors line-clamp-2">
                         {mod.name}
                       </h3>
                     </Link>
-                    <p className="text-[9px] font-mono text-gray-600 uppercase tracking-widest truncate">{mod.id}</p>
+                    <p className="text-[7px] sm:text-[9px] font-mono text-gray-600 uppercase tracking-widest truncate">{mod.id}</p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
-                     <div className="space-y-1">
-                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Personnel</p>
-                        <p className="text-xs font-black text-white font-mono">{(mod.totalPlayers || 0).toLocaleString()}</p>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4 border-t border-white/5 pt-3 sm:pt-4">
+                     <div className="space-y-0.5 sm:space-y-1">
+                        <p className="text-[7px] sm:text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Personnel</p>
+                        <p className="text-xs sm:text-xs font-black text-white font-mono">{(mod.totalPlayers || 0).toLocaleString()}</p>
                      </div>
-                     <div className="space-y-1">
-                        <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Deployments</p>
-                        <p className="text-xs font-black text-white font-mono">{mod.serverCount || 0}</p>
+                     <div className="space-y-0.5 sm:space-y-1">
+                        <p className="text-[7px] sm:text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Deployments</p>
+                        <p className="text-xs sm:text-xs font-black text-white font-mono">{mod.serverCount || 0}</p>
                      </div>
                   </div>
 
-                  <div className="border-t border-white/5 pt-3">
-                    <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Marketshare</p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <div className="flex-1 h-2 bg-white/5 overflow-hidden">
+                  <div className="border-t border-white/5 pt-2 sm:pt-3">
+                    <p className="text-[7px] sm:text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Marketshare</p>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-1">
+                      <div className="flex-1 h-1.5 sm:h-2 bg-white/5 overflow-hidden">
                         <div
                           className="h-full bg-tactical-orange transition-all duration-500"
                           style={{ width: `${Math.min(marketshare, 100)}%` }}
                         />
                       </div>
-                      <p className="text-xs font-black text-tactical-orange font-mono">{marketshare.toFixed(1)}%</p>
+                      <p className="text-[10px] sm:text-xs font-black text-tactical-orange font-mono">{marketshare.toFixed(1)}%</p>
                     </div>
                   </div>
 
-                  <div className="flex gap-4 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 pt-2">
                     <Link
                       to={`/mod/${mod.id}`}
-                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 text-[9px] font-black text-gray-400 text-center uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
+                      className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-white/5 border border-white/10 text-[8px] sm:text-[9px] font-black text-gray-400 text-center uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
                     >
                       Module Intel
                     </Link>
@@ -233,7 +242,7 @@ export function ServerDetail() {
                       href={`https://reforger.armaplatform.com/workshop/${mod.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-3 bg-white/5 border border-white/10 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-white hover:text-black transition-all"
+                      className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-3 bg-white/5 border border-white/10 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-white hover:text-black transition-all text-center"
                     >
                       Workshop ↗
                     </a>

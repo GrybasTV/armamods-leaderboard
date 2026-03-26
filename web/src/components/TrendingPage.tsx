@@ -55,6 +55,11 @@ export function TrendingPage() {
   const currentMods = trending[activeCategory];
   const hasNoData = currentMods.length === 0;
 
+  // Sort new mods by overall rank
+  const sortedCurrentMods = activeCategory === 'new' 
+    ? [...currentMods].sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999))
+    : currentMods;
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Unknown';
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -145,7 +150,7 @@ export function TrendingPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {currentMods.map((mod) => (
+              {sortedCurrentMods.map((mod) => (
                 <Card key={mod.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group">
                   <CardContent className="p-8 space-y-6">
                     <div className="space-y-2">
