@@ -617,7 +617,7 @@ export default {
   fetch: (request: any, env: any, ctx: any) => app.fetch(request, env, ctx),
   async scheduled(event: any, env: any, ctx: any) {
     const cron = event.cron;
-    if (cron === '0 * * * *') {
+    if (cron === '0 */4 * * *') {
       ctx.waitUntil(runCollector(env));
     }
     if (cron === '0 3 * * *') {
