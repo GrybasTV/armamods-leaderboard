@@ -1,8 +1,12 @@
 import axios from 'axios';
 import type { Mod, Server, ApiResponse, TrendingResponse } from '../types';
 
-// Use relative path - API requests will be proxied via Cloudflare Pages Functions
-const API_BASE = '/api';
+// Produkcijoje – tiesiogiai į Worker (Pages Functions neveikia patikimai)
+// Lokaliai – Vite proxy peradresuoja /api į Worker
+const IS_PROD = import.meta.env.PROD;
+const API_BASE = IS_PROD
+  ? 'https://armamods-leaderboard.pauliusmed.workers.dev/api'
+  : '/api';
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -18,7 +22,7 @@ export const modsApi = {
   },
 
   getById: async (modId: string) => {
-    const response = await api.get<{ data: Mod & { stats: any; servers: Server[] } }>(`mods/${modId}`);
+    const response = await api.get<{ data: Mod & { stats: { totalPlayers: number; serverCount: number; playerRank: number; serverRank: number }; servers: Server[] } }>(`mods/${modId}`);
     return response.data;
   },
 
