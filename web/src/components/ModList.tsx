@@ -2,6 +2,7 @@ import { useMods } from '../hooks/useMods';
 import { ModCard } from './ModCard';
 import { StatusState } from './ui/StatusState';
 import { StatsHero } from './ui/StatsHero';
+import { DonationCard } from './DonationCard';
 
 export function ModList() {
   const { 
@@ -35,7 +36,7 @@ export function ModList() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <StatsHero 
+      <StatsHero
         title="Mod Popularity Leaderboard"
         subtitle="Discover which mods are actually being played by the community right now."
         stats={[
@@ -45,6 +46,8 @@ export function ModList() {
           { label: 'Pages', value: stats.totalPages }
         ]}
       />
+
+      <DonationCard />
 
       {/* Sleeker Glassmorphic Filter Bar */}
       <div className="sticky top-4 z-50 mb-12">
