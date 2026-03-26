@@ -184,7 +184,7 @@ export function ServerDetail() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {sortedAndFilteredMods.map((mod: Mod) => {
+            {sortedAndFilteredMods.map((mod: any) => {
               const marketshare = ((mod.serverCount || 0) / 7669) * 100;
               return (
               <Card key={mod.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group overflow-hidden">
