@@ -18,10 +18,15 @@ export function ModCard({ mod, rank }: ModCardProps) {
         <div className="flex flex-col gap-4 sm:gap-6">
           <div className="flex items-center justify-between border-b border-white/5 pb-3 sm:pb-4">
             <div className="flex items-center gap-2 sm:gap-3">
-               <div className={`w-1 h-1 rounded-full ${isTop3 ? 'bg-tactical-orange animate-pulse' : 'bg-gray-700'}`}></div>
-               <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 group-hover:text-tactical-orange transition-colors truncate max-w-[120px] sm:max-w-none">
-                 [ ASSET_{mod.id.slice(0, 4)} ]
-               </span>
+               <div className={`w-1.5 h-1.5 rounded-full ${isTop3 ? 'bg-tactical-orange animate-pulse' : 'bg-gray-700'}`}></div>
+               <div className="flex flex-col">
+                 <span className="text-[6px] sm:text-[7px] font-black uppercase tracking-[0.3em] text-tactical-orange/80">
+                   OVERALL RANK
+                 </span>
+                 <span className="text-[10px] sm:text-xs font-black text-white uppercase tracking-widest">
+                   # {rank}
+                 </span>
+               </div>
             </div>
             <div className="flex gap-2 sm:gap-4">
               <div className="text-right">

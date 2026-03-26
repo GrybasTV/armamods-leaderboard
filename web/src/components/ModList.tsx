@@ -78,6 +78,7 @@ export function ModList() {
               onChange={(e) => setSortBy(e.target.value as any)}
               className="px-4 py-3 bg-zinc-900 border border-white/10 text-[9px] font-black text-white uppercase tracking-widest cursor-pointer hover:bg-zinc-800 hover:border-tactical-orange transition-all outline-none"
             >
+              <option value="overall" className="bg-zinc-900 text-white">SORT: OVERALL RANK</option>
               <option value="players" className="bg-zinc-900 text-white">SORT: PERSONNEL RANK</option>
               <option value="servers" className="bg-zinc-900 text-white">SORT: SERVER RANK</option>
               <option value="name" className="bg-zinc-900 text-white">SORT: NAME</option>
