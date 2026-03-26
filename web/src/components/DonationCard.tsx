@@ -1,7 +1,7 @@
 import { Card, CardContent } from './ui/Card';
 
 export function DonationCard() {
-  const goal = 500;
+  const goal = 100;
   const paypalUrl = 'https://www.paypal.com/paypalme/sachta2023';
 
   return (
