@@ -20,3 +20,6 @@ ENVIRONMENT = "production"
 
 # Webhook secret for cron-job.org
 WEBHOOK_SECRET = "arma-collector-2025-secret-key-xk9m2p8"
+
+[triggers]
+crons = ["0 * * * *", "0 3 * * *"]

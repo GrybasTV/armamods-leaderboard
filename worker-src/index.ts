@@ -6,6 +6,7 @@ type Bindings = {
   DB: D1Database;
   TRENDING_KV: KVNamespace;
   BATTLEMETRICS_API_KEY?: string;
+  WEBHOOK_SECRET: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -197,7 +198,7 @@ app.get('/api/servers/:serverId', async (c) => {
 // Trending Data - still from KV (unchanged)
 app.get('/api/trending', async (c) => {
   try {
-    const latestData = await c.env.TRENDING_KV.get('snapshot:latest', 'json');
+    const latestData = await c.env.TRENDING_KV.get('snapshot:latest', 'json') as any;
 
     if (!latestData) {
       return c.json({
@@ -260,7 +261,7 @@ async function runCollector(env: Bindings) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
       const servers = data.data || [];
       allServers.push(...servers);
       console.log(`📡 PAGE ${pageCount + 1}: ${servers.length} servers | TOTAL: ${allServers.length}`);
@@ -576,16 +577,13 @@ app.get('/api/webhook/collect', async (c) => {
   }
 
   try {
-    // Set flag in KV that collection was requested
-    await c.env.TRENDING_KV.put('webhook:collect:trigger', JSON.stringify({
-      timestamp: new Date().toISOString(),
-      source: 'cron-job.org'
-    }), { expirationTtl: 3600 }); // Expire in 1 hour
+    // Directly trigger collector in the background
+    c.executionCtx.waitUntil(runCollector(c.env));
 
     return c.json({
       success: true,
-      message: 'Collection triggered',
-      note: 'Run npm run collect:push locally or via GitHub Actions'
+      message: 'Collection triggered in background',
+      note: 'Collector is now running on Cloudflare'
     });
   } catch (err) {
     return c.json({ success: false, error: String(err) }, 500);
