@@ -52,11 +52,11 @@ export function TrendingPage() {
     </div>
   );
 
-  const currentMods = trending[activeCategory];
-  const hasNoData = currentMods.length === 0;
+  const currentMods = trending[activeCategory] || [];
+  const hasNoData = !currentMods || currentMods.length === 0;
 
   // Sort new mods by overall rank
-  const sortedCurrentMods = activeCategory === 'new' 
+  const sortedCurrentMods = activeCategory === 'new' && Array.isArray(currentMods)
     ? [...currentMods].sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999))
     : currentMods;
 
