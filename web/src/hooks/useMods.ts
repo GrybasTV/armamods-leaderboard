@@ -22,16 +22,16 @@ export function useMods() {
     try {
       setLoading(true);
       const offset = (currentPage - 1) * itemsPerPage;
-      
+
       // Fetch both list and global stats
       const [listData, statsData] = await Promise.all([
         modsApi.getPopular(itemsPerPage, offset, searchQuery, sortBy),
         modsApi.getGlobalStats()
       ]);
 
-      setMods(listData.data);
-      setTotalMods(listData.meta.total);
-      setGlobalStats(statsData);
+      setMods(listData?.data || []);
+      setTotalMods(listData?.meta?.total || 0);
+      setGlobalStats(statsData || { totalPlayers: 0, totalServers: 0, totalMods: 0 });
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -52,6 +52,8 @@ export function useMods() {
   }, [currentPage, searchQuery, sortBy, loadMods]);
 
   const filteredMods = useMemo(() => {
+    if (!Array.isArray(mods)) return [];
+    
     let filtered = [...mods];
 
     if (playerFilter !== 'all') {
@@ -77,9 +79,9 @@ export function useMods() {
   const totalPages = Math.ceil(totalMods / itemsPerPage);
 
   const stats = useMemo(() => ({
-    totalMods: globalStats.totalMods,
-    totalPlayers: globalStats.totalPlayers,
-    totalServers: globalStats.totalServers,
+    totalMods: globalStats?.totalMods || 0,
+    totalPlayers: globalStats?.totalPlayers || 0,
+    totalServers: globalStats?.totalServers || 0,
     totalPages
   }), [globalStats, totalPages]);
 
