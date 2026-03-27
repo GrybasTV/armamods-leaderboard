@@ -134,13 +134,15 @@ async function runCollector() {
 
   // Calculate ranks
   const mods = Array.from(modMap.values());
+  const totalServers = serverList.length;
   const byPlayers = [...mods].sort((a, b) => b.totalPlayers - a.totalPlayers);
   const byServers = [...mods].sort((a, b) => b.serverCount - a.serverCount);
 
   const playerRanks = new Map(byPlayers.map((m, i) => [m.id, i + 1]));
   const serverRanks = new Map(byServers.map((m, i) => [m.id, i + 1]));
 
-  const modList = mods.map(m => ({
+  // Create mod list with ranks
+  let modList = mods.map(m => ({
     id: m.id,
     name: m.name,
     serverCount: m.serverCount,
@@ -148,7 +150,12 @@ async function runCollector() {
     playerRank: playerRanks.get(m.id)!,
     serverRank: serverRanks.get(m.id)!,
     overallRank: Math.round((playerRanks.get(m.id)! + serverRanks.get(m.id)!) / 2),
+    marketShare: totalServers > 0 ? ((m.serverCount / totalServers) * 100) : 0,
   }));
+
+  // Sort by overallRank and reassign sequential ranks to avoid gaps
+  modList.sort((a, b) => a.overallRank - b.overallRank);
+  modList = modList.map((m, i) => ({ ...m, overallRank: i + 1 }));
 
   // Update server mods with ranks
   for (const server of serverList) {
@@ -164,8 +171,7 @@ async function runCollector() {
 
   // Global stats
   const totalMods = mods.length;
-  const currentPlayers = serverList.reduce((sum, s) => sum + s.players, 0); // Current online players
-  const totalServers = serverList.length;
+  const currentPlayers = serverList.reduce((sum, s) => sum + s.players, 0);
 
   console.log(`📦 Writing to KV...`);
   console.log(`  - ${modList.length} mods`);

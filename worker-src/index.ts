@@ -371,7 +371,7 @@ async function runCollector(env: Bindings) {
     const serverRanks = new Map(byServers.map((m, i) => [m.id, i + 1]));
 
     // Create mod list with all computed data
-    const modList = mods.map(m => ({
+    let modList = mods.map(m => ({
       id: m.id,
       name: m.name,
       serverCount: m.serverCount,
@@ -379,6 +379,10 @@ async function runCollector(env: Bindings) {
       overallRank: Math.round((playerRanks.get(m.id)! + serverRanks.get(m.id)!) / 2),
       marketShare: totalServers > 0 ? ((m.serverCount / totalServers) * 100) : 0,
     }));
+
+    // Sort by overallRank and reassign sequential ranks to avoid gaps
+    modList.sort((a, b) => a.overallRank - b.overallRank);
+    modList = modList.map((m, i) => ({ ...m, overallRank: i + 1 }));
 
     // Get all server-mod relationships in ONE query
     const { results: allServerMods } = await env.DB.prepare(
