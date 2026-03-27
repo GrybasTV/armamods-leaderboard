@@ -486,10 +486,12 @@ async function runTrendingSnapshot(env: Bindings) {
             changeServers: currentMod.serverCount
           });
         } else {
+          const rankImprovement = prevMod.overallRank - currentMod.overallRank;
           const playerChange = currentMod.totalPlayers - prevMod.totalPlayers;
           const serverChange = currentMod.serverCount - prevMod.serverCount;
 
-          if (playerChange > 50 || serverChange > 5) {
+          // Rising: rank improved (current rank is better/lower number than prev)
+          if (rankImprovement > 0) {
             rising.push({
               id: currentMod.id,
               name: currentMod.name,
@@ -503,7 +505,8 @@ async function runTrendingSnapshot(env: Bindings) {
             });
           }
 
-          if (playerChange < -50 || serverChange < -5) {
+          // Falling: rank dropped (current rank is worse/higher number than prev)
+          if (rankImprovement < 0) {
             falling.push({
               id: currentMod.id,
               name: currentMod.name,
