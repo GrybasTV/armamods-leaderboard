@@ -81,7 +81,6 @@ export function ModList() {
               <option value="overall" className="bg-zinc-900 text-white">SORT: OVERALL RANK</option>
               <option value="players" className="bg-zinc-900 text-white">SORT: PERSONNEL RANK</option>
               <option value="servers" className="bg-zinc-900 text-white">SORT: SERVER RANK</option>
-              <option value="name" className="bg-zinc-900 text-white">SORT: NAME</option>
             </select>
 
             <button

@@ -3,7 +3,7 @@ import { modsApi } from '../api/client';
 import type { Mod } from '../types';
 
 export type PlayerFilter = 'all' | 'high' | 'medium' | 'low';
-export type ModSortBy = 'overall' | 'players' | 'servers' | 'name';
+export type ModSortBy = 'overall' | 'players' | 'servers';
 
 export function useMods() {
   const [mods, setMods] = useState<Mod[]>([]);
