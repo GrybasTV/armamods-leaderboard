@@ -23,7 +23,11 @@ export async function getPopularMods(req: Request, res: Response) {
     if (sortBy === 'servers') orderBy.serverCount = 'desc';
     else if (sortBy === 'name') orderBy.name = 'asc';
     else if (sortBy === 'players') orderBy.totalPlayers = 'desc';
-    else orderBy.overallRank = 'asc'; // 'overall' is default
+    else {
+      // 'overall' - primary by overallRank ASC, secondary by totalPlayers DESC (tiebreaker)
+      orderBy.overallRank = 'asc';
+      orderBy.totalPlayers = 'desc';
+    }
 
     const mods = await prisma.mod.findMany({
       where,
@@ -31,6 +35,9 @@ export async function getPopularMods(req: Request, res: Response) {
       take: limit,
       skip: offset,
     });
+
+    // Get total servers for market share calculation
+    const totalServers = await prisma.server.count();
 
     const total = await prisma.mod.count({ where });
 
@@ -43,7 +50,8 @@ export async function getPopularMods(req: Request, res: Response) {
         thumbnail: m.thumbnail,
         serverCount: m.serverCount,
         totalPlayers: m.totalPlayers,
-        overallRank: m.overallRank || 9999
+        overallRank: m.overallRank || 9999,
+        marketShare: totalServers > 0 ? ((m.serverCount / totalServers) * 100) : 0
       };
     });
 
@@ -124,7 +132,8 @@ export async function getModDetails(req: Request, res: Response) {
           overallRank: mod.overallRank || 9999,
           playerRank: playerRank || 9999,
           serverRank: serverRank || 9999,
-          totalMods: totalActiveMods
+          totalMods: totalActiveMods,
+          marketShare: totalActiveMods > 0 ? ((mod.serverCount / totalActiveMods) * 100) : 0
         },
         servers: mod.servers.map(sm => ({
           id: sm.server.id,

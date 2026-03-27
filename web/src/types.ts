@@ -8,6 +8,7 @@ export interface Mod {
   playerRank: number;
   serverRank: number;
   overallRank: number;
+  marketShare?: number;
 }
 
 export interface Server {

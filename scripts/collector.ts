@@ -147,7 +147,7 @@ async function runCollector() {
     totalPlayers: m.totalPlayers,
     playerRank: playerRanks.get(m.id)!,
     serverRank: serverRanks.get(m.id)!,
-    overallRank: Math.floor((playerRanks.get(m.id)! + serverRanks.get(m.id)!) / 2),
+    overallRank: Math.round((playerRanks.get(m.id)! + serverRanks.get(m.id)!) / 2),
   }));
 
   // Update server mods with ranks
@@ -316,9 +316,22 @@ async function runTrendingSnapshot() {
     }
   }
 
-  rising.sort((a, b) => (b.prevRank - b.currentRank) - (a.prevRank - a.currentRank));
-  falling.sort((a, b) => (a.prevRank - a.currentRank) - (b.prevRank - b.currentRank));
-  newMods.sort((a, b) => b.totalPlayers - a.totalPlayers);
+  // Sort rising by biggest rank improvement (prevRank - currentRank)
+  rising.sort((a, b) => {
+    const rankChangeA = (a.prevRank || 9999) - (a.currentRank || 9999);
+    const rankChangeB = (b.prevRank || 9999) - (b.currentRank || 9999);
+    return rankChangeB - rankChangeA;
+  });
+  
+  // Sort falling by biggest rank drop
+  falling.sort((a, b) => {
+    const rankChangeA = (a.prevRank || 9999) - (a.currentRank || 9999);
+    const rankChangeB = (b.prevRank || 9999) - (b.currentRank || 9999);
+    return rankChangeA - rankChangeB;
+  });
+  
+  // Sort new mods by best overall rank
+  newMods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
 
   const today = new Date().toISOString().split('T')[0];
   const snapshot = {

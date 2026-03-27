@@ -60,15 +60,9 @@ export function ModDetail() {
               Authorized by: <span className="text-gray-300">{mod.author || 'UNKNOWN_ORIGIN'}</span>
             </p>
           </div>
-          <div className="flex gap-4">
-             <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
-                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Player Rank</p>
-                <p className="text-3xl font-black text-white">#{mod.stats?.playerRank || mod.playerRank || '-'}</p>
-             </div>
-             <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
-                <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Server Rank</p>
-                <p className="text-3xl font-black text-white">#{mod.stats?.serverRank || mod.serverRank || '-'}</p>
-             </div>
+          <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
+            <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Overall Rank</p>
+            <p className="text-3xl font-black text-white">#{mod.stats?.overallRank || mod.overallRank || '-'}</p>
           </div>
         </div>
       </header>
@@ -77,8 +71,8 @@ export function ModDetail() {
         stats={[
           { label: 'Total Personnel', value: mod.stats?.totalPlayers || mod.totalPlayers || 0 },
           { label: 'Deployed Servers', value: mod.stats?.serverCount || mod.serverCount || 0 },
-          { label: 'Players Rank', value: `#${mod.stats?.playerRank || '-'}` },
-          { label: 'Servers Rank', value: `#${mod.stats?.serverRank || '-'}` }
+          { label: 'Marketshare', value: `${(mod.stats?.marketShare || 0).toFixed(1)}%` },
+          { label: 'Overall Rank', value: `#${mod.stats?.overallRank || '-'}` }
         ]}
         title="Tactical Analytics"
         subtitle="Real-time module performance tracking across global network"

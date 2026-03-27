@@ -84,7 +84,14 @@ app.get('/api/mods', async (c) => {
     if (sortBy === 'players') mods.sort((a, b) => (b.totalPlayers || 0) - (a.totalPlayers || 0));
     else if (sortBy === 'servers') mods.sort((a, b) => (b.serverCount || 0) - (a.serverCount || 0));
     else if (sortBy === 'name') mods.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    else mods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
+    else {
+      // 'overall' - primary by overallRank ASC, secondary by totalPlayers DESC (tiebreaker)
+      mods.sort((a, b) => {
+        const rankDiff = (a.overallRank || 9999) - (b.overallRank || 9999);
+        if (rankDiff !== 0) return rankDiff;
+        return (b.totalPlayers || 0) - (a.totalPlayers || 0);
+      });
+    }
 
     // Paginate
     const data = mods.slice(offset, offset + limit);
@@ -125,6 +132,9 @@ app.get('/api/mods/:modId', async (c) => {
 
     const playerRank = byPlayers.findIndex((m: any) => m.id === modId) + 1;
     const serverRank = byServers.findIndex((m: any) => m.id === modId) + 1;
+    const overallRank = Math.round((playerRank + serverRank) / 2);
+    const totalMods = mods.length;
+    const marketShare = totalMods > 0 ? ((mod.serverCount / totalMods) * 100) : 0;
 
     return c.json({
       data: {
@@ -132,7 +142,10 @@ app.get('/api/mods/:modId', async (c) => {
         stats: {
           ...mod,
           playerRank: playerRank || 9999,
-          serverRank: serverRank || 9999
+          serverRank: serverRank || 9999,
+          overallRank: overallRank || 9999,
+          marketShare: marketShare || 0,
+          totalMods: totalMods
         },
         servers: modServers
       }
@@ -363,7 +376,8 @@ async function runCollector(env: Bindings) {
       name: m.name,
       serverCount: m.serverCount,
       totalPlayers: m.totalPlayers,
-      overallRank: Math.floor((playerRanks.get(m.id)! + serverRanks.get(m.id)!) / 2),
+      overallRank: Math.round((playerRanks.get(m.id)! + serverRanks.get(m.id)!) / 2),
+      marketShare: totalServers > 0 ? ((m.serverCount / totalServers) * 100) : 0,
     }));
 
     // Get all server-mod relationships in ONE query
@@ -518,9 +532,21 @@ async function runTrendingSnapshot(env: Bindings) {
       }
     }
 
-    rising.sort((a, b) => b.changePlayers - a.changePlayers);
-    falling.sort((a, b) => a.changePlayers - b.changePlayers);
-    newMods.sort((a, b) => b.totalPlayers - a.totalPlayers);
+    // Sort rising by biggest rank improvement (prevRank - currentRank)
+    rising.sort((a, b) => {
+      const rankChangeA = (a.prevRank || 9999) - (a.currentRank || 9999);
+      const rankChangeB = (b.prevRank || 9999) - (b.currentRank || 9999);
+      return rankChangeB - rankChangeA;
+    });
+    
+    // Sort falling by biggest rank drop
+    falling.sort((a, b) => {
+      const rankChangeA = (a.prevRank || 9999) - (a.currentRank || 9999);
+      const rankChangeB = (b.prevRank || 9999) - (b.currentRank || 9999);
+      return rankChangeA - rankChangeB;
+    });
+    
+    newMods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
 
     const snapshot = {
       date: today,

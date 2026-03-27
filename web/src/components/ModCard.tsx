@@ -9,8 +9,6 @@ interface ModCardProps {
 
 export function ModCard({ mod, rank }: ModCardProps) {
   const isTop3 = rank && rank <= 3;
-  const playerRank = mod.playerRank ?? rank;
-  const serverRank = mod.serverRank ?? rank;
 
   return (
     <Card className="group relative border-white/5 border-l-2 border-l-zinc-700 hover:border-l-tactical-orange transition-all overflow-hidden bg-black/40">
@@ -28,16 +26,6 @@ export function ModCard({ mod, rank }: ModCardProps) {
                  </span>
                </div>
             </div>
-            <div className="flex gap-2 sm:gap-4">
-              <div className="text-right">
-                <p className="text-[6px] sm:text-[7px] text-gray-700 font-black uppercase tracking-[0.2em]">Players</p>
-                <p className="text-xs sm:text-sm font-black text-white">#{playerRank}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[6px] sm:text-[7px] text-gray-700 font-black uppercase tracking-[0.2em]">Servers</p>
-                <p className="text-xs sm:text-sm font-black text-white">#{serverRank}</p>
-              </div>
-            </div>
           </div>
 
           <Link to={`/mod/${mod.id}`}>
@@ -47,7 +35,7 @@ export function ModCard({ mod, rank }: ModCardProps) {
           </Link>
         </div>
 
-        {/* Improved Stats Grid */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4 border-y border-white/5 py-4 sm:py-6">
           <div className="space-y-1">
             <p className="text-[7px] sm:text-[8px] text-gray-600 font-black uppercase tracking-[0.3em] font-mono italic">Personnel</p>
@@ -64,13 +52,13 @@ export function ModCard({ mod, rank }: ModCardProps) {
           <div className="flex items-center justify-between">
             <p className="text-[6px] sm:text-[7px] text-gray-600 font-black uppercase tracking-[0.2em]">Marketshare</p>
             <p className="text-[7px] sm:text-[8px] font-black text-tactical-orange font-mono">
-              {(((mod.serverCount || 0) / 7669) * 100).toFixed(1)}%
+              {(mod.marketShare || 0).toFixed(1)}%
             </p>
           </div>
           <div className="h-1.5 bg-white/5 overflow-hidden">
             <div
               className="h-full bg-tactical-orange/50 group-hover:bg-tactical-orange transition-all duration-500"
-              style={{ width: `${Math.min(((mod.serverCount || 0) / 7669) * 100, 100)}%` }}
+              style={{ width: `${Math.min(mod.marketShare || 0, 100)}%` }}
             />
           </div>
         </div>

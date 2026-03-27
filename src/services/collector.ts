@@ -129,7 +129,7 @@ export class CollectorService {
       for (const m of modsWithStats) {
         const pRank = playerRankMap.get(m.id);
         const sRank = serverRankMap.get(m.id);
-        const hybridRank = Math.floor((pRank + sRank) / 2);
+        const hybridRank = Math.round((pRank + sRank) / 2);
 
         await prisma.mod.update({
           where: { id: m.id },
