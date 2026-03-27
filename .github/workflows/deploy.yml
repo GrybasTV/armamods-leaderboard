@@ -1,10 +1,10 @@
-name: Deploy Frontend to Cloudflare Pages
+name: Deploy Full Stack (Frontend + Backend)
 
 on:
   push:
     branches:
-      - main        # Kiekvienas push į main atnaujina frontend
-  workflow_dispatch: # Rankinis paleidimas iš GitHub UI
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -35,8 +35,23 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: web/package-lock.json
 
+      - name: Install dependencies
+        run: npm ci
+
+      # ========== BACKEND (Workers) ==========
+      - name: Build backend
+        run: echo "Backend build not required (using TS directly)"
+
+      - name: Deploy backend to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          workingDirectory: .
+
+      # ========== FRONTEND (Pages) ==========
       - name: Install web dependencies
         working-directory: web
         run: npm ci
@@ -47,7 +62,7 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy frontend to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
