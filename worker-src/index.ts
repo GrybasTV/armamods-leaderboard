@@ -380,8 +380,11 @@ async function runCollector(env: Bindings) {
       marketShare: totalServers > 0 ? ((m.serverCount / totalServers) * 100) : 0,
     }));
 
-    // Sort by overallRank and reassign sequential ranks to avoid gaps
-    modList.sort((a, b) => a.overallRank - b.overallRank);
+    // Sort by overallRank, then by totalPlayers (desc) for tie-breaking, then assign sequential ranks
+    modList.sort((a, b) => {
+      if (a.overallRank !== b.overallRank) return a.overallRank - b.overallRank;
+      return b.totalPlayers - a.totalPlayers; // More players = better rank
+    });
     modList = modList.map((m, i) => ({ ...m, overallRank: i + 1 }));
 
     // Get all server-mod relationships in ONE query
