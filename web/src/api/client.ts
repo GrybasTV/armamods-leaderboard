@@ -52,8 +52,10 @@ export const serversApi = {
 };
 
 export const trendingApi = {
-  getTrending: async () => {
-    const response = await api.get<TrendingResponse>('trending');
+  getTrending: async (period: import('../types').TrendPeriod = '24h') => {
+    const response = await api.get<TrendingResponse>('trending', {
+      params: { period }
+    });
     return response.data;
   },
 };

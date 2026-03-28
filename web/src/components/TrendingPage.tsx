@@ -4,7 +4,7 @@ import { trendingApi } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
-import type { TrendingMod } from '../types';
+import type { TrendingMod, TrendPeriod } from '../types';
 
 type TrendCategory = 'rising' | 'falling' | 'new';
 
@@ -17,38 +17,30 @@ export function TrendingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<TrendCategory>('rising');
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [activePeriod, setActivePeriod] = useState<TrendPeriod>('24h');
+  const [comparisonDate, setComparisonDate] = useState<string | null>(null);
 
   const loadTrending = useCallback(async () => {
     try {
-      console.log("Starting loadTrending...");
       setLoading(true);
-      const data = await trendingApi.getTrending();
-      console.log("API Response received:", data);
+      const data = await trendingApi.getTrending(activePeriod);
       
-      if (!data) {
-        console.warn("API returned no data object");
-        return;
-      }
-
-      if (data.data) {
+      if (data && data.data) {
         setTrending({
-          rising: data.data.rising || [],
-          falling: data.data.falling || [],
-          new: data.data.new || []
+          rising: data.data.rising,
+          falling: data.data.falling,
+          new: data.data.new
         });
       }
       
-      const lu = (data && data.meta) ? data.meta.lastUpdated : null;
-      setLastUpdated(lu || null);
+      setComparisonDate(data?.meta?.comparisonDate || null);
       setError(null);
     } catch (err) {
-      console.error("Error in loadTrending:", err);
       setError(err instanceof Error ? err.message : 'Failed to load trending data');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activePeriod]);
 
   useEffect(() => {
     loadTrending();
@@ -91,17 +83,6 @@ export function TrendingPage() {
           : currentMods
     : currentMods;
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Unknown';
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const getCategoryLabel = (cat: TrendCategory) => {
     switch (cat) {
       case 'rising': return '📈 Rising Mods';
@@ -127,8 +108,23 @@ export function TrendingPage() {
               Trending Intelligence
             </h1>
             <p className="text-gray-500 font-bold uppercase tracking-[0.2em]">
-              Daily performance analysis • Last updated: {formatDate(lastUpdated)}
+              {activePeriod === '24h' ? 'Daily' : activePeriod === '7d' ? 'Weekly' : 'Monthly'} analysis • Comparison vs: {comparisonDate ? new Date(comparisonDate).toLocaleDateString() : 'Baseline'}
             </p>
+          </div>
+          <div className="flex gap-2">
+            {(['24h', '7d', '30d'] as TrendPeriod[]).map((period) => (
+              <button
+                key={period}
+                onClick={() => setActivePeriod(period)}
+                className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                  activePeriod === period
+                    ? 'bg-white text-black'
+                    : 'bg-zinc-800 text-gray-400 hover:text-white'
+                }`}
+              >
+                {period === '24h' ? '24 HOURS' : period === '7d' ? '7 DAYS' : '30 DAYS'}
+              </button>
+            ))}
           </div>
         </div>
       </header>
@@ -138,7 +134,7 @@ export function TrendingPage() {
           { label: 'Rising Mods', value: trending?.rising?.length || 0 },
           { label: 'Falling Mods', value: trending?.falling?.length || 0 },
           { label: 'New Mods', value: trending?.new?.length || 0 },
-          { label: 'Analysis Period', value: '24 Hours' }
+          { label: 'Analysis Period', value: activePeriod === '24h' ? '24 Hours' : activePeriod === '7d' ? '7 Days' : '30 Days' }
         ]}
         title="Network Movement Overview"
         subtitle="Daily snapshot of mod performance trends across all active servers"

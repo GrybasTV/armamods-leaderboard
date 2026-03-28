@@ -63,6 +63,8 @@ export interface TrendingResponse {
   data: TrendingData;
   meta: {
     lastUpdated: string | null;
+    period?: string;
+    comparisonDate?: string;
     snapshotDate?: string;
     error?: string;
   };
@@ -74,3 +76,5 @@ export interface ModHistory {
   serverCount: number;
   overallRank: number;
 }
+
+export type TrendPeriod = '24h' | '7d' | '30d';

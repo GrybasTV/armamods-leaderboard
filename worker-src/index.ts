@@ -228,35 +228,91 @@ app.get('/api/servers/:serverId', async (c) => {
   }
 });
 
-// Trending Data - still from KV (unchanged)
+// Trending Data - Now using SQL for historical comparison
 app.get('/api/trending', async (c) => {
-  try {
-    const latestData = await c.env.TRENDING_KV.get('snapshot:latest', 'json') as any;
+  const period = (c.req.query('period') || '24h') as '24h' | '7d' | '30d';
 
-    if (!latestData) {
-      return c.json({
-        data: { rising: [], falling: [], new: [] },
-        meta: { lastUpdated: null, nextUpdate: null }
-      });
+  try {
+    const today = new Date();
+    const currentMods = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.MODS) as any[];
+
+    if (!currentMods || currentMods.length === 0) {
+      return c.json({ data: { rising: [], falling: [], new: [] }, meta: { error: 'No current mod data' } });
     }
 
-    const limit = 50;
+    // Determine target date for comparison
+    const targetDate = new Date(today);
+    if (period === '7d') targetDate.setDate(today.getDate() - 7);
+    else if (period === '30d') targetDate.setDate(today.getDate() - 30);
+    else targetDate.setDate(today.getDate() - 1);
+
+    const dateStr = targetDate.toISOString().split('T')[0];
+
+    // Get historical data from SQL
+    const { results } = await c.env.DB.prepare(`
+      SELECT modId, overallRank, totalPlayers, serverCount
+      FROM ModHistory
+      WHERE date = ?
+    `).bind(dateStr).all();
+
+    const historicalMods = (results || []) as any[];
+    const prevModMap = new Map(historicalMods.map(m => [m.modId, m]));
+
+    const rising: any[] = [];
+    const falling: any[] = [];
+    const newMods: any[] = [];
+
+    for (const mod of currentMods) {
+      const prev = prevModMap.get(mod.id);
+
+      if (!prev) {
+        // If it's a new mod (created recently)
+        newMods.push({
+          ...mod,
+          changePlayers: mod.totalPlayers,
+          changeServers: mod.serverCount
+        });
+      } else {
+        const rankImprovement = (prev.overallRank || 9999) - (mod.overallRank || 9999);
+        const playerChange = mod.totalPlayers - prev.totalPlayers;
+        const serverChange = mod.serverCount - prev.serverCount;
+
+        const trendInfo = {
+          ...mod,
+          prevRank: prev.overallRank,
+          currentRank: mod.overallRank,
+          changePlayers: playerChange,
+          changeServers: serverChange
+        };
+
+        if (rankImprovement > 0) rising.push(trendInfo);
+        else if (rankImprovement < 0) falling.push(trendInfo);
+      }
+    }
+
+    // Sort rising by biggest rank improvement
+    rising.sort((a, b) => (b.prevRank - b.currentRank) - (a.prevRank - a.currentRank));
+    // Sort falling by biggest rank drop
+    falling.sort((a, b) => (a.currentRank - a.prevRank) - (b.currentRank - b.prevRank));
+    // Sort new by best rank
+    newMods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
+
+    const limit = 100;
     return c.json({
       data: {
-        rising: (latestData.rising || []).slice(0, limit),
-        falling: (latestData.falling || []).slice(0, limit),
-        new: (latestData.new || []).slice(0, limit)
+        rising: rising.slice(0, limit),
+        falling: falling.slice(0, limit),
+        new: newMods.slice(0, limit)
       },
       meta: {
-        lastUpdated: latestData.timestamp,
-        snapshotDate: latestData.date
+        period,
+        comparisonDate: dateStr,
+        lastUpdated: new Date().toISOString()
       }
     });
+
   } catch (err) {
-    return c.json({
-      data: { rising: [], falling: [], new: [] },
-      meta: { error: String(err) }
-    }, 500);
+    return c.json({ data: { rising: [], falling: [], new: [] }, meta: { error: String(err) } }, 500);
   }
 });
 
