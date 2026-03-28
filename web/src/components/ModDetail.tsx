@@ -4,10 +4,13 @@ import { modsApi } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import type { ModHistory } from '../types';
 
 export function ModDetail() {
   const { modId } = useParams<{ modId: string }>();
   const [mod, setMod] = useState<any>(null);
+  const [history, setHistory] = useState<ModHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,8 +18,12 @@ export function ModDetail() {
     if (!modId) return;
     try {
       setLoading(true);
-      const data = await modsApi.getById(modId);
+      const [data, historyData] = await Promise.all([
+        modsApi.getById(modId),
+        modsApi.getHistory(modId).catch(() => ({ data: [] }))
+      ]);
       setMod(data.data);
+      setHistory(historyData.data);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load mission data');
@@ -77,6 +84,78 @@ export function ModDetail() {
         title="Tactical Analytics"
         subtitle="Real-time module performance tracking across global network"
       />
+
+      {history && history.length > 0 && (
+        <section className="space-y-6 sm:space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter">
+              📈 Active Duty Trend (30 Days)
+            </h2>
+          </div>
+          <Card className="border-l-4 border-l-tactical-orange bg-zinc-900/50 backdrop-blur-sm">
+            <CardContent className="p-4 sm:p-6 lg:p-8 h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#666" 
+                    tickFormatter={(tick) => {
+                      const d = new Date(tick);
+                      return `${d.getMonth()+1}/${d.getDate()}`;
+                    }}
+                    tick={{ fontSize: 10, fill: '#666', fontWeight: 'bold' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    yAxisId="players"
+                    stroke="#f97316" 
+                    tick={{ fontSize: 10, fill: '#f97316', fontWeight: 'bold' }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={40}
+                  />
+                  <YAxis 
+                    yAxisId="servers"
+                    orientation="right"
+                    stroke="#db2777" 
+                    tick={{ fontSize: 10, fill: '#db2777', fontWeight: 'bold' }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={40}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '4px' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                    labelStyle={{ color: '#666', fontSize: '10px', fontWeight: 'bold', marginBottom: '8px' }}
+                  />
+                  <Line 
+                    yAxisId="players"
+                    type="monotone" 
+                    dataKey="totalPlayers" 
+                    name="Deployed Personnel"
+                    stroke="#f97316" 
+                    strokeWidth={3}
+                    dot={false}
+                    activeDot={{ r: 6, fill: '#f97316', stroke: '#18181b', strokeWidth: 2 }}
+                  />
+                  <Line 
+                    yAxisId="servers"
+                    type="monotone" 
+                    dataKey="serverCount" 
+                    name="Active Servers"
+                    stroke="#db2777" 
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4, fill: '#db2777', stroke: '#18181b', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       <section className="space-y-6 sm:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">

@@ -26,6 +26,11 @@ export const modsApi = {
     return response.data;
   },
 
+  getHistory: async (modId: string) => {
+    const response = await api.get<{ data: import('../types').ModHistory[] }>(`mods/${modId}/history`);
+    return response.data;
+  },
+
   getGlobalStats: async () => {
     const response = await api.get<{ totalServers: number; totalPlayers: number; totalMods: number }>('stats');
     return response.data;

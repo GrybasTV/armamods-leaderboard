@@ -37,6 +37,7 @@ model Mod {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   servers     ServerMod[]
+  history     ModHistory[]
 
   @@index([name])
   @@index([totalPlayers])
@@ -53,4 +54,19 @@ model ServerMod {
   @@id([serverId, modId])
   @@index([modId])
   @@index([serverId])
+}
+
+model ModHistory {
+  id           String   @id @default(cuid())
+  modId        String
+  date         String   // YYYY-MM-DD format
+  totalPlayers Int
+  serverCount  Int
+  overallRank  Int
+  createdAt    DateTime @default(now())
+  mod          Mod      @relation(fields: [modId], references: [id], onDelete: Cascade)
+
+  @@unique([modId, date])
+  @@index([modId])
+  @@index([date])
 }

@@ -155,6 +155,26 @@ app.get('/api/mods/:modId', async (c) => {
   }
 });
 
+// Mod History (30 days) from D1
+app.get('/api/mods/:modId/history', async (c) => {
+  const modId = c.req.param('modId');
+  try {
+    const { results } = await c.env.DB.prepare(`
+      SELECT date, totalPlayers, serverCount, overallRank
+      FROM ModHistory
+      WHERE modId = ?
+      ORDER BY date DESC
+      LIMIT 60
+    `).bind(modId).all();
+
+    // Reverse to get chronological order (oldest -> newest) for charts
+    const data = results ? [...results].reverse() : [];
+    return c.json({ data });
+  } catch (err) {
+    return c.json({ error: String(err) }, 500);
+  }
+});
+
 // All Servers
 app.get('/api/servers', async (c) => {
   const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
@@ -567,10 +587,48 @@ async function runTrendingSnapshot(env: Bindings) {
       new: newMods.slice(0, 100)
     };
 
+    // Save daily snapshots to KV
     await env.TRENDING_KV.put('snapshot:latest', JSON.stringify(snapshot));
     await env.TRENDING_KV.put(`snapshot:${today}`, JSON.stringify(snapshot), {
       expirationTtl: 30 * 24 * 60 * 60
     });
+
+    // ------------------------------------------------------------------------
+    // NEW: Save historical daily stats to D1 ModHistory table
+    // ------------------------------------------------------------------------
+    console.log("📊 SAVING HISTORY TO D1...");
+    const statements: any[] = [];
+    
+    // Fallback ID generator in case crypto.randomUUID is not available in context
+    const generateId = () => {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+      return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    };
+
+    for (const mod of mods) {
+      statements.push(env.DB.prepare(`
+        INSERT INTO ModHistory (id, modId, date, totalPlayers, serverCount, overallRank, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(modId, date) DO UPDATE SET
+          totalPlayers=excluded.totalPlayers,
+          serverCount=excluded.serverCount,
+          overallRank=excluded.overallRank
+      `).bind(
+        generateId(),
+        mod.id, 
+        today, 
+        mod.totalPlayers || 0, 
+        mod.serverCount || 0, 
+        mod.overallRank || 9999
+      ));
+    }
+
+    console.log(`📦 PREPARED ${statements.length} HISTORY STATEMENTS`);
+    if (statements.length > 0) {
+      for (let i = 0; i < statements.length; i += 50) {
+        await env.DB.batch(statements.slice(i, i + 50));
+      }
+    }
 
     console.log(`✅ TRENDING_SNAPSHOT: ${rising.length} rising, ${falling.length} falling, ${newMods.length} new`);
 

@@ -67,3 +67,10 @@ export interface TrendingResponse {
     error?: string;
   };
 }
+
+export interface ModHistory {
+  date: string;
+  totalPlayers: number;
+  serverCount: number;
+  overallRank: number;
+}
