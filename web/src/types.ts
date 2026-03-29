@@ -1,12 +1,12 @@
 export interface Mod {
   id: string; // The modId from workshop
   name: string;
-  author: string | null;
-  thumbnail: string | null;
+  author?: string | null;
+  thumbnail?: string | null;
   serverCount: number;
   totalPlayers: number;
-  playerRank: number;
-  serverRank: number;
+  playerRank?: number;
+  serverRank?: number;
   overallRank: number;
   marketShare?: number;
 }

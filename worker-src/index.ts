@@ -2,12 +2,42 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-type Bindings = {
+interface Mod {
+  id: string;
+  name: string;
+  serverCount: number;
+  totalPlayers: number;
+  overallRank: number;
+  marketShare: number;
+}
+
+interface Server {
+  id: string;
+  name: string;
+  ip: string;
+  port: number;
+  players: number;
+  maxPlayers: number;
+  mods: Array<{ id: string; name: string; rank: number } | null>;
+}
+
+interface ModSnapshot {
+  p: number; // Players
+  s: number; // Servers
+  r: number; // Rank
+}
+
+interface HistoryPoint {
+  time: string;
+  mods: Record<string, ModSnapshot>;
+}
+
+interface Bindings {
   DB: D1Database;
   TRENDING_KV: KVNamespace;
   BATTLEMETRICS_API_KEY?: string;
   WEBHOOK_SECRET: string;
-};
+}
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -62,41 +92,34 @@ app.get('/api/mods', async (c) => {
   const search = c.req.query('search') || '';
 
   try {
-    const cached = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.MODS);
+    const cached = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.MODS) as Mod[];
     if (!cached || !Array.isArray(cached)) {
       return c.json({ data: [], meta: { total: 0, limit, offset } });
     }
 
-    let mods = cached as any[];
+    let modsList = cached;
 
     // Filter by search
     if (search) {
       const searchLower = search.toLowerCase();
-      mods = mods.filter(m =>
+      modsList = modsList.filter(m =>
         m.name?.toLowerCase().includes(searchLower) ||
         m.id?.toLowerCase().includes(searchLower)
       );
     }
 
-    const total = mods.length;
-
     // Sort
-    if (sortBy === 'players') mods.sort((a, b) => (b.totalPlayers || 0) - (a.totalPlayers || 0));
-    else if (sortBy === 'servers') mods.sort((a, b) => (b.serverCount || 0) - (a.serverCount || 0));
-    else if (sortBy === 'name') mods.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    if (sortBy === 'players') modsList.sort((a, b) => b.totalPlayers - a.totalPlayers);
+    else if (sortBy === 'servers') modsList.sort((a, b) => b.serverCount - a.serverCount);
+    else if (sortBy === 'name') modsList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     else {
-      // 'overall' - primary by overallRank ASC, secondary by totalPlayers DESC (tiebreaker)
-      mods.sort((a, b) => {
+      modsList.sort((a, b) => {
         const rankDiff = (a.overallRank || 9999) - (b.overallRank || 9999);
-        if (rankDiff !== 0) return rankDiff;
-        return (b.totalPlayers || 0) - (a.totalPlayers || 0);
+        return rankDiff !== 0 ? rankDiff : b.totalPlayers - a.totalPlayers;
       });
     }
 
-    // Paginate
-    const data = mods.slice(offset, offset + limit);
-
-    return c.json({ data, meta: { total, limit, offset } });
+    return c.json({ data: modsList.slice(offset, offset + limit), meta: { total: modsList.length, limit, offset } });
   } catch (err) {
     return c.json({ data: [], meta: { total: 0, limit, offset, error: String(err) } });
   }
@@ -108,44 +131,26 @@ app.get('/api/mods/:modId', async (c) => {
 
   try {
     const [mods, servers] = await Promise.all([
-      getChunkedData(c.env.TRENDING_KV, KV_KEYS.MODS),
-      getChunkedData(c.env.TRENDING_KV, KV_KEYS.SERVERS),
+      getChunkedData(c.env.TRENDING_KV, KV_KEYS.MODS) as Promise<Mod[]>,
+      getChunkedData(c.env.TRENDING_KV, KV_KEYS.SERVERS) as Promise<Server[]>,
     ]);
 
-    if (!mods || !servers) {
-      return c.json({ error: 'Not found' }, 404);
-    }
-
-    const mod = mods.find((m: any) => m.id === modId);
+    const mod = mods.find(m => m.id === modId);
     if (!mod) {
       return c.json({ error: 'Not found' }, 404);
     }
 
     // Find servers using this mod
-    const modServers = servers.filter((s: any) =>
-      s.mods?.some((m: any) => m.id === modId)
+    const modServers = servers.filter((s: Server) =>
+      s.mods?.some((m) => m?.id === modId)
     );
-
-    // Calculate ranks
-    const byPlayers = [...mods].sort((a, b) => (b.totalPlayers || 0) - (a.totalPlayers || 0));
-    const byServers = [...mods].sort((a, b) => (b.serverCount || 0) - (a.serverCount || 0));
-
-    const playerRank = byPlayers.findIndex((m: any) => m.id === modId) + 1;
-    const serverRank = byServers.findIndex((m: any) => m.id === modId) + 1;
-    const overallRank = Math.round((playerRank + serverRank) / 2);
-    const totalMods = mods.length;
-    const marketShare = totalMods > 0 ? ((mod.serverCount / totalMods) * 100) : 0;
 
     return c.json({
       data: {
         ...mod,
         stats: {
           ...mod,
-          playerRank: playerRank || 9999,
-          serverRank: serverRank || 9999,
-          overallRank: overallRank || 9999,
-          marketShare: marketShare || 0,
-          totalMods: totalMods
+          totalMods: mods.length
         },
         servers: modServers
       }
@@ -155,21 +160,21 @@ app.get('/api/mods/:modId', async (c) => {
   }
 });
 
-// Mod History (30 days) from D1
+// Mod History (30 days) from KV
 app.get('/api/mods/:modId/history', async (c) => {
   const modId = c.req.param('modId');
+  const days = Math.min(parseInt(c.req.query('days') || '30'), 365);
+  
   try {
-    const { results } = await c.env.DB.prepare(`
-      SELECT date, totalPlayers, serverCount, overallRank
-      FROM ModHistory
-      WHERE modId = ?
-      ORDER BY date DESC
-      LIMIT 60
-    `).bind(modId).all();
+    const key = days <= 1 ? 'history:hourly' : 'history:daily';
+    const historyData = await c.env.TRENDING_KV.get(key, 'json') as HistoryPoint[] || [];
+    
+    const modHistory = historyData.slice(-days * (key === 'history:hourly' ? 24 : 1)).map(point => {
+      const stats = point.mods[modId] || { p: 0, s: 0, r: 9999 };
+      return { date: point.time, totalPlayers: stats.p, serverCount: stats.s, overallRank: stats.r };
+    }).filter(d => d.totalPlayers > 0 || d.serverCount > 0);
 
-    // Reverse to get chronological order (oldest -> newest) for charts
-    const data = results ? [...results].reverse() : [];
-    return c.json({ data });
+    return c.json({ data: modHistory });
   } catch (err) {
     return c.json({ error: String(err) }, 500);
   }
@@ -182,12 +187,12 @@ app.get('/api/servers', async (c) => {
   const search = c.req.query('search') || '';
 
   try {
-    const cached = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.SERVERS);
+    const cached = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.SERVERS) as Server[];
     if (!cached || !Array.isArray(cached)) {
       return c.json({ data: [], meta: { total: 0, limit, offset } });
     }
 
-    let servers = cached as any[];
+    let servers = cached;
 
     if (search) {
       const searchLower = search.toLowerCase();
@@ -212,15 +217,11 @@ app.get('/api/servers/:serverId', async (c) => {
   const serverId = c.req.param('serverId');
 
   try {
-    const servers = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.SERVERS);
-    if (!servers) {
-      return c.json({ error: 'Not found' }, 404);
-    }
+    const servers = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.SERVERS) as Server[];
+    if (!servers) return c.json({ error: 'Not found' }, 404);
 
-    const server = servers.find((s: any) => s.id === serverId);
-    if (!server) {
-      return c.json({ error: 'Not found' }, 404);
-    }
+    const server = servers.find((s: Server) => s.id === serverId);
+    if (!server) return c.json({ error: 'Not found' }, 404);
 
     return c.json({ data: server });
   } catch (err) {
@@ -228,472 +229,192 @@ app.get('/api/servers/:serverId', async (c) => {
   }
 });
 
-// Trending Data - Now using SQL for historical comparison
+// Trending Data - Now 100% KV-Based
 app.get('/api/trending', async (c) => {
   const period = (c.req.query('period') || '24h') as '24h' | '7d' | '30d';
 
   try {
-    const today = new Date();
-    const currentMods = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.MODS) as any[];
-
+    const currentMods = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.MODS) as Mod[];
     if (!currentMods || currentMods.length === 0) {
       return c.json({ data: { rising: [], falling: [], new: [] }, meta: { error: 'No current mod data' } });
     }
 
-    // Determine target date for comparison
-    const targetDate = new Date(today);
-    if (period === '7d') targetDate.setDate(today.getDate() - 7);
-    else if (period === '30d') targetDate.setDate(today.getDate() - 30);
-    else targetDate.setDate(today.getDate() - 1);
+    const dailyHistory = await c.env.TRENDING_KV.get('history:daily', 'json') as HistoryPoint[] || [];
+    const target = new Date();
+    if (period === '7d') target.setDate(target.getDate() - 7);
+    else if (period === '30d') target.setDate(target.getDate() - 30);
+    else target.setDate(target.getDate() - 1);
+    const targetDateStr = target.toISOString().split('T')[0];
 
-    const dateStr = targetDate.toISOString().split('T')[0];
-
-    // Get historical data from SQL
-    const { results } = await c.env.DB.prepare(`
-      SELECT modId, overallRank, totalPlayers, serverCount
-      FROM ModHistory
-      WHERE date = ?
-    `).bind(dateStr).all();
-
-    const historicalMods = (results || []) as any[];
-    const prevModMap = new Map(historicalMods.map(m => [m.modId, m]));
+    const prevEntry = dailyHistory.find(h => h.time.startsWith(targetDateStr)) || dailyHistory[0];
+    const prevMap = new Map<string, ModSnapshot>();
+    if (prevEntry?.mods) {
+      for (const [id, stats] of Object.entries(prevEntry.mods)) {
+        prevMap.set(id, stats);
+      }
+    }
 
     const rising: any[] = [];
     const falling: any[] = [];
     const newMods: any[] = [];
 
     for (const mod of currentMods) {
-      const prev = prevModMap.get(mod.id);
-
+      const prev = prevMap.get(mod.id);
       if (!prev) {
-        // If it's a new mod (created recently)
-        newMods.push({
-          ...mod,
-          changePlayers: mod.totalPlayers,
-          changeServers: mod.serverCount
-        });
+        newMods.push({ ...mod, changePlayers: mod.totalPlayers, changeServers: mod.serverCount });
       } else {
-        const rankImprovement = (prev.overallRank || 9999) - (mod.overallRank || 9999);
-        const playerChange = mod.totalPlayers - prev.totalPlayers;
-        const serverChange = mod.serverCount - prev.serverCount;
-
+        const rankImprovement = (prev.r || 9999) - (mod.overallRank || 9999);
         const trendInfo = {
           ...mod,
-          prevRank: prev.overallRank,
+          prevRank: prev.r,
           currentRank: mod.overallRank,
-          changePlayers: playerChange,
-          changeServers: serverChange
+          changePlayers: mod.totalPlayers - (prev.p || 0),
+          changeServers: mod.serverCount - (prev.s || 0)
         };
-
         if (rankImprovement > 0) rising.push(trendInfo);
         else if (rankImprovement < 0) falling.push(trendInfo);
       }
     }
 
-    // Sort rising by biggest rank improvement
     rising.sort((a, b) => (b.prevRank - b.currentRank) - (a.prevRank - a.currentRank));
-    // Sort falling by biggest rank drop
-    falling.sort((a, b) => (a.currentRank - a.prevRank) - (b.currentRank - b.prevRank));
-    // Sort new by best rank
+    falling.sort((a, b) => (a.currentRank - b.prevRank) - (b.currentRank - b.prevRank));
     newMods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
 
-    const limit = 100;
     return c.json({
-      data: {
-        rising: rising.slice(0, limit),
-        falling: falling.slice(0, limit),
-        new: newMods.slice(0, limit)
-      },
-      meta: {
-        period,
-        comparisonDate: dateStr,
-        lastUpdated: new Date().toISOString()
-      }
+      data: { rising: rising.slice(0, 100), falling: falling.slice(0, 100), new: newMods.slice(0, 100) },
+      meta: { period, comparisonDate: prevEntry?.time || 'N/A' }
     });
-
   } catch (err) {
     return c.json({ data: { rising: [], falling: [], new: [] }, meta: { error: String(err) } }, 500);
   }
 });
 
 // ============================================================================
-// Collector Service (writes to D1 + KV)
+// Collector Service (100% KV-Native)
 // ============================================================================
 
 async function runCollector(env: Bindings) {
   const game = 'reforger';
-
-  console.log("🚀 CLOUDFLARE_COLLECTOR: STARTING IMPORT");
+  console.log("🚀 CLOUDFLARE_COLLECTOR: STARTING IMPORT (100% KV)");
 
   const allServers: any[] = [];
-  const params = new URLSearchParams({
-    'filter[game]': game,
-    'page[size]': '100'
-  });
+  const params = new URLSearchParams({ 'filter[game]': game, 'page[size]': '100' });
   let url = `https://api.battlemetrics.com/servers?${params.toString()}`;
   let pageCount = 0;
   const MAX_PAGES = 10;
 
   try {
     while (url && pageCount < MAX_PAGES) {
-      console.log(`📡 FETCHING PAGE ${pageCount + 1}: ${url}`);
-      const headers: Record<string, string> = {
-        'User-Agent': 'ReforgerMods/1.0',
-        'Accept': 'application/json'
-      };
-      if (env.BATTLEMETRICS_API_KEY) {
-        headers['Authorization'] = `Bearer ${env.BATTLEMETRICS_API_KEY}`;
-      }
+      const headers: Record<string, string> = { 'User-Agent': 'ReforgerMods/1.0', 'Accept': 'application/json' };
+      if (env.BATTLEMETRICS_API_KEY) headers['Authorization'] = `Bearer ${env.BATTLEMETRICS_API_KEY}`;
       const response = await fetch(url, { headers });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       const data = await response.json() as any;
       const servers = data.data || [];
       allServers.push(...servers);
-      console.log(`📡 PAGE ${pageCount + 1}: ${servers.length} servers | TOTAL: ${allServers.length}`);
-
       url = data.links?.next || '';
       pageCount++;
-
-      if (url) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+      if (url) await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    console.log(`✅ FETCHED ${allServers.length} TOTAL SERVERS`);
-
-    // ============================================================================
-    // 1. Write to D1 (backup)
-    // ============================================================================
-
-    const statements: any[] = [];
-    const modMap = new Map<string, any>();
-
+    const activeModsMap = new Map<string, {id:string, name:string, p:number, s:number}>();
     for (const server of allServers) {
-      const { id, attributes } = server;
-      const reforgerMods = attributes.details?.reforger?.mods || [];
-
-      // Server upsert
-      statements.push(env.DB.prepare(`
-        INSERT INTO Server (id, name, ip, port, players, maxPlayers, updatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(id) DO UPDATE SET
-          name=excluded.name, ip=excluded.ip, port=excluded.port,
-          players=excluded.players, maxPlayers=excluded.maxPlayers,
-          updatedAt=excluded.updatedAt
-      `).bind(id, attributes.name, attributes.ip || '', attributes.port || 0, attributes.players, attributes.maxPlayers));
-
-      // Clean up old server mods before adding current ones
-      statements.push(env.DB.prepare(`DELETE FROM ServerMod WHERE serverId = ?`).bind(id));
-
-      // Process mods
-      for (const sm of reforgerMods) {
-        modMap.set(sm.modId, {
-          id: sm.modId,
-          name: sm.name || "Unknown Module",
-        });
-
-        statements.push(env.DB.prepare(`
-          INSERT INTO Mod (id, name, thumbnail, createdAt, updatedAt)
-          VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          ON CONFLICT(id) DO UPDATE SET name = excluded.name, updatedAt = CURRENT_TIMESTAMP
-        `).bind(sm.modId, sm.name || "Unknown Module", null));
-
-        statements.push(env.DB.prepare(`
-          INSERT INTO ServerMod (serverId, modId)
-          VALUES (?, ?)
-          ON CONFLICT(serverId, modId) DO NOTHING
-        `).bind(id, sm.modId));
+      const players = server.attributes?.players || 0;
+      const mods = server.attributes?.details?.reforger?.mods || [];
+      for (const sm of mods) {
+        if (!sm.modId) continue;
+        const existing = activeModsMap.get(sm.modId);
+        if (existing) { existing.p += players; existing.s += 1; }
+        else activeModsMap.set(sm.modId, { id: sm.modId, name: sm.name || "Unknown Module", p: players, s: 1 });
       }
     }
 
-    console.log(`📦 PREPARED ${statements.length} STATEMENTS`);
-    if (statements.length > 0) {
-      for (let i = 0; i < statements.length; i += 50) {
-        await env.DB.batch(statements.slice(i, i + 50));
-      }
-    }
+    const mListRaw = Array.from(activeModsMap.values());
+    const totalS = allServers.length;
+    const totalP = mListRaw.reduce((sum, m) => sum + m.p, 0);
 
-    // Update stats in D1
-    console.log("📊 UPDATING D1 STATS...");
-    await env.DB.prepare("UPDATE Mod SET serverCount = 0, totalPlayers = 0").run();
-    await env.DB.prepare(`
-      UPDATE Mod SET
-        serverCount = (SELECT COUNT(*) FROM ServerMod WHERE modId = Mod.id),
-        totalPlayers = COALESCE((SELECT SUM(s.players) FROM Server s JOIN ServerMod sm ON s.id = sm.serverId WHERE sm.modId = Mod.id), 0)
-    `).run();
-
-    // ============================================================================
-    // 2. Build data for KV cache (compute all in memory)
-    // ============================================================================
-
-    console.log("📦 BUILDING KV CACHE...");
-
-    // Get all mods with their stats from D1
-    const { results: rawMods } = await env.DB.prepare(
-      "SELECT id, name, serverCount, totalPlayers FROM Mod WHERE serverCount > 0"
-    ).all();
-
-    const mods = (rawMods as any[]) || [];
-
-    // Calculate ranks in memory
-    const byPlayers = [...mods].sort((a, b) => (b.totalPlayers || 0) - (a.totalPlayers || 0));
-    const byServers = [...mods].sort((a, b) => (b.serverCount || 0) - (a.serverCount || 0));
-
+    const byPlayers = [...mListRaw].sort((a, b) => b.p - a.p);
+    const byServers = [...mListRaw].sort((a, b) => b.s - a.s);
     const playerRanks = new Map(byPlayers.map((m, i) => [m.id, i + 1]));
     const serverRanks = new Map(byServers.map((m, i) => [m.id, i + 1]));
 
-    // Create mod list with all computed data
-    let modList = mods.map(m => ({
-      id: m.id,
-      name: m.name,
-      serverCount: m.serverCount,
-      totalPlayers: m.totalPlayers,
+    let modList: Mod[] = mListRaw.map((m) => ({
+      id: m.id, name: m.name, serverCount: m.s, totalPlayers: m.p,
       overallRank: Math.round((playerRanks.get(m.id)! + serverRanks.get(m.id)!) / 2),
-      marketShare: totalServers > 0 ? ((m.serverCount / totalServers) * 100) : 0,
+      marketShare: totalS > 0 ? ((m.s / totalS) * 100) : 0,
     }));
 
-    // Sort by overallRank, then by totalPlayers (desc) for tie-breaking, then assign sequential ranks
     modList.sort((a, b) => {
-      if (a.overallRank !== b.overallRank) return a.overallRank - b.overallRank;
-      return b.totalPlayers - a.totalPlayers; // More players = better rank
+      const rankDiff = a.overallRank - b.overallRank;
+      return rankDiff !== 0 ? rankDiff : b.totalPlayers - a.totalPlayers;
     });
-    modList = modList.map((m, i) => ({ ...m, overallRank: i + 1 }));
+    modList.forEach((m, i) => m.overallRank = i + 1);
 
-    // Get all server-mod relationships in ONE query
-    const { results: allServerMods } = await env.DB.prepare(
-      "SELECT sm.serverId, sm.modId FROM ServerMod sm"
-    ).all();
-
-    // Build server-mod map
-    const serverModMap = new Map<string, string[]>();
-    for (const sm of (allServerMods as any[])) {
-      if (!serverModMap.has(sm.serverId)) {
-        serverModMap.set(sm.serverId, []);
-      }
-      serverModMap.get(sm.serverId)!.push(sm.modId);
-    }
-
-    // Get servers
-    const { results: rawServers } = await env.DB.prepare(
-      "SELECT s.id, s.name, s.ip, s.port, s.players, s.maxPlayers FROM Server s ORDER BY s.players DESC"
-    ).all();
-
-    const serverList = (rawServers as any[]).map(s => ({
-      id: s.id,
-      name: s.name,
-      ip: s.ip,
-      port: s.port,
-      players: s.players,
-      maxPlayers: s.maxPlayers,
-      mods: (serverModMap.get(s.id) || []).map(modId => {
-        const mod = modList.find(m => m.id === modId);
-        return mod ? { id: mod.id, name: mod.name, rank: mod.overallRank } : null;
-      }).filter(Boolean)
-    }));
-
-    // Global stats
-    const totalMods = mods.length;
-    const totalPlayers = mods.reduce((sum, m) => sum + (m.totalPlayers || 0), 0);
-    const totalServers = serverList.length;
-
-    // ============================================================================
-    // 3. Write to KV (active read cache)
-    // ============================================================================
+    const serverList: Server[] = allServers.map((s: any) => {
+      const sMods = s.attributes?.details?.reforger?.mods || [];
+      return {
+        id: s.id, name: s.attributes?.name, ip: s.attributes?.ip, port: s.attributes?.port,
+        players: s.attributes?.players, maxPlayers: s.attributes?.maxPlayers,
+        mods: sMods.map((sm: any) => {
+          const mod = activeModsMap.get(sm.modId);
+          const rank = modList.find(m => m.id === sm.modId)?.overallRank;
+          return mod ? { id: mod.id, name: mod.name, rank: rank || 9999 } : null;
+        }).filter(Boolean)
+      };
+    });
 
     console.log("✍️  WRITING TO KV CACHE...");
-
     await Promise.all([
       env.TRENDING_KV.put(KV_KEYS.MODS, JSON.stringify(modList)),
       env.TRENDING_KV.put(KV_KEYS.SERVERS, JSON.stringify(serverList)),
-      env.TRENDING_KV.put(KV_KEYS.STATS, JSON.stringify({ totalMods, totalPlayers, totalServers })),
+      env.TRENDING_KV.put(KV_KEYS.STATS, JSON.stringify({ totalMods: modList.length, totalPlayers: totalP, totalServers: totalS })),
       env.TRENDING_KV.put(KV_KEYS.LAST_UPDATE, new Date().toISOString()),
     ]);
 
-    console.log("✅ CLOUDFLARE_COLLECTOR: COMPLETE");
-    return {
-      servers: allServers.length,
-      mods: modList.length,
-      timestamp: new Date().toISOString()
-    };
-  } catch (err) {
-    console.error("❌ COLLECTOR_ERROR:", err);
-    throw err;
-  }
+    console.log("💾 UPDATING KV HOURLY HISTORY...");
+    try {
+      const historyHourly = await env.TRENDING_KV.get('history:hourly', 'json') as HistoryPoint[] || [];
+      const statsMap: Record<string, ModSnapshot> = {};
+      for (const m of modList) statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
+      const updatedHourly = [...historyHourly, { time: new Date().toISOString(), mods: statsMap }].slice(-24);
+      await env.TRENDING_KV.put('history:hourly', JSON.stringify(updatedHourly));
+    } catch (kvErr) { console.error("⚠️ KV Error:", kvErr); }
+
+    return { servers: totalS, mods: modList.length, timestamp: new Date().toISOString() };
+  } catch (err) { console.error("❌ ERROR:", err); throw err; }
 }
 
-// Trending Snapshot Service (unchanged - already uses KV)
+// Trending Snapshot Service
 async function runTrendingSnapshot(env: Bindings) {
   console.log("📈 TRENDING_SNAPSHOT: STARTING");
 
   try {
     const today = new Date().toISOString().split('T')[0];
-    const timestamp = new Date().toISOString();
+    const mods = await getChunkedData(env.TRENDING_KV, KV_KEYS.MODS) as Mod[];
+    if (!mods.length) throw new Error('No mods in cache');
 
-    const mods = await env.TRENDING_KV.get(KV_KEYS.MODS, 'json') as any[];
-    if (!mods) {
-      throw new Error('No mods in cache');
-    }
-
-    const prevData = await env.TRENDING_KV.get('snapshot:latest', 'json') as any;
-
-    const currentModMap = new Map();
-    for (const mod of mods) {
-      currentModMap.set(mod.id, mod);
-    }
-
-    const rising: any[] = [];
-    const falling: any[] = [];
-    const newMods: any[] = [];
-
-    if (prevData && prevData.mods) {
-      const prevModMap = new Map();
-      for (const mod of prevData.mods) {
-        prevModMap.set(mod.id, mod);
+    console.log("📊 SAVING DAILY KV SNAPSHOT...");
+    try {
+      const historyDaily = await env.TRENDING_KV.get('history:daily', 'json') as HistoryPoint[] || [];
+      
+      const statsMap: Record<string, ModSnapshot> = {};
+      for (const m of mods) {
+        statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
       }
 
-      for (const [id, currentMod] of currentModMap) {
-        const prevMod = prevModMap.get(id);
+      const dailyPoint = {
+        time: today,
+        mods: statsMap
+      };
 
-        if (!prevMod) {
-          newMods.push({
-            id: currentMod.id,
-            name: currentMod.name,
-            serverCount: currentMod.serverCount,
-            totalPlayers: currentMod.totalPlayers,
-            overallRank: currentMod.overallRank,
-            changePlayers: currentMod.totalPlayers,
-            changeServers: currentMod.serverCount
-          });
-        } else {
-          const rankImprovement = prevMod.overallRank - currentMod.overallRank;
-          const playerChange = currentMod.totalPlayers - prevMod.totalPlayers;
-          const serverChange = currentMod.serverCount - prevMod.serverCount;
-
-          // Rising: rank improved (current rank is better/lower number than prev)
-          if (rankImprovement > 0) {
-            rising.push({
-              id: currentMod.id,
-              name: currentMod.name,
-              serverCount: currentMod.serverCount,
-              totalPlayers: currentMod.totalPlayers,
-              overallRank: currentMod.overallRank,
-              changePlayers: playerChange,
-              changeServers: serverChange,
-              prevRank: prevMod.overallRank,
-              currentRank: currentMod.overallRank
-            });
-          }
-
-          // Falling: rank dropped (current rank is worse/higher number than prev)
-          if (rankImprovement < 0) {
-            falling.push({
-              id: currentMod.id,
-              name: currentMod.name,
-              serverCount: currentMod.serverCount,
-              totalPlayers: currentMod.totalPlayers,
-              overallRank: currentMod.overallRank,
-              changePlayers: playerChange,
-              changeServers: serverChange,
-              prevRank: prevMod.overallRank,
-              currentRank: currentMod.overallRank
-            });
-          }
-        }
-      }
-    } else {
-      for (const mod of mods.slice(0, 50)) {
-        newMods.push({
-          id: mod.id,
-          name: mod.name,
-          serverCount: mod.serverCount,
-          totalPlayers: mod.totalPlayers,
-          overallRank: mod.overallRank,
-          changePlayers: mod.totalPlayers,
-          changeServers: mod.serverCount
-        });
-      }
+      const updatedDaily = [...historyDaily, dailyPoint].slice(-90);
+      await env.TRENDING_KV.put('history:daily', JSON.stringify(updatedDaily));
+      console.log("✅ DAILY KV HISTORY UPDATED (90-day window)");
+    } catch (kvErr) {
+      console.error("⚠️ Failed to update daily KV:", kvErr);
     }
-
-    // Sort rising by biggest rank improvement (prevRank - currentRank)
-    rising.sort((a, b) => {
-      const rankChangeA = (a.prevRank || 9999) - (a.currentRank || 9999);
-      const rankChangeB = (b.prevRank || 9999) - (b.currentRank || 9999);
-      return rankChangeB - rankChangeA;
-    });
     
-    // Sort falling by biggest rank drop
-    falling.sort((a, b) => {
-      const rankChangeA = (a.prevRank || 9999) - (a.currentRank || 9999);
-      const rankChangeB = (b.prevRank || 9999) - (b.currentRank || 9999);
-      return rankChangeA - rankChangeB;
-    });
-    
-    newMods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
-
-    const snapshot = {
-      date: today,
-      timestamp,
-      mods: mods,
-      rising: rising.slice(0, 100),
-      falling: falling.slice(0, 100),
-      new: newMods.slice(0, 100)
-    };
-
-    // Save daily snapshots to KV
-    await env.TRENDING_KV.put('snapshot:latest', JSON.stringify(snapshot));
-    await env.TRENDING_KV.put(`snapshot:${today}`, JSON.stringify(snapshot), {
-      expirationTtl: 30 * 24 * 60 * 60
-    });
-
-    // ------------------------------------------------------------------------
-    // NEW: Save historical daily stats to D1 ModHistory table
-    // ------------------------------------------------------------------------
-    console.log("📊 SAVING HISTORY TO D1...");
-    const statements: any[] = [];
-    
-    // Fallback ID generator in case crypto.randomUUID is not available in context
-    const generateId = () => {
-      if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-      return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    };
-
-    for (const mod of mods) {
-      statements.push(env.DB.prepare(`
-        INSERT INTO ModHistory (id, modId, date, totalPlayers, serverCount, overallRank, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(modId, date) DO UPDATE SET
-          totalPlayers=excluded.totalPlayers,
-          serverCount=excluded.serverCount,
-          overallRank=excluded.overallRank
-      `).bind(
-        generateId(),
-        mod.id, 
-        today, 
-        mod.totalPlayers || 0, 
-        mod.serverCount || 0, 
-        mod.overallRank || 9999
-      ));
-    }
-
-    console.log(`📦 PREPARED ${statements.length} HISTORY STATEMENTS`);
-    if (statements.length > 0) {
-      for (let i = 0; i < statements.length; i += 50) {
-        await env.DB.batch(statements.slice(i, i + 50));
-      }
-    }
-
-    console.log(`✅ TRENDING_SNAPSHOT: ${rising.length} rising, ${falling.length} falling, ${newMods.length} new`);
-
-    return {
-      date: today,
-      rising: rising.length,
-      falling: falling.length,
-      new: newMods.length
-    };
+    return { success: true, date: today };
   } catch (err) {
     console.error("❌ TRENDING_SNAPSHOT_ERROR:", err);
     throw err;
@@ -704,7 +425,7 @@ async function runTrendingSnapshot(env: Bindings) {
 app.get('/api/collect', async (c) => {
   try {
     const stats = await runCollector(c.env);
-    return c.json({ success: true, ...stats });
+    return c.json(stats);
   } catch (err) {
     return c.json({ success: false, error: String(err) }, 500);
   }
@@ -713,37 +434,26 @@ app.get('/api/collect', async (c) => {
 app.get('/api/trending/snapshot', async (c) => {
   try {
     const result = await runTrendingSnapshot(c.env);
-    return c.json({ success: true, ...result });
+    return c.json(result);
   } catch (err) {
     return c.json({ success: false, error: String(err) }, 500);
   }
 });
 
 // Public webhook for cron-job.org
-// Usage: https://armamods-leaderboard.pauliusmed.workers.dev/api/webhook/collect?key=YOUR_SECRET_KEY
 app.get('/api/webhook/collect', async (c) => {
   const key = c.req.query('key');
-
-  // Check for webhook key (set as secret in wrangler)
-  if (key !== c.env.WEBHOOK_SECRET) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
+  if (key !== c.env.WEBHOOK_SECRET) return c.json({ error: 'Unauthorized' }, 401);
 
   try {
-    // Directly trigger collector in the background
     c.executionCtx.waitUntil(runCollector(c.env));
-
-    return c.json({
-      success: true,
-      message: 'Collection triggered in background',
-      note: 'Collector is now running on Cloudflare'
-    });
+    return c.json({ success: true, message: 'Collection triggered in background' });
   } catch (err) {
     return c.json({ success: false, error: String(err) }, 500);
   }
 });
 
-// Status endpoint - check if collection is needed
+// Status endpoint
 app.get('/api/webhook/status', async (c) => {
   const key = c.req.query('key');
 
@@ -770,7 +480,7 @@ export default {
   fetch: (request: any, env: any, ctx: any) => app.fetch(request, env, ctx),
   async scheduled(event: any, env: any, ctx: any) {
     const cron = event.cron;
-    if (cron === '0 */4 * * *') {
+    if (cron === '0 * * * *') {
       ctx.waitUntil(runCollector(env));
     }
     if (cron === '0 3 * * *') {

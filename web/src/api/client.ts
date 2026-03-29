@@ -22,12 +22,14 @@ export const modsApi = {
   },
 
   getById: async (modId: string) => {
-    const response = await api.get<{ data: Mod & { stats: { totalPlayers: number; serverCount: number; playerRank: number; serverRank: number }; servers: Server[] } }>(`mods/${modId}`);
+    const response = await api.get<{ data: Mod & { stats: Mod & { totalMods: number }; servers: Server[] } }>(`mods/${modId}`);
     return response.data;
   },
 
-  getHistory: async (modId: string) => {
-    const response = await api.get<{ data: import('../types').ModHistory[] }>(`mods/${modId}/history`);
+  getHistory: async (modId: string, days = 30) => {
+    const response = await api.get<{ data: import('../types').ModHistory[] }>(`mods/${modId}/history`, {
+      params: { days }
+    });
     return response.data;
   },
 

@@ -5,24 +5,31 @@ import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import type { ModHistory } from '../types';
+import type { Mod, Server, ModHistory } from '../types';
+
+interface ModDetailData extends Mod {
+  stats: Mod & { totalMods: number };
+  author?: string | null;
+  servers: Server[];
+}
 
 export function ModDetail() {
   const { modId } = useParams<{ modId: string }>();
-  const [mod, setMod] = useState<any>(null);
+  const [mod, setMod] = useState<ModDetailData | null>(null);
   const [history, setHistory] = useState<ModHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDays, setSelectedDays] = useState(30);
 
-  const loadMod = useCallback(async () => {
+  const loadMod = useCallback(async (days: number) => {
     if (!modId) return;
     try {
       setLoading(true);
-      const [data, historyData] = await Promise.all([
+      const [modRes, historyData] = await Promise.all([
         modsApi.getById(modId),
-        modsApi.getHistory(modId).catch(() => ({ data: [] }))
+        modsApi.getHistory(modId, days).catch(() => ({ data: [] }))
       ]);
-      setMod(data.data);
+      setMod(modRes.data);
       setHistory(historyData.data);
       setError(null);
     } catch (err) {
@@ -33,8 +40,8 @@ export function ModDetail() {
   }, [modId]);
 
   useEffect(() => {
-    loadMod();
-  }, [modId]);
+    loadMod(selectedDays);
+  }, [modId, selectedDays, loadMod]);
 
   if (loading) return <StatusState type="loading" />;
   if (error || !mod) return (
@@ -42,7 +49,7 @@ export function ModDetail() {
       <StatusState 
         type="error" 
         message={error || 'Module not found in registry'} 
-        onAction={loadMod} 
+        onAction={() => loadMod(selectedDays)} 
         actionText="Re-scan" 
       />
       <Link to="/" className="block text-center text-tactical-orange font-black uppercase tracking-[0.4em] text-[10px] hover:underline">
@@ -59,7 +66,7 @@ export function ModDetail() {
         </Link>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/10 pb-12">
           <div className="space-y-4">
-            <span className="text-tactical-orange font-black text-[10px] uppercase tracking-[0.5em]">// MODULE_IDENTIFIER: {mod.modId}</span>
+            <span className="text-tactical-orange font-black text-[10px] uppercase tracking-[0.5em]">// MODULE_IDENTIFIER: {mod.id}</span>
             <h1 className="text-6xl font-black text-white uppercase tracking-tighter leading-none">
               {mod.name}
             </h1>
@@ -87,10 +94,31 @@ export function ModDetail() {
 
       {history && history.length > 0 && (
         <section className="space-y-6 sm:space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
             <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter">
-              📈 Active Duty Trend (30 Days)
+              📈 Performance Timeline
             </h2>
+            <div className="flex gap-2 p-1 bg-zinc-900 border border-white/10">
+              {[
+                { label: '24H', value: 1 },
+                { label: '7D', value: 7 },
+                { label: '30D', value: 30 },
+                { label: '90D', value: 90 },
+                { label: '1Y', value: 365 }
+              ].map(opt => (
+                <button
+                  key={opt.label}
+                  onClick={() => setSelectedDays(opt.value)}
+                  className={`px-4 py-1 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    selectedDays === opt.value 
+                      ? 'bg-tactical-orange text-black' 
+                      : 'text-gray-500 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
           <Card className="border-l-4 border-l-tactical-orange bg-zinc-900/50 backdrop-blur-sm">
             <CardContent className="p-4 sm:p-6 lg:p-8 h-[400px]">
@@ -102,6 +130,9 @@ export function ModDetail() {
                     stroke="#666" 
                     tickFormatter={(tick) => {
                       const d = new Date(tick);
+                      if (selectedDays === 1) {
+                        return `${d.getHours().toString().padStart(2, '0')}:00`;
+                      }
                       return `${d.getMonth()+1}/${d.getDate()}`;
                     }}
                     tick={{ fontSize: 10, fill: '#666', fontWeight: 'bold' }}
@@ -117,10 +148,11 @@ export function ModDetail() {
                     width={40}
                   />
                   <YAxis 
-                    yAxisId="servers"
+                    yAxisId="rank"
                     orientation="right"
-                    stroke="#db2777" 
-                    tick={{ fontSize: 10, fill: '#db2777', fontWeight: 'bold' }}
+                    reversed
+                    stroke="#3b82f6" 
+                    tick={{ fontSize: 10, fill: '#3b82f6', fontWeight: 'bold' }}
                     axisLine={false}
                     tickLine={false}
                     width={40}
@@ -141,7 +173,7 @@ export function ModDetail() {
                     activeDot={{ r: 6, fill: '#f97316', stroke: '#18181b', strokeWidth: 2 }}
                   />
                   <Line 
-                    yAxisId="servers"
+                    yAxisId="players"
                     type="monotone" 
                     dataKey="serverCount" 
                     name="Active Servers"
@@ -149,6 +181,17 @@ export function ModDetail() {
                     strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 4, fill: '#db2777', stroke: '#18181b', strokeWidth: 2 }}
+                  />
+                  <Line 
+                    yAxisId="rank"
+                    type="stepAfter" 
+                    dataKey="overallRank" 
+                    name="Strategic Rank"
+                    stroke="#3b82f6" 
+                    strokeWidth={1}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    activeDot={{ r: 4, fill: '#3b82f6', stroke: '#18181b', strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
