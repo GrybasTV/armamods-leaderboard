@@ -18,8 +18,8 @@ preview_id = "0a5d2870e2114b1783fb607c35d78751"
 [vars]
 ENVIRONMENT = "production"
 
-# Webhook secret for cron-job.org
-WEBHOOK_SECRET = "arma-collector-2025-secret-key-xk9m2p8"
+# Webhook secret (Set this in Cloudflare Dashboard or via 'wrangler secret put WEBHOOK_SECRET')
+WEBHOOK_SECRET = "REPLACE_WITH_SECRET"
 
 [triggers]
 # crons = ["0 */4 * * *", "0 3 * * *"]
