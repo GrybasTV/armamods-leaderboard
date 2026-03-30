@@ -1,75 +1,23 @@
-# Arma Mod Leaderboard 🚀
+﻿# Arma Reforger Mod Leaderboard 🚀
 
-Modernas Arma Reforger modifikacijų reitingavimo platforma.
+Šis projektas yra skirtas Arma Reforger modams stebėti ir reitinguoti pagal realią serverių bei žaidėjų statistiką, naudojant BattleMetrics API.
 
-## 🏗 Techninis Stackas
-- **Frontend**: React + Vite + Tailwind CSS (Tactical Aesthetic)
-- **Database**: Cloudflare D1 (Serverless SQL)
-- **Runtime**: Cloudflare Workers (Hono framework)
+## 🛠 Technologijos
+- **Frontend**: Vite + React
+- **Backend**: Cloudflare Workers + GitHub Actions (duomenų rinkimas)
+- **Database**: Cloudflare KV (laikinoji atmintis ir istorija)
 
----
+## 📊 Kaip tai veikia?
+1. **GitHub Actions** kas valandą paleidžia kolektorių (scripts/collector.ts).
+2. Kolektorius parsiunčia visus Arma Reforger serverius iš **BattleMetrics**.
+3. Duomenys suskaičiuojami ir išsaugomi **Cloudflare KV** saugykloje.
+4. **Cloudflare Worker** pateikia šiuos duomenis per paprastą API jūsų naršyklei.
 
-## 🛠 Local Development
+## 🛡 Teisinė informacija ir Licencija
+Šis projektas yra platinamas pagal **MIT License**. Galite laisvai naudoti, modifikuoti ir platinti šį kodą asmeniniams ar bendruomenės poreikiams.
 
-### 1. Įdiekite priklausomybes
-```bash
-# Main project
-npm install
-
-# Frontend
-cd web
-npm install
-```
-
-### 2. Paleiskite programą
-```bash
-# Terminalas 1 (Backend)
-npm run dev
-
-# Terminalas 2 (Frontend)
-cd web
-npm run dev
-```
+## 💼 Komercinis naudojimas
+Nors projektas yra atviro kodo, **komercinis naudojimas** (pvz., integravimas į mokamas paslaugas, verslo projektus ar šio kodo pagrindu sukurtų svetainių monetizavimas be susitarimo) yra apribotas. Dėl komercinio naudojimo sąlygų, specialių pritaikymų ar komercinės licencijos prašome susisiekti el. paštu: **info@saulespro.lt**.
 
 ---
-
-## ☁️ Cloudflare Deployment
-
-### 1. Sukurkite D1 duomenų bazę
-```bash
-wrangler d1 create armamods-db
-```
-Nukopijuokite `database_id` į `wrangler.toml` failą.
-
-### 2. Sukurkite DB lenteles (Initial Schema)
-```bash
-npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > initial.sql
-wrangler d1 execute armamods-db --remote --file=initial.sql
-```
-
-### 3. Deploy API (Worker)
-```bash
-npm run build
-wrangler deploy
-```
-
-### 4. Deploy Website (Pages)
-Prijunkite savo GitHub repozitoriją prie Cloudflare Pages dashboard'e.
-Instaliavimo nustatymai:
-- Framework preset: `Vite`
-- Build command: `npm run build`
-- Build output: `dist`
-- Environment: `Node.js v18+`
-
----
-
-## 🏁 GitHub Setup
-Jei dar nesukūrėte repozitorijos:
-1. Eikite į [github.com/new](https://github.com/new)
-2. Sukurkite `armamods-leaderboard`
-3. Vykdykite terminale:
-```bash
-git remote add origin https://github.com/YOUR_USER/armamods-leaderboard.git
-git branch -M main
-git push -u origin main
-```
+© 2026 Saulėspro
