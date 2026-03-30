@@ -229,9 +229,9 @@ app.get('/api/servers/:serverId', async (c) => {
   }
 });
 
-// Trending Data - Now 100% KV-Based
+// Trending Data - Now 100% KV-Based and Adaptive
 app.get('/api/trending', async (c) => {
-  const period = (c.req.query('period') || '24h') as '24h' | '7d' | '30d';
+  const period = (c.req.query('period') || '30d') as '24h' | '7d' | '30d';
 
   try {
     const currentMods = await getChunkedData(c.env.TRENDING_KV, KV_KEYS.MODS) as Mod[];
@@ -239,14 +239,31 @@ app.get('/api/trending', async (c) => {
       return c.json({ data: { rising: [], falling: [], new: [] }, meta: { error: 'No current mod data' } });
     }
 
+    // Adaptive history selection
     const dailyHistory = await c.env.TRENDING_KV.get('history:daily', 'json') as HistoryPoint[] || [];
-    const target = new Date();
-    if (period === '7d') target.setDate(target.getDate() - 7);
-    else if (period === '30d') target.setDate(target.getDate() - 30);
-    else target.setDate(target.getDate() - 1);
-    const targetDateStr = target.toISOString().split('T')[0];
+    
+    // Choose target date based on period
+    const targetDays = period === '7d' ? 7 : (period === '30d' ? 30 : 1);
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - targetDays);
+    const targetTimestamp = targetDate.getTime();
 
-    const prevEntry = dailyHistory.find(h => h.time.startsWith(targetDateStr)) || dailyHistory[0];
+    // Find the entry closest to our target date (but not newer than target)
+    // If we have very little history, this will naturally fall to the oldest entry (dailyHistory[0])
+    let prevEntry = dailyHistory[0];
+    let minDiff = Infinity;
+
+    for (const entry of dailyHistory) {
+      const entryTime = new Date(entry.time).getTime();
+      const diff = Math.abs(entryTime - targetTimestamp);
+      
+      // We want the best match for the requested period
+      if (diff < minDiff) {
+        minDiff = diff;
+        prevEntry = entry;
+      }
+    }
+
     const prevMap = new Map<string, ModSnapshot>();
     if (prevEntry?.mods) {
       for (const [id, stats] of Object.entries(prevEntry.mods)) {
@@ -263,26 +280,45 @@ app.get('/api/trending', async (c) => {
       if (!prev) {
         newMods.push({ ...mod, changePlayers: mod.totalPlayers, changeServers: mod.serverCount });
       } else {
+        // Calculate rank change (positive is good)
         const rankImprovement = (prev.r || 9999) - (mod.overallRank || 9999);
+        const playerGrowth = mod.totalPlayers - (prev.p || 0);
+        
         const trendInfo = {
           ...mod,
           prevRank: prev.r,
           currentRank: mod.overallRank,
-          changePlayers: mod.totalPlayers - (prev.p || 0),
-          changeServers: mod.serverCount - (prev.s || 0)
+          changePlayers: playerGrowth,
+          changeServers: mod.serverCount - (prev.s || 0),
+          rankChange: rankImprovement
         };
-        if (rankImprovement > 0) rising.push(trendInfo);
-        else if (rankImprovement < 0) falling.push(trendInfo);
+
+        // If it's a completely new history (only 1 entry), rankImprovement will be 0.
+        // We prioritize rank improvement, then player growth.
+        if (rankImprovement > 0 || (rankImprovement === 0 && playerGrowth > 0)) {
+          rising.push(trendInfo);
+        } else if (rankImprovement < 0 || (rankImprovement === 0 && playerGrowth < 0)) {
+          falling.push(trendInfo);
+        }
       }
     }
 
-    rising.sort((a, b) => (b.prevRank - b.currentRank) - (a.prevRank - a.currentRank));
-    falling.sort((a, b) => (a.currentRank - b.prevRank) - (b.currentRank - b.prevRank));
+    // Sort: Rising by rank improvement (primary) and player growth (secondary)
+    rising.sort((a, b) => b.rankChange - a.rankChange || b.changePlayers - a.changePlayers);
+    falling.sort((a, b) => a.rankChange - b.rankChange || a.changePlayers - b.changePlayers);
     newMods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
 
     return c.json({
-      data: { rising: rising.slice(0, 100), falling: falling.slice(0, 100), new: newMods.slice(0, 100) },
-      meta: { period, comparisonDate: prevEntry?.time || 'N/A' }
+      data: { 
+        rising: rising.slice(0, 100), 
+        falling: falling.slice(0, 100), 
+        new: newMods.slice(0, 100) 
+      },
+      meta: { 
+        period, 
+        comparisonDate: prevEntry?.time || 'N/A',
+        isFallback: dailyHistory.length < targetDays // Inform frontend if we don't have full period data yet
+      }
     });
   } catch (err) {
     return c.json({ data: { rising: [], falling: [], new: [] }, meta: { error: String(err) } }, 500);
