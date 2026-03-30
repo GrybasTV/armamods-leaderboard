@@ -210,6 +210,20 @@ async function runCollector() {
   await kv.put(KV_KEYS.STATS, JSON.stringify({ totalMods, totalPlayers: currentPlayers, totalServers }));
   await kv.put(KV_KEYS.LAST_UPDATE, new Date().toISOString());
 
+  console.log("💾 UPDATING KV HOURLY HISTORY...");
+  try {
+    const historyHourly = await kv.get('history:hourly', 'json') || [];
+    const statsMap: Record<string, { p: number, s: number, r: number }> = {};
+    for (const m of modList) {
+      statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
+    }
+    const updatedHourly = [...historyHourly, { time: new Date().toISOString(), mods: statsMap }].slice(-24);
+    await kv.put('history:hourly', JSON.stringify(updatedHourly));
+    console.log("✅ HOURLY KV HISTORY UPDATED!");
+  } catch (kvErr) {
+    console.error("⚠️ KV Error:", kvErr);
+  }
+
   console.log('✅ COLLECTOR: Complete!');
   return { servers: totalServers, mods: totalMods };
 }
@@ -233,129 +247,35 @@ async function runTrendingSnapshot() {
   const kv = new CloudflareKVClient();
 
   const mods = await getChunkedData(kv, KV_KEYS.MODS) as any[];
-  if (!mods) {
+  if (!mods || mods.length === 0) {
     throw new Error('No mods in cache - run collector first');
   }
 
-  const prevData = await kv.get('snapshot:latest', 'json') as any;
-
-  const currentModMap = new Map();
-  for (const mod of mods) {
-    currentModMap.set(mod.id, mod);
-  }
-
-  const rising: any[] = [];
-  const falling: any[] = [];
-  const newMods: any[] = [];
-
-  if (prevData && prevData.mods) {
-    const prevModMap = new Map();
-    for (const mod of prevData.mods) {
-      prevModMap.set(mod.id, mod);
-    }
-
-    for (const [id, currentMod] of currentModMap) {
-      const prevMod = prevModMap.get(id);
-
-      if (!prevMod) {
-        newMods.push({
-          id: currentMod.id,
-          name: currentMod.name,
-          serverCount: currentMod.serverCount,
-          totalPlayers: currentMod.totalPlayers,
-          playerRank: currentMod.playerRank,
-          serverRank: currentMod.serverRank,
-          overallRank: currentMod.overallRank,
-          changePlayers: currentMod.totalPlayers,
-          changeServers: currentMod.serverCount,
-        });
-      } else {
-        const prevOverallRank = prevMod.overallRank;
-        const currentOverallRank = currentMod.overallRank;
-        const rankImprovement = prevOverallRank - currentOverallRank; // Positive = improved (lower rank number)
-        const playerChange = currentMod.totalPlayers - prevMod.totalPlayers;
-        const serverChange = currentMod.serverCount - prevMod.serverCount;
-
-        if (rankImprovement > 0) {
-          rising.push({
-            id: currentMod.id,
-            name: currentMod.name,
-            serverCount: currentMod.serverCount,
-            totalPlayers: currentMod.totalPlayers,
-            playerRank: currentMod.playerRank,
-            serverRank: currentMod.serverRank,
-            overallRank: currentMod.overallRank,
-            changePlayers: playerChange,
-            changeServers: serverChange,
-            prevRank: prevOverallRank,
-            currentRank: currentOverallRank,
-          });
-        }
-
-        if (rankImprovement < 0) {
-          falling.push({
-            id: currentMod.id,
-            name: currentMod.name,
-            serverCount: currentMod.serverCount,
-            totalPlayers: currentMod.totalPlayers,
-            playerRank: currentMod.playerRank,
-            serverRank: currentMod.serverRank,
-            overallRank: currentMod.overallRank,
-            changePlayers: playerChange,
-            changeServers: serverChange,
-            prevRank: prevOverallRank,
-            currentRank: currentOverallRank,
-          });
-        }
-      }
-    }
-  } else {
-    for (const mod of mods.slice(0, 50)) {
-      newMods.push({
-        id: mod.id,
-        name: mod.name,
-        serverCount: mod.serverCount,
-        totalPlayers: mod.totalPlayers,
-        playerRank: mod.playerRank,
-        serverRank: mod.serverRank,
-        overallRank: mod.overallRank,
-        changePlayers: mod.totalPlayers,
-        changeServers: mod.serverCount,
-      });
-    }
-  }
-
-  // Sort rising by biggest rank improvement (prevRank - currentRank)
-  rising.sort((a, b) => {
-    const rankChangeA = (a.prevRank || 9999) - (a.currentRank || 9999);
-    const rankChangeB = (b.prevRank || 9999) - (b.currentRank || 9999);
-    return rankChangeB - rankChangeA;
-  });
-  
-  // Sort falling by biggest rank drop
-  falling.sort((a, b) => {
-    const rankChangeA = (a.prevRank || 9999) - (a.currentRank || 9999);
-    const rankChangeB = (b.prevRank || 9999) - (b.currentRank || 9999);
-    return rankChangeA - rankChangeB;
-  });
-  
-  // Sort new mods by best overall rank
-  newMods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
-
   const today = new Date().toISOString().split('T')[0];
-  const snapshot = {
-    date: today,
-    timestamp: new Date().toISOString(),
-    mods: mods,
-    rising: rising.slice(0, 100),
-    falling: falling.slice(0, 100),
-    new: newMods.slice(0, 100),
-  };
+  console.log("📊 SAVING DAILY KV SNAPSHOT...");
 
-  await kv.put('snapshot:latest', JSON.stringify(snapshot));
+  try {
+    const historyDaily = await kv.get('history:daily', 'json') || [];
+    
+    const statsMap: Record<string, { p: number, s: number, r: number }> = {};
+    for (const m of mods) {
+      statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
+    }
 
-  console.log(`✅ TRENDING: ${rising.length} rising, ${falling.length} falling, ${newMods.length} new`);
-  return { date: today, rising: rising.length, falling: falling.length, new: newMods.length };
+    const dailyPoint = {
+      time: today,
+      mods: statsMap
+    };
+
+    const updatedDaily = [...historyDaily, dailyPoint].slice(-90);
+    await kv.put('history:daily', JSON.stringify(updatedDaily));
+    
+    console.log("✅ DAILY KV HISTORY UPDATED (90-day window)");
+    return { success: true, date: today };
+  } catch (kvErr) {
+    console.error("⚠️ Failed to update daily KV:", kvErr);
+    throw kvErr;
+  }
 }
 
 // CLI
