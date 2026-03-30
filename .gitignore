@@ -6,8 +6,13 @@ dist
 .dev.vars
 .wrangler
 .gemini
+.claude
+.qwen
 tmp
 web/dist
 web/node_modules
 .DS_Store
-package-lock.json
+
+# Logs
+*.log
+error_tail.txt
