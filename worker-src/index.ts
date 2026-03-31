@@ -229,7 +229,20 @@ app.get('/api/servers/:serverId', async (c) => {
   }
 });
 
-// Trending Data - Now 100% KV-Based and Adaptive
+// ============================================================================
+// TRENDING ALGORITHM: Bayesian Average
+// ============================================================================
+// Formula: ((v / (v + m)) * R) + ((m / (v + m)) * C)
+// Where:
+//   v = actual server count (sample size)
+//   m = minimum server threshold (prior weight) = 5
+//   R = actual growth rate
+//   C = mean growth rate across all mods (prior)
+//
+// This prevents noise from small sample sizes while genuinely highlighting trends.
+// Similar to IMDb's Top 250 and BoardGameGeek rankings.
+// ============================================================================
+
 app.get('/api/trending', async (c) => {
   const period = (c.req.query('period') || '30d') as '24h' | '7d' | '30d';
 
@@ -241,23 +254,21 @@ app.get('/api/trending', async (c) => {
 
     // Adaptive history selection
     const dailyHistory = await c.env.TRENDING_KV.get('history:daily', 'json') as HistoryPoint[] || [];
-    
+
     // Choose target date based on period
     const targetDays = period === '7d' ? 7 : (period === '30d' ? 30 : 1);
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() - targetDays);
     const targetTimestamp = targetDate.getTime();
 
-    // Find the entry closest to our target date (but not newer than target)
-    // If we have very little history, this will naturally fall to the oldest entry (dailyHistory[0])
+    // Find the entry closest to our target date
     let prevEntry = dailyHistory[0];
     let minDiff = Infinity;
 
     for (const entry of dailyHistory) {
       const entryTime = new Date(entry.time).getTime();
       const diff = Math.abs(entryTime - targetTimestamp);
-      
-      // We want the best match for the requested period
+
       if (diff < minDiff) {
         minDiff = diff;
         prevEntry = entry;
@@ -271,53 +282,100 @@ app.get('/api/trending', async (c) => {
       }
     }
 
+    // ============================================================================
+    // BAYESIAN AVERAGE CALCULATION
+    // ============================================================================
+
+    const MIN_SERVERS = 5; // Prior weight (m) - minimum threshold for significance
+    const MIN_PLAYERS = 10; // Minimum players to qualify
+
+    // Calculate mean server growth across all mods (prior C)
+    let totalServerGrowth = 0;
+    let modsWithGrowth = 0;
+
+    for (const mod of currentMods) {
+      const prev = prevMap.get(mod.id);
+      if (prev) {
+        totalServerGrowth += (mod.serverCount - (prev.s || 0));
+        modsWithGrowth++;
+      }
+    }
+
+    const meanServerGrowth = modsWithGrowth > 0 ? totalServerGrowth / modsWithGrowth : 0;
+
     const rising: any[] = [];
     const falling: any[] = [];
     const newMods: any[] = [];
 
     for (const mod of currentMods) {
       const prev = prevMap.get(mod.id);
+
       if (!prev) {
-        newMods.push({ ...mod, changePlayers: mod.totalPlayers, changeServers: mod.serverCount });
+        // New mods - filter by quality thresholds
+        if (mod.serverCount >= MIN_SERVERS && mod.totalPlayers >= MIN_PLAYERS) {
+          newMods.push({
+            ...mod,
+            changePlayers: mod.totalPlayers,
+            changeServers: mod.serverCount
+          });
+        }
       } else {
-        // Calculate rank change (positive is good)
-        const rankImprovement = (prev.r || 9999) - (mod.overallRank || 9999);
-        const playerGrowth = mod.totalPlayers - (prev.p || 0);
-        
+        const serverDelta = mod.serverCount - (prev.s || 0);
+        const playerDelta = mod.totalPlayers - (prev.p || 0);
+
+        // Bayesian Average formula
+        const v = mod.serverCount; // Actual sample size
+        const m = MIN_SERVERS; // Prior weight
+        const R = serverDelta; // Actual growth rate
+        const C = meanServerGrowth; // Prior (mean)
+
+        const bayesianScore = ((v / (v + m)) * R) + ((m / (v + m)) * C);
+
+        // Player velocity as secondary signal
+        const playerVelocity = playerDelta / Math.max((prev.p || 1), 1);
+
+        // Combined score (70% Bayesian, 30% player)
+        const combinedScore = (bayesianScore * 3) + (playerVelocity * 1);
+
         const trendInfo = {
           ...mod,
           prevRank: prev.r,
           currentRank: mod.overallRank,
-          changePlayers: playerGrowth,
-          changeServers: mod.serverCount - (prev.s || 0),
-          rankChange: rankImprovement
+          changePlayers: playerDelta,
+          changeServers: serverDelta,
+          bayesianScore,
+          combinedScore
         };
 
-        // If it's a completely new history (only 1 entry), rankImprovement will be 0.
-        // We prioritize rank improvement, then player growth.
-        if (rankImprovement > 0 || (rankImprovement === 0 && playerGrowth > 0)) {
-          rising.push(trendInfo);
-        } else if (rankImprovement < 0 || (rankImprovement === 0 && playerGrowth < 0)) {
-          falling.push(trendInfo);
+        // Quality filter + positive/negative classification
+        if (mod.serverCount >= MIN_SERVERS && mod.totalPlayers >= MIN_PLAYERS) {
+          if (combinedScore > 0) {
+            rising.push(trendInfo);
+          } else if (combinedScore < 0) {
+            falling.push(trendInfo);
+          }
         }
       }
     }
 
-    // Sort: Rising by rank improvement (primary) and player growth (secondary)
-    rising.sort((a, b) => b.rankChange - a.rankChange || b.changePlayers - a.changePlayers);
-    falling.sort((a, b) => a.rankChange - b.rankChange || a.changePlayers - b.changePlayers);
+    // Sort by combined Bayesian score
+    rising.sort((a, b) => b.combinedScore - a.combinedScore);
+    falling.sort((a, b) => a.combinedScore - b.combinedScore);
     newMods.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
 
     return c.json({
-      data: { 
-        rising: rising.slice(0, 100), 
-        falling: falling.slice(0, 100), 
-        new: newMods.slice(0, 100) 
+      data: {
+        rising: rising.slice(0, 100),
+        falling: falling.slice(0, 100),
+        new: newMods.slice(0, 100)
       },
-      meta: { 
-        period, 
+      meta: {
+        period,
         comparisonDate: prevEntry?.time || 'N/A',
-        isFallback: dailyHistory.length < targetDays // Inform frontend if we don't have full period data yet
+        isFallback: dailyHistory.length < targetDays,
+        algorithm: 'bayesian',
+        minServers: MIN_SERVERS,
+        minPlayers: MIN_PLAYERS
       }
     });
   } catch (err) {
