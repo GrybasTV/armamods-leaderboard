@@ -1,11 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
-import { serversApi, modsApi } from '../api/client';
+import { serversApi, modsApi, type GameType } from '../api/client';
 import type { Server } from '../types';
 
 export type StatusFilter = 'all' | 'full' | 'active' | 'available' | 'low';
 export type ServerSortBy = 'players' | 'name' | 'mods';
 
-export function useServers() {
+interface UseServersOptions {
+  game?: GameType;
+}
+
+export function useServers(options: UseServersOptions = {}) {
+  const { game = 'reforger' } = options;
   const [servers, setServers] = useState<Server[]>([]);
   const [totalServers, setTotalServers] = useState(0);
   const [globalStats, setGlobalStats] = useState({ totalPlayers: 0, fullServers: 0 });
@@ -22,8 +27,8 @@ export function useServers() {
     try {
       setLoading(true);
       const [serversData, statsData] = await Promise.all([
-        serversApi.getList(1000),
-        modsApi.getGlobalStats()
+        serversApi.getList(1000, 0, undefined, game),
+        modsApi.getGlobalStats(game)
       ]);
       const fetchedServers = serversData?.data || [];
       setServers(fetchedServers);

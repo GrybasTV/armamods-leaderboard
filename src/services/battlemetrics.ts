@@ -16,6 +16,13 @@ interface BattleMetricsServer {
           version: string;
         }>;
       };
+      arma3?: {
+        mods?: Array<{
+          modId: string;
+          name: string;
+          version?: string;
+        }>;
+      };
     };
   };
 }
@@ -27,13 +34,17 @@ interface BattleMetricsResponse {
   };
 }
 
+export type GameType = 'reforger' | 'arma3';
+
 export class BattleMetricsService {
   private readonly baseUrl = 'https://api.battlemetrics.com/servers';
   private readonly apiKey = process.env.BATTLEMETRICS_API_KEY;
 
+  constructor(private game: GameType = 'reforger') {}
+
   async fetchAllServers(updateMode = false): Promise<BattleMetricsServer[]> {
     const servers: BattleMetricsServer[] = [];
-    let url = `${this.baseUrl}?filter[game]=reforger&page[size]=100`;
+    let url = `${this.baseUrl}?filter[game]=${this.game}&page[size]=100`;
     let pageCount = 0;
     const maxPages = updateMode ? 3 : 10000; // Update mode: only first 3 pages (300 servers)
 

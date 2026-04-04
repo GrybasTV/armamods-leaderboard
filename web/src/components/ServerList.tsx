@@ -3,8 +3,13 @@ import { ServerCard } from './ServerCard';
 import { StatsHero } from './ui/StatsHero';
 import { Pagination } from './ui/Pagination';
 import { StatusState } from './ui/StatusState';
+import type { GameType } from '../api/client';
 
-export function ServerList() {
+interface ServerListProps {
+  game?: GameType;
+}
+
+export function ServerList({ game = 'reforger' }: ServerListProps) {
   const {
     filteredServers,
     loading,
@@ -21,7 +26,7 @@ export function ServerList() {
     resetFilters,
     stats,
     refresh
-  } = useServers();
+  } = useServers({ game });
 
   if (loading) return <StatusState type="loading" />;
   if (error) return <StatusState type="error" details={error} onAction={refresh} actionText="Try Again" />;

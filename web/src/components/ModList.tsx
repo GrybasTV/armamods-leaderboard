@@ -3,8 +3,13 @@ import { ModCard } from './ModCard';
 import { StatusState } from './ui/StatusState';
 import { StatsHero } from './ui/StatsHero';
 import { DonationCard } from './DonationCard';
+import type { GameType } from '../api/client';
 
-export function ModList() {
+interface ModListProps {
+  game?: GameType;
+}
+
+export function ModList({ game = 'reforger' }: ModListProps) {
   const {
     filteredMods,
     loading,
@@ -21,7 +26,7 @@ export function ModList() {
     resetFilters,
     stats,
     refresh
-  } = useMods();
+  } = useMods({ game });
 
   if (loading && filteredMods.length === 0) return <StatusState type="loading" />;
 

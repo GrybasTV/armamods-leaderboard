@@ -62,12 +62,20 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<ModList />} />
-            <Route path="/servers" element={<ServerList />} />
-            <Route path="/server/:serverId" element={<ServerDetail />} />
-            <Route path="/mod/:modId" element={<ModDetail />} />
-            <Route path="/trending" element={<TrendingPage />} />
+            {/* Reforger routes (default) */}
+            <Route path="/" element={<ModList game="reforger" />} />
+            <Route path="/servers" element={<ServerList game="reforger" />} />
+            <Route path="/server/:serverId" element={<ServerDetail game="reforger" />} />
+            <Route path="/mod/:modId" element={<ModDetail game="reforger" />} />
+            <Route path="/trending" element={<TrendingPage game="reforger" />} />
             <Route path="/support" element={<SupportPage />} />
+
+            {/* Arma 3 routes */}
+            <Route path="/arma3" element={<ModList game="arma3" />} />
+            <Route path="/arma3/servers" element={<ServerList game="arma3" />} />
+            <Route path="/arma3/server/:serverId" element={<ServerDetail game="arma3" />} />
+            <Route path="/arma3/mod/:modId" element={<ModDetail game="arma3" />} />
+            <Route path="/arma3/trending" element={<TrendingPage game="arma3" />} />
           </Routes>
         </Layout>
       </Router>

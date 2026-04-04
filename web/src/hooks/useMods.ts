@@ -1,11 +1,16 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { modsApi } from '../api/client';
+import { modsApi, type GameType } from '../api/client';
 import type { Mod } from '../types';
 
 export type PlayerFilter = 'all' | 'high' | 'medium' | 'low';
 export type ModSortBy = 'overall' | 'players' | 'servers';
 
-export function useMods() {
+interface UseModsOptions {
+  game?: GameType;
+}
+
+export function useMods(options: UseModsOptions = {}) {
+  const { game = 'reforger' } = options;
   const [mods, setMods] = useState<Mod[]>([]);
   const [totalMods, setTotalMods] = useState(0);
   const [globalStats, setGlobalStats] = useState({ totalPlayers: 0, totalServers: 0, totalMods: 0 });
@@ -25,8 +30,8 @@ export function useMods() {
 
       // Fetch both list and global stats
       const [listData, statsData] = await Promise.all([
-        modsApi.getPopular(itemsPerPage, offset, searchQuery, sortBy),
-        modsApi.getGlobalStats()
+        modsApi.getPopular(itemsPerPage, offset, searchQuery, sortBy, game),
+        modsApi.getGlobalStats(game)
       ]);
 
       setMods(Array.isArray(listData?.data) ? listData.data : []);
@@ -38,7 +43,7 @@ export function useMods() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery, sortBy]);
+  }, [currentPage, searchQuery, sortBy, game]);
 
   useEffect(() => {
     setCurrentPage(1);

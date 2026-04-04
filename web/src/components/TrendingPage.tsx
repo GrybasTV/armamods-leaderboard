@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { trendingApi } from '../api/client';
+import { trendingApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
@@ -8,7 +8,11 @@ import type { TrendingMod, TrendPeriod } from '../types';
 
 type TrendCategory = 'rising' | 'falling' | 'new';
 
-export function TrendingPage() {
+interface TrendingPageProps {
+  game?: GameType;
+}
+
+export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
   const [trending, setTrending] = useState<{
     rising: TrendingMod[];
     falling: TrendingMod[];
@@ -23,8 +27,8 @@ export function TrendingPage() {
   const loadTrending = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await trendingApi.getTrending(activePeriod);
-      
+      const data = await trendingApi.getTrending(activePeriod, game);
+
       if (data && data.data) {
         setTrending({
           rising: data.data.rising,
@@ -32,7 +36,7 @@ export function TrendingPage() {
           new: data.data.new
         });
       }
-      
+
       setComparisonDate(data?.meta?.comparisonDate || null);
       setError(null);
     } catch (err) {
@@ -40,7 +44,7 @@ export function TrendingPage() {
     } finally {
       setLoading(false);
     }
-  }, [activePeriod]);
+  }, [activePeriod, game]);
 
   useEffect(() => {
     loadTrending();

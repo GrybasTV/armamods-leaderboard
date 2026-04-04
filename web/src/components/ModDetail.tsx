@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { modsApi } from '../api/client';
+import { modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
@@ -13,7 +13,11 @@ interface ModDetailData extends Mod {
   servers: Server[];
 }
 
-export function ModDetail() {
+interface ModDetailProps {
+  game?: GameType;
+}
+
+export function ModDetail({ game = 'reforger' }: ModDetailProps) {
   const { modId } = useParams<{ modId: string }>();
   const [mod, setMod] = useState<ModDetailData | null>(null);
   const [history, setHistory] = useState<ModHistory[]>([]);
@@ -26,8 +30,8 @@ export function ModDetail() {
     try {
       setLoading(true);
       const [modRes, historyData] = await Promise.all([
-        modsApi.getById(modId),
-        modsApi.getHistory(modId, days).catch(() => ({ data: [] }))
+        modsApi.getById(modId, game),
+        modsApi.getHistory(modId, days, game).catch(() => ({ data: [] }))
       ]);
       setMod(modRes.data);
       setHistory(historyData.data);
@@ -37,7 +41,7 @@ export function ModDetail() {
     } finally {
       setLoading(false);
     }
-  }, [modId]);
+  }, [modId, game]);
 
   useEffect(() => {
     loadMod(selectedDays);

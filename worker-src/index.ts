@@ -2,6 +2,23 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
+type GameType = 'reforger' | 'arma3';
+
+function getGameFromQuery(c: any): GameType {
+  const game = c.req.query('game');
+  return game === 'arma3' ? 'arma3' : 'reforger';
+}
+
+function getKVKeys(game: GameType) {
+  const suffix = game === 'arma3' ? ':arma3' : '';
+  return {
+    MODS: `cache:mods${suffix}`,
+    SERVERS: `cache:servers${suffix}`,
+    STATS: `cache:stats${suffix}`,
+    LAST_UPDATE: `cache:lastUpdate${suffix}`,
+  };
+}
+
 interface Mod {
   id: string;
   name: string;
@@ -45,14 +62,6 @@ const app = new Hono<{ Bindings: Bindings }>();
 app.use('*', cors());
 app.get('/', (c) => c.text('ARMAMODS Leaderboard API - Online'));
 
-// KV Keys
-const KV_KEYS = {
-  MODS: 'cache:mods',
-  SERVERS: 'cache:servers',
-  STATS: 'cache:stats',
-  LAST_UPDATE: 'cache:lastUpdate',
-};
-
 // ============================================================================
 // API Endpoints (serving from KV - no SQL reads!)
 // ============================================================================
@@ -76,16 +85,22 @@ async function getChunkedData(kv: KVNamespace, baseKey: string): Promise<any[]> 
 }
 
 app.get('/api/stats', async (c) => {
+  const game = getGameFromQuery(c);
+  const KV_KEYS = getKVKeys(game);
+
   try {
     const stats = await c.env.TRENDING_KV.get(KV_KEYS.STATS, 'json');
-    return c.json(stats || { totalMods: 0, totalPlayers: 0, totalServers: 0 });
+    return c.json(stats || { totalMods: 0, totalPlayers: 0, totalServers: 0, game });
   } catch (err) {
-    return c.json({ totalMods: 0, totalPlayers: 0, totalServers: 0, error: String(err) });
+    return c.json({ totalMods: 0, totalPlayers: 0, totalServers: 0, game, error: String(err) });
   }
 });
 
 // All Active Mods
 app.get('/api/mods', async (c) => {
+  const game = getGameFromQuery(c);
+  const KV_KEYS = getKVKeys(game);
+
   const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
   const offset = parseInt(c.req.query('offset') || '0');
   const sortBy = c.req.query('sortBy') || 'overall';
@@ -127,6 +142,8 @@ app.get('/api/mods', async (c) => {
 
 // Single Mod Detail
 app.get('/api/mods/:modId', async (c) => {
+  const game = getGameFromQuery(c);
+  const KV_KEYS = getKVKeys(game);
   const modId = c.req.param('modId');
 
   try {
@@ -162,11 +179,12 @@ app.get('/api/mods/:modId', async (c) => {
 
 // Mod History (30 days) from KV
 app.get('/api/mods/:modId/history', async (c) => {
+  const game = getGameFromQuery(c);
   const modId = c.req.param('modId');
   const days = Math.min(parseInt(c.req.query('days') || '30'), 365);
-  
+
   try {
-    const key = days <= 1 ? 'history:hourly' : 'history:daily';
+    const key = days <= 1 ? `history:hourly:${game}` : `history:daily:${game}`;
     const historyData = await c.env.TRENDING_KV.get(key, 'json') as HistoryPoint[] || [];
     
     const modHistory = historyData.slice(-days * (key === 'history:hourly' ? 24 : 1)).map(point => {
@@ -182,6 +200,9 @@ app.get('/api/mods/:modId/history', async (c) => {
 
 // All Servers
 app.get('/api/servers', async (c) => {
+  const game = getGameFromQuery(c);
+  const KV_KEYS = getKVKeys(game);
+
   const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
   const offset = parseInt(c.req.query('offset') || '0');
   const search = c.req.query('search') || '';
@@ -214,6 +235,8 @@ app.get('/api/servers', async (c) => {
 
 // Single Server Detail
 app.get('/api/servers/:serverId', async (c) => {
+  const game = getGameFromQuery(c);
+  const KV_KEYS = getKVKeys(game);
   const serverId = c.req.param('serverId');
 
   try {
@@ -244,6 +267,8 @@ app.get('/api/servers/:serverId', async (c) => {
 // ============================================================================
 
 app.get('/api/trending', async (c) => {
+  const game = getGameFromQuery(c);
+  const KV_KEYS = getKVKeys(game);
   const period = (c.req.query('period') || '30d') as '24h' | '7d' | '30d';
 
   try {
@@ -253,7 +278,7 @@ app.get('/api/trending', async (c) => {
     }
 
     // Adaptive history selection
-    const dailyHistory = await c.env.TRENDING_KV.get('history:daily', 'json') as HistoryPoint[] || [];
+    const dailyHistory = await c.env.TRENDING_KV.get(`history:daily:${game}`, 'json') as HistoryPoint[] || [];
 
     // Choose target date based on period
     const targetDays = period === '7d' ? 7 : (period === '30d' ? 30 : 1);
@@ -387,9 +412,10 @@ app.get('/api/trending', async (c) => {
 // Collector Service (100% KV-Native)
 // ============================================================================
 
-async function runCollector(env: Bindings) {
-  const game = 'reforger';
-  console.log("🚀 CLOUDFLARE_COLLECTOR: STARTING IMPORT (100% KV)");
+async function runCollector(env: Bindings, game: GameType = 'reforger') {
+  console.log(`🚀 CLOUDFLARE_COLLECTOR: STARTING IMPORT (100% KV) - ${game.toUpperCase()}`);
+
+  const KV_KEYS = getKVKeys(game);
 
   const allServers: any[] = [];
   const params = new URLSearchParams({ 'filter[game]': game, 'page[size]': '100' });
@@ -414,7 +440,9 @@ async function runCollector(env: Bindings) {
     const activeModsMap = new Map<string, {id:string, name:string, p:number, s:number}>();
     for (const server of allServers) {
       const players = server.attributes?.players || 0;
-      const mods = server.attributes?.details?.reforger?.mods || [];
+      const mods = game === 'arma3'
+        ? (server.attributes?.details?.arma3?.mods || [])
+        : (server.attributes?.details?.reforger?.mods || []);
       for (const sm of mods) {
         if (!sm.modId) continue;
         const existing = activeModsMap.get(sm.modId);
@@ -445,7 +473,9 @@ async function runCollector(env: Bindings) {
     modList.forEach((m, i) => m.overallRank = i + 1);
 
     const serverList: Server[] = allServers.map((s: any) => {
-      const sMods = s.attributes?.details?.reforger?.mods || [];
+      const sMods = game === 'arma3'
+        ? (s.attributes?.details?.arma3?.mods || [])
+        : (s.attributes?.details?.reforger?.mods || []);
       return {
         id: s.id, name: s.attributes?.name, ip: s.attributes?.ip, port: s.attributes?.port,
         players: s.attributes?.players, maxPlayers: s.attributes?.maxPlayers,
@@ -467,11 +497,11 @@ async function runCollector(env: Bindings) {
 
     console.log("💾 UPDATING KV HOURLY HISTORY...");
     try {
-      const historyHourly = await env.TRENDING_KV.get('history:hourly', 'json') as HistoryPoint[] || [];
+      const historyHourly = await env.TRENDING_KV.get(`history:hourly:${game}`, 'json') as HistoryPoint[] || [];
       const statsMap: Record<string, ModSnapshot> = {};
       for (const m of modList) statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
       const updatedHourly = [...historyHourly, { time: new Date().toISOString(), mods: statsMap }].slice(-24);
-      await env.TRENDING_KV.put('history:hourly', JSON.stringify(updatedHourly));
+      await env.TRENDING_KV.put(`history:hourly:${game}`, JSON.stringify(updatedHourly));
     } catch (kvErr) { console.error("⚠️ KV Error:", kvErr); }
 
     return { servers: totalS, mods: modList.length, timestamp: new Date().toISOString() };
@@ -479,8 +509,10 @@ async function runCollector(env: Bindings) {
 }
 
 // Trending Snapshot Service
-async function runTrendingSnapshot(env: Bindings) {
-  console.log("📈 TRENDING_SNAPSHOT: STARTING");
+async function runTrendingSnapshot(env: Bindings, game: GameType = 'reforger') {
+  console.log(`📈 TRENDING_SNAPSHOT: STARTING - ${game.toUpperCase()}`);
+
+  const KV_KEYS = getKVKeys(game);
 
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -489,7 +521,7 @@ async function runTrendingSnapshot(env: Bindings) {
 
     console.log("📊 SAVING DAILY KV SNAPSHOT...");
     try {
-      const historyDaily = await env.TRENDING_KV.get('history:daily', 'json') as HistoryPoint[] || [];
+      const historyDaily = await env.TRENDING_KV.get(`history:daily:${game}`, 'json') as HistoryPoint[] || [];
       
       const statsMap: Record<string, ModSnapshot> = {};
       for (const m of mods) {
@@ -502,7 +534,7 @@ async function runTrendingSnapshot(env: Bindings) {
       };
 
       const updatedDaily = [...historyDaily, dailyPoint].slice(-90);
-      await env.TRENDING_KV.put('history:daily', JSON.stringify(updatedDaily));
+      await env.TRENDING_KV.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
       console.log("✅ DAILY KV HISTORY UPDATED (90-day window)");
     } catch (kvErr) {
       console.error("⚠️ Failed to update daily KV:", kvErr);
@@ -517,20 +549,22 @@ async function runTrendingSnapshot(env: Bindings) {
 
 // Manual trigger endpoints
 app.get('/api/collect', async (c) => {
+  const game = getGameFromQuery(c);
   try {
-    const stats = await runCollector(c.env);
-    return c.json(stats);
+    const stats = await runCollector(c.env, game);
+    return c.json({ ...stats, game });
   } catch (err) {
-    return c.json({ success: false, error: String(err) }, 500);
+    return c.json({ success: false, game, error: String(err) }, 500);
   }
 });
 
 app.get('/api/trending/snapshot', async (c) => {
+  const game = getGameFromQuery(c);
   try {
-    const result = await runTrendingSnapshot(c.env);
-    return c.json(result);
+    const result = await runTrendingSnapshot(c.env, game);
+    return c.json({ ...result, game });
   } catch (err) {
-    return c.json({ success: false, error: String(err) }, 500);
+    return c.json({ success: false, game, error: String(err) }, 500);
   }
 });
 
@@ -555,11 +589,15 @@ app.get('/api/webhook/status', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
+  const game = getGameFromQuery(c);
+  const KV_KEYS = getKVKeys(game);
+
   try {
     const trigger = await c.env.TRENDING_KV.get('webhook:collect:trigger', 'json');
     const lastUpdate = await c.env.TRENDING_KV.get(KV_KEYS.LAST_UPDATE);
 
     return c.json({
+      game,
       hasPendingTrigger: !!trigger,
       lastUpdate: lastUpdate || null,
       triggerData: trigger || null

@@ -2,10 +2,12 @@
 /**
  * Collector - fetches data from BattleMetrics and pushes to Cloudflare KV
  * Runs outside of Cloudflare (GitHub Actions, local machine) to avoid IP blocks
+ *
+ * Usage: npm run collect [-- --game=reforger|arma3]
  */
 
 import 'dotenv/config';
-import { BattleMetricsService } from '../src/services/battlemetrics.js';
+import { BattleMetricsService, GameType } from '../src/services/battlemetrics.js';
 
 interface CloudflareKV {
   put: (key: string, value: string) => Promise<void>;
@@ -59,12 +61,22 @@ class CloudflareKVClient {
   }
 }
 
-const KV_KEYS = {
-  MODS: 'cache:mods',
-  SERVERS: 'cache:servers',
-  STATS: 'cache:stats',
-  LAST_UPDATE: 'cache:lastUpdate',
-};
+// Parse game type from CLI
+function parseGameType(): GameType {
+  const gameArg = process.argv.find(arg => arg.startsWith('--game='));
+  const game = gameArg?.split('=')[1] as GameType;
+  return game === 'arma3' ? 'arma3' : 'reforger';
+}
+
+function getKVKeys(game: GameType) {
+  const suffix = game === 'arma3' ? ':arma3' : '';
+  return {
+    MODS: `cache:mods${suffix}`,
+    SERVERS: `cache:servers${suffix}`,
+    STATS: `cache:stats${suffix}`,
+    LAST_UPDATE: `cache:lastUpdate${suffix}`,
+  };
+}
 
 interface ServerMod {
   serverId: string;
@@ -72,10 +84,12 @@ interface ServerMod {
 }
 
 async function runCollector() {
-  console.log('🚀 COLLECTOR: Starting...');
+  const game = parseGameType();
+  console.log(`🚀 COLLECTOR: Starting for ${game.toUpperCase()}...`);
 
   const kv = new CloudflareKVClient();
-  const bm = new BattleMetricsService();
+  const bm = new BattleMetricsService(game);
+  const KV_KEYS = getKVKeys(game);
 
   console.log('📡 Fetching servers from BattleMetrics...');
   const servers = await bm.fetchAllServers(false); // fetch ALL servers
@@ -88,7 +102,9 @@ async function runCollector() {
 
   for (const server of servers) {
     const { id, attributes } = server;
-    const reforgerMods = attributes.details?.reforger?.mods || [];
+    const gameMods = game === 'arma3'
+      ? (attributes.details?.arma3?.mods || [])
+      : (attributes.details?.reforger?.mods || []);
 
     serverList.push({
       id,
@@ -100,7 +116,7 @@ async function runCollector() {
       mods: [] as any[],
     });
 
-    for (const sm of reforgerMods) {
+    for (const sm of gameMods) {
       serverMods.push({ serverId: id, modId: sm.modId });
 
       if (!modMap.has(sm.modId)) {
@@ -212,13 +228,13 @@ async function runCollector() {
 
   console.log("💾 UPDATING KV HOURLY HISTORY...");
   try {
-    const historyHourly = await kv.get('history:hourly', 'json') || [];
+    const historyHourly = await kv.get(`history:hourly:${game}`, 'json') || [];
     const statsMap: Record<string, { p: number, s: number, r: number }> = {};
     for (const m of modList) {
       statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
     }
     const updatedHourly = [...historyHourly, { time: new Date().toISOString(), mods: statsMap }].slice(-24);
-    await kv.put('history:hourly', JSON.stringify(updatedHourly));
+    await kv.put(`history:hourly:${game}`, JSON.stringify(updatedHourly));
     console.log("✅ HOURLY KV HISTORY UPDATED!");
   } catch (kvErr) {
     console.error("⚠️ KV Error:", kvErr);
@@ -242,9 +258,11 @@ async function getChunkedData(kv: CloudflareKVClient, baseKey: string): Promise<
 }
 
 async function runTrendingSnapshot() {
-  console.log('📈 TRENDING SNAPSHOT: Starting...');
+  const game = parseGameType();
+  console.log(`📈 TRENDING SNAPSHOT: Starting for ${game.toUpperCase()}...`);
 
   const kv = new CloudflareKVClient();
+  const KV_KEYS = getKVKeys(game);
 
   const mods = await getChunkedData(kv, KV_KEYS.MODS) as any[];
   if (!mods || mods.length === 0) {
@@ -255,7 +273,7 @@ async function runTrendingSnapshot() {
   console.log("📊 SAVING DAILY KV SNAPSHOT...");
 
   try {
-    const historyDaily = await kv.get('history:daily', 'json') || [];
+    const historyDaily = await kv.get(`history:daily:${game}`, 'json') || [];
     
     const statsMap: Record<string, { p: number, s: number, r: number }> = {};
     for (const m of mods) {
@@ -268,7 +286,7 @@ async function runTrendingSnapshot() {
     };
 
     const updatedDaily = [...historyDaily, dailyPoint].slice(-90);
-    await kv.put('history:daily', JSON.stringify(updatedDaily));
+    await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
     
     console.log("✅ DAILY KV HISTORY UPDATED (90-day window)");
     return { success: true, date: today };
@@ -296,3 +314,9 @@ const command = process.argv[2];
     process.exit(1);
   }
 })();
+
+// Usage examples:
+// npm run collect              # Collect Reforger (default)
+// npm run collect -- --game=arma3  # Collect Arma 3
+// npm run trending             # Trending snapshot for Reforger
+// npm run trending -- --game=arma3 # Trending snapshot for Arma 3

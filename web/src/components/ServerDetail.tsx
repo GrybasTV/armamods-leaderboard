@@ -1,12 +1,16 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { serversApi } from '../api/client';
+import { serversApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
 import type { Server } from '../types';
 
-export function ServerDetail() {
+interface ServerDetailProps {
+  game?: GameType;
+}
+
+export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   const { serverId } = useParams<{ serverId: string }>();
   const [server, setServer] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,7 +26,7 @@ export function ServerDetail() {
     if (!serverId) return;
     try {
       setLoading(true);
-      const data = await serversApi.getById(serverId);
+      const data = await serversApi.getById(serverId, game);
       setServer(data.data);
       setError(null);
     } catch (err) {
@@ -30,7 +34,7 @@ export function ServerDetail() {
     } finally {
       setLoading(false);
     }
-  }, [serverId]);
+  }, [serverId, game]);
 
   useEffect(() => {
     loadServer();
