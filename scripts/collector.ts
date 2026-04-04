@@ -127,6 +127,9 @@ async function runCollector() {
     });
 
     for (const sm of gameMods) {
+      // Skip mod ID 0 (base game, not an actual mod)
+      if (sm.modId === '0' || sm.modId === 0) continue;
+
       serverMods.push({ serverId: id, modId: sm.modId });
 
       if (!modMap.has(sm.modId)) {

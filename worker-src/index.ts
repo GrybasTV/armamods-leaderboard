@@ -456,6 +456,8 @@ async function runCollector(env: Bindings, game: GameType = 'reforger') {
 
       for (const sm of mods) {
         if (!sm.modId) continue;
+        // Skip mod ID 0 (base game, not an actual mod)
+        if (sm.modId === '0' || sm.modId === 0) continue;
         const existing = activeModsMap.get(sm.modId);
         if (existing) { existing.p += players; existing.s += 1; }
         else activeModsMap.set(sm.modId, { id: sm.modId, name: sm.name || "Unknown Module", p: players, s: 1 });
