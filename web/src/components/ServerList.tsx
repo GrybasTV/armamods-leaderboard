@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useServers } from '../hooks/useServers';
 import { ServerCard } from './ServerCard';
 import { StatsHero } from './ui/StatsHero';
@@ -10,6 +11,11 @@ interface ServerListProps {
 }
 
 export function ServerList({ game = 'reforger' }: ServerListProps) {
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
   const {
     filteredServers,
     loading,

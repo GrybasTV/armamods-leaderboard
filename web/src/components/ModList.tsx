@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useMods } from '../hooks/useMods';
 import { ModCard } from './ModCard';
 import { StatusState } from './ui/StatusState';
@@ -10,6 +11,11 @@ interface ModListProps {
 }
 
 export function ModList({ game = 'reforger' }: ModListProps) {
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
   const {
     filteredMods,
     loading,
