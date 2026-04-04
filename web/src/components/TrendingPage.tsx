@@ -21,7 +21,7 @@ export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<TrendCategory>('rising');
-  const [activePeriod, setActivePeriod] = useState<TrendPeriod>('24h');
+  const [activePeriod, setActivePeriod] = useState<TrendPeriod>('30d');
   const [comparisonDate, setComparisonDate] = useState<string | null>(null);
 
   const loadTrending = useCallback(async () => {
