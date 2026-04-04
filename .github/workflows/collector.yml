@@ -62,8 +62,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
-    # Only run trending snapshot at 3 AM daily or manual trigger
-    if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+    # Run trending snapshot on manual trigger only (to save API quota)
+    if: github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout
@@ -90,8 +90,8 @@ jobs:
     timeout-minutes: 5
     needs: trending-reforger
 
-    # Only run trending snapshot at 3 AM daily or manual trigger
-    if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+    # Run trending snapshot on manual trigger only (to save API quota)
+    if: github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout

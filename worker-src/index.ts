@@ -440,9 +440,20 @@ async function runCollector(env: Bindings, game: GameType = 'reforger') {
     const activeModsMap = new Map<string, {id:string, name:string, p:number, s:number}>();
     for (const server of allServers) {
       const players = server.attributes?.players || 0;
-      const mods = game === 'arma3'
-        ? (server.attributes?.details?.arma3?.mods || [])
-        : (server.attributes?.details?.reforger?.mods || []);
+
+      // Arma 3 uses modIds/modNames arrays, Reforger uses mods array
+      let mods: Array<{modId: string; name: string}> = [];
+      if (game === 'arma3') {
+        const modIds = server.attributes?.details?.modIds || [];
+        const modNames = server.attributes?.details?.modNames || [];
+        mods = modIds.filter((mid: any) => mid != null).map((mid: number, idx: number) => ({
+          modId: mid.toString(),
+          name: modNames[idx] || `Mod ${mid}`
+        }));
+      } else {
+        mods = server.attributes?.details?.reforger?.mods || [];
+      }
+
       for (const sm of mods) {
         if (!sm.modId) continue;
         const existing = activeModsMap.get(sm.modId);
@@ -473,9 +484,19 @@ async function runCollector(env: Bindings, game: GameType = 'reforger') {
     modList.forEach((m, i) => m.overallRank = i + 1);
 
     const serverList: Server[] = allServers.map((s: any) => {
-      const sMods = game === 'arma3'
-        ? (s.attributes?.details?.arma3?.mods || [])
-        : (s.attributes?.details?.reforger?.mods || []);
+      // Arma 3 uses modIds/modNames arrays, Reforger uses mods array
+      let sMods: Array<{modId: string; name: string}> = [];
+      if (game === 'arma3') {
+        const modIds = s.attributes?.details?.modIds || [];
+        const modNames = s.attributes?.details?.modNames || [];
+        sMods = modIds.filter((mid: any) => mid != null).map((mid: number, idx: number) => ({
+          modId: mid.toString(),
+          name: modNames[idx] || `Mod ${mid}`
+        }));
+      } else {
+        sMods = s.attributes?.details?.reforger?.mods || [];
+      }
+
       return {
         id: s.id, name: s.attributes?.name, ip: s.attributes?.ip, port: s.attributes?.port,
         players: s.attributes?.players, maxPlayers: s.attributes?.maxPlayers,

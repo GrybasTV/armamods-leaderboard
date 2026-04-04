@@ -102,9 +102,19 @@ async function runCollector() {
 
   for (const server of servers) {
     const { id, attributes } = server;
-    const gameMods = game === 'arma3'
-      ? (attributes.details?.arma3?.mods || [])
-      : (attributes.details?.reforger?.mods || []);
+
+    // Arma 3 uses modIds/modNames arrays, Reforger uses mods array
+    let gameMods: Array<{modId: string; name: string}> = [];
+    if (game === 'arma3') {
+      const modIds = attributes.details?.modIds || [];
+      const modNames = attributes.details?.modNames || [];
+      gameMods = modIds.filter((mid: any) => mid != null).map((mid: number, idx: number) => ({
+        modId: mid.toString(),
+        name: modNames[idx] || `Mod ${mid}`
+      }));
+    } else {
+      gameMods = attributes.details?.reforger?.mods || [];
+    }
 
     serverList.push({
       id,
