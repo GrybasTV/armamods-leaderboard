@@ -21,5 +21,3 @@ ENVIRONMENT = "production"
 # Webhook secret (Set this in Cloudflare Dashboard or via 'wrangler secret put WEBHOOK_SECRET')
 WEBHOOK_SECRET = "REPLACE_WITH_SECRET"
 
-[triggers]
-# crons = ["0 * * * *"]
