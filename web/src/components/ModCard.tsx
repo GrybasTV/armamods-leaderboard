@@ -1,14 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from './ui/Card';
-import type { Mod, GameType } from '../types';
+import type { Mod } from '../types';
 
 interface ModCardProps {
   mod: Mod;
   rank?: number;
-  game?: GameType;
 }
 
-export function ModCard({ mod, rank, game = 'reforger' }: ModCardProps) {
+export function ModCard({ mod, rank }: ModCardProps) {
   const isTop3 = rank && rank <= 3;
 
   return (
@@ -72,7 +71,7 @@ export function ModCard({ mod, rank, game = 'reforger' }: ModCardProps) {
              Full Intel →
            </Link>
            <a
-            href={game === 'arma3'
+            href={/^\d+$/.test(mod.id)
               ? `https://steamcommunity.com/sharedfiles/filedetails/?id=${mod.id}`
               : `https://reforger.armaplatform.com/workshop/${mod.id}`}
             target="_blank"

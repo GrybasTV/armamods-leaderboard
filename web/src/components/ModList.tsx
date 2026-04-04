@@ -107,7 +107,6 @@ export function ModList({ game = 'reforger' }: ModListProps) {
               key={mod.id}
               mod={mod}
               rank={mod.overallRank}
-              game={game}
             />
           ))}
         </div>
