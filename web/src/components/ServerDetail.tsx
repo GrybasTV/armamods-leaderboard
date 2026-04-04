@@ -245,7 +245,9 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
                       Module Intel
                     </Link>
                     <a
-                      href={`https://reforger.armaplatform.com/workshop/${mod.id}`}
+                      href={game === 'arma3'
+                        ? `https://steamcommunity.com/sharedfiles/filedetails/?id=${mod.id}`
+                        : `https://reforger.armaplatform.com/workshop/${mod.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-3 bg-white/5 border border-white/10 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-white hover:text-black transition-all text-center"

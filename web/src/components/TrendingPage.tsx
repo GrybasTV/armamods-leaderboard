@@ -235,7 +235,9 @@ export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
                         Full Intel
                       </Link>
                       <a
-                        href={`https://reforger.armaplatform.com/workshop/${mod.id}`}
+                        href={game === 'arma3'
+                          ? `https://steamcommunity.com/sharedfiles/filedetails/?id=${mod.id}`
+                          : `https://reforger.armaplatform.com/workshop/${mod.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-4 py-3 bg-white/5 border border-white/10 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-white hover:text-black transition-all"
