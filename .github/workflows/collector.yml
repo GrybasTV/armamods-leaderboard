@@ -61,9 +61,7 @@ jobs:
   trending-reforger:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-
-    # Run trending snapshot on manual trigger only (to save API quota)
-    if: github.event_name == 'workflow_dispatch'
+    needs: collect-reforger
 
     steps:
       - name: Checkout
@@ -89,9 +87,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: trending-reforger
-
-    # Run trending snapshot on manual trigger only (to save API quota)
-    if: github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout

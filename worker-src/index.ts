@@ -187,7 +187,7 @@ app.get('/api/mods/:modId/history', async (c) => {
     const key = days <= 1 ? `history:hourly:${game}` : `history:daily:${game}`;
     const historyData = await c.env.TRENDING_KV.get(key, 'json') as HistoryPoint[] || [];
     
-    const modHistory = historyData.slice(-days * (key === 'history:hourly' ? 24 : 1)).map(point => {
+    const modHistory = historyData.slice(days <= 1 ? -24 : -days).map(point => {
       const stats = point.mods[modId] || { p: 0, s: 0, r: 9999 };
       return { date: point.time, totalPlayers: stats.p, serverCount: stats.s, overallRank: stats.r };
     }).filter(d => d.totalPlayers > 0 || d.serverCount > 0);
