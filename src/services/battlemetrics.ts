@@ -66,9 +66,15 @@ export class BattleMetricsService {
       }
 
       const json: BattleMetricsResponse = await response.json();
+      
+      if (!json || !json.data) {
+        console.error('❌ Malformed BattleMetrics response:', json);
+        break;
+      }
+
       servers.push(...json.data);
 
-      console.log(`Fetched ${json.data.length} servers, total: ${servers.length}`);
+      console.log(`✅ Fetched ${json.data.length} servers, total items: ${servers.length}`);
 
       url = json.links?.next || '';
       pageCount++;

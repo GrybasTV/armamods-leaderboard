@@ -143,14 +143,18 @@ async function runCollector() {
     }
   }
 
+  // Create a map for faster server lookups
+  const serverMap = new Map(serverList.map(s => [s.id, s]));
+
   // Calculate mod stats
+  console.log(`📊 Processing ${serverMods.length} mod-server associations...`);
   for (const sm of serverMods) {
     const mod = modMap.get(sm.modId);
     if (mod) {
-      const server = serverList.find(s => s.id === sm.serverId);
+      const server = serverMap.get(sm.serverId);
       if (server) {
         mod.serverCount++;
-        mod.totalPlayers += server.players;
+        mod.totalPlayers += (server.players || 0);
         server.mods.push({
           id: mod.id,
           name: mod.name,
@@ -210,34 +214,40 @@ async function runCollector() {
   console.log(`  - ${serverList.length} servers`);
   console.log(`  - ${currentPlayers} current players`);
 
-  // Split mods into chunks (KV limit is 25MB)
-  const CHUNK_SIZE = 1800; // Reduced to fit overallRank field
-  const modChunks = [];
-  for (let i = 0; i < modList.length; i += CHUNK_SIZE) {
-    modChunks.push(modList.slice(i, i + CHUNK_SIZE));
-  }
+  try {
+    // Split mods into chunks (KV limit is 25MB)
+    const CHUNK_SIZE = 1800; // Reduced to fit overallRank field
+    const modChunks = [];
+    for (let i = 0; i < modList.length; i += CHUNK_SIZE) {
+      modChunks.push(modList.slice(i, i + CHUNK_SIZE));
+    }
 
-  console.log(`  - Splitting into ${modChunks.length} mod chunks...`);
-  for (let i = 0; i < modChunks.length; i++) {
-    await kv.put(`${KV_KEYS.MODS}:${i}`, JSON.stringify(modChunks[i]));
-  }
-  // Store metadata
-  await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
+    console.log(`  - Splitting into ${modChunks.length} mod chunks...`);
+    for (let i = 0; i < modChunks.length; i++) {
+      await kv.put(`${KV_KEYS.MODS}:${i}`, JSON.stringify(modChunks[i]));
+    }
+    // Store metadata
+    await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
 
-  // Split servers into chunks
-  const serverChunks = [];
-  for (let i = 0; i < serverList.length; i += CHUNK_SIZE) {
-    serverChunks.push(serverList.slice(i, i + CHUNK_SIZE));
-  }
+    // Split servers into chunks
+    const serverChunks = [];
+    for (let i = 0; i < serverList.length; i += CHUNK_SIZE) {
+      serverChunks.push(serverList.slice(i, i + CHUNK_SIZE));
+    }
 
-  console.log(`  - Splitting into ${serverChunks.length} server chunks...`);
-  for (let i = 0; i < serverChunks.length; i++) {
-    await kv.put(`${KV_KEYS.SERVERS}:${i}`, JSON.stringify(serverChunks[i]));
-  }
-  await kv.put(`${KV_KEYS.SERVERS}:meta`, JSON.stringify({ total: serverList.length, chunks: serverChunks.length }));
+    console.log(`  - Splitting into ${serverChunks.length} server chunks...`);
+    for (let i = 0; i < serverChunks.length; i++) {
+      await kv.put(`${KV_KEYS.SERVERS}:${i}`, JSON.stringify(serverChunks[i]));
+    }
+    await kv.put(`${KV_KEYS.SERVERS}:meta`, JSON.stringify({ total: serverList.length, chunks: serverChunks.length }));
 
-  await kv.put(KV_KEYS.STATS, JSON.stringify({ totalMods, totalPlayers: currentPlayers, totalServers }));
-  await kv.put(KV_KEYS.LAST_UPDATE, new Date().toISOString());
+    await kv.put(KV_KEYS.STATS, JSON.stringify({ totalMods, totalPlayers: currentPlayers, totalServers }));
+    await kv.put(KV_KEYS.LAST_UPDATE, new Date().toISOString());
+    console.log(`✅ KV write completed successfully`);
+  } catch (kvWriteErr) {
+    console.error(`❌ Failed to write primary data to KV:`, kvWriteErr);
+    throw kvWriteErr;
+  }
 
   console.log("💾 UPDATING KV HOURLY HISTORY...");
   try {
