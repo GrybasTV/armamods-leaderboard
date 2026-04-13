@@ -37,10 +37,12 @@ export function CardHeader({ children, className = '' }: { children: React.React
   );
 }
 
-export function CardContent({ children, className = '' }: { children: React.ReactNode, className?: string }) {
-  return (
-    <div className={`p-8 ${className}`}>
-      {children}
-    </div>
-  );
-}
+export const CardContent = React.forwardRef<HTMLDivElement, { children: React.ReactNode; className?: string }>(
+  ({ children, className = '' }, ref) => {
+    return (
+      <div ref={ref} className={`p-8 ${className}`}>
+        {children}
+      </div>
+    );
+  }
+);

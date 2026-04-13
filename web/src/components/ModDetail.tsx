@@ -4,7 +4,7 @@ import { modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import type { Mod, Server, ModHistory } from '../types';
 
 interface ModDetailData extends Mod {

@@ -11,11 +11,6 @@ interface ServerListProps {
 }
 
 export function ServerList({ game = 'reforger' }: ServerListProps) {
-  // Scroll to top when page changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPage]);
-
   const {
     filteredServers,
     loading,
@@ -33,6 +28,11 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
     stats,
     refresh
   } = useServers({ game });
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
 
   if (loading) return <StatusState type="loading" />;
   if (error) return <StatusState type="error" details={error} onAction={refresh} actionText="Try Again" />;

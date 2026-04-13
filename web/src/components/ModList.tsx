@@ -11,11 +11,6 @@ interface ModListProps {
 }
 
 export function ModList({ game = 'reforger' }: ModListProps) {
-  // Scroll to top when page changes
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPage]);
-
   const {
     filteredMods,
     loading,
@@ -33,6 +28,11 @@ export function ModList({ game = 'reforger' }: ModListProps) {
     stats,
     refresh
   } = useMods({ game });
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
 
   if (loading && filteredMods.length === 0) return <StatusState type="loading" />;
 
