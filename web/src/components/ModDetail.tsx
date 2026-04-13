@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
@@ -24,6 +24,8 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDays, setSelectedDays] = useState(30);
+  const [chartReady, setChartReady] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const loadMod = useCallback(async (days: number) => {
     if (!modId) return;
@@ -46,6 +48,20 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
   useEffect(() => {
     loadMod(selectedDays);
   }, [modId, selectedDays, loadMod]);
+
+  useEffect(() => {
+    setChartReady(false);
+    if (!history || history.length === 0) return;
+    const el = chartRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+        setChartReady(true);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [history]);
 
   if (loading) return <StatusState type="loading" />;
   if (error || !mod) return (
@@ -125,8 +141,8 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
             </div>
           </div>
           <Card className="border-l-4 border-l-tactical-orange bg-zinc-900/50 backdrop-blur-sm">
-            <CardContent className="p-4 sm:p-6 lg:p-8 h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
+            <CardContent ref={chartRef} className="p-4 sm:p-6 lg:p-8 h-[400px]">
+              {chartReady && (
                 <LineChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
                   <XAxis 
@@ -198,7 +214,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                     activeDot={{ r: 4, fill: '#3b82f6', stroke: '#18181b', strokeWidth: 2 }}
                   />
                 </LineChart>
-              </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </section>
