@@ -61,7 +61,9 @@ jobs:
 
       - name: Build frontend
         working-directory: web
-        run: npm run build
+        run: |
+          npm run build
+          cp -r functions dist/
         env:
           NODE_ENV: production
 
