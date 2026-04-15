@@ -96,17 +96,17 @@ async function getServersForMod(kv: KVNamespace, baseKey: string, modId: string)
   const meta = await kv.get(`${baseKey}:meta`, 'json') as any;
   if (!meta || !meta.chunks) return [];
 
-  const foundServers = [];
-  for (let i = 0; i < meta.chunks; i++) {
-    const rawChunk = await kv.get(`${baseKey}:${i}`, 'text'); 
-    if (rawChunk && rawChunk.includes(modId)) {
-        const chunk = JSON.parse(rawChunk) as any[];
-        const matches = chunk.filter(s => s.mods?.some(m => m?.id === modId));
-        foundServers.push(...matches);
-    }
-    if (foundServers.length >= 100) break; 
-  }
-  return foundServers;
+  // Read all chunks in parallel, filter for mod
+  const chunkPromises = Array.from({ length: meta.chunks }, (_, i) =>
+    kv.get(`${baseKey}:${i}`, 'text').then(raw => {
+      if (!raw || !raw.includes(modId)) return [];
+      const chunk = JSON.parse(raw) as any[];
+      return chunk.filter(s => s.mods?.some(m => m?.id === modId));
+    })
+  );
+  const results = await Promise.all(chunkPromises);
+  const all = results.flat();
+  return all.slice(0, 100);
 }
 
 app.get('/mods/:modId', async (c) => {
