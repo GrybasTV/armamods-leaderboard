@@ -216,10 +216,10 @@ async function runCollector() {
 
   try {
     // Split mods into chunks (KV limit is 25MB)
-    const CHUNK_SIZE = 5000; // Optimal size for 14k+ mods to stay under KV write limits
+    const MOD_CHUNK_SIZE = 5000; 
     const modChunks = [];
-    for (let i = 0; i < modList.length; i += CHUNK_SIZE) {
-      modChunks.push(modList.slice(i, i + CHUNK_SIZE));
+    for (let i = 0; i < modList.length; i += MOD_CHUNK_SIZE) {
+      modChunks.push(modList.slice(i, i + MOD_CHUNK_SIZE));
     }
 
     console.log(`  - Writing mod chunks...`);
@@ -237,9 +237,10 @@ async function runCollector() {
     await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
 
     // Split servers into chunks
+    const SERVER_CHUNK_SIZE = 500;
     const serverChunks = [];
-    for (let i = 0; i < serverList.length; i += CHUNK_SIZE) {
-      serverChunks.push(serverList.slice(i, i + CHUNK_SIZE));
+    for (let i = 0; i < serverList.length; i += SERVER_CHUNK_SIZE) {
+      serverChunks.push(serverList.slice(i, i + SERVER_CHUNK_SIZE));
     }
 
     console.log(`  - Writing server chunks...`);
@@ -316,15 +317,25 @@ async function runTrendingSnapshot() {
       statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
     }
 
-    const dailyPoint = {
-      time: today,
-      mods: statsMap
-    };
+    const dailyPoint = { time: today, mods: statsMap };
 
-    const updatedDaily = [...historyDaily, dailyPoint].slice(-90);
+    // 1. DIENOS ISTORIJA (Iki 40 dienų)
+    const updatedDaily = [...historyDaily.filter((d:any) => d.time !== today), dailyPoint].slice(-40);
     await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
     
-    console.log("✅ DAILY KV HISTORY UPDATED (90-day window)");
+    // 2. MĖNESIO ISTORIJA (Iki 60 mėnesių = 5 metai)
+    const thisMonth = today.substring(0, 7); // pvz. "2026-04"
+    const historyMonthly = await kv.get(`history:monthly:${game}`, 'json') || [];
+    const updatedMonthly = [...(historyMonthly as any[]).filter((d:any) => d.time !== thisMonth), { time: thisMonth, mods: statsMap }].slice(-60);
+    await kv.put(`history:monthly:${game}`, JSON.stringify(updatedMonthly));
+
+    // 3. METŲ ISTORIJA (Iki 10 metų)
+    const thisYear = today.substring(0, 4); // pvz. "2026"
+    const historyYearly = await kv.get(`history:yearly:${game}`, 'json') || [];
+    const updatedYearly = [...(historyYearly as any[]).filter((d:any) => d.time !== thisYear), { time: thisYear, mods: statsMap }].slice(-10);
+    await kv.put(`history:yearly:${game}`, JSON.stringify(updatedYearly));
+
+    console.log(`✅ ROLLUP HISTORY UPDATED: Daily, Monthly, Yearly`);
     return { success: true, date: today };
   } catch (kvErr) {
     console.error("⚠️ Failed to update daily KV:", kvErr);

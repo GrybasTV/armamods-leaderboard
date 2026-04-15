@@ -112,12 +112,31 @@ app.get('/mods/:modId', async (c) => {
 app.get('/mods/:modId/history', async (c) => {
   const game = getGameFromQuery(c);
   const modId = c.req.param('modId');
-  const days = Math.min(parseInt(c.req.query('days') || '30'), 365);
+  const daysString = c.req.query('days') || '30';
+  const requestingAll = daysString === 'all';
+  const days = requestingAll ? 9999 : parseInt(daysString);
 
-  const key = days <= 1 ? `history:hourly:${game}` : `history:daily:${game}`;
+  let key = `history:daily:${game}`;
+  let sliceCount = -days;
+
+  if (days <= 1) {
+    key = `history:hourly:${game}`;
+    sliceCount = -24;
+  } else if (days > 40 && days <= 365) {
+    key = `history:monthly:${game}`;
+    sliceCount = -12; // paskutiniai 12 mėnesių
+  } else if (days > 365 || requestingAll) {
+    key = `history:yearly:${game}`;
+    sliceCount = -10; // paskutiniai 10 metų
+  } else {
+    // 2-40 days window
+    key = `history:daily:${game}`;
+    sliceCount = -days;
+  }
+
   const historyData = await c.env.TRENDING_KV.get(key, 'json') as any[] || [];
   
-  const modHistory = historyData.slice(days <= 1 ? -24 : -days).map(point => {
+  const modHistory = historyData.slice(sliceCount).map(point => {
     const stats = point.mods[modId] || { p: 0, s: 0, r: 9999 };
     return { date: point.time, totalPlayers: stats.p, serverCount: stats.s, overallRank: stats.r };
   }).filter(d => d.totalPlayers > 0 || d.serverCount > 0);
