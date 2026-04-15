@@ -49,21 +49,7 @@ async function getChunkedData(kv: KVNamespace, baseKey: string): Promise<any[]> 
   }
 }
 
-// ---------------------------------------------------------
-// NIGHT MODE & CRON FILTER
-// ---------------------------------------------------------
-app.all('/cron/*', async (c, next) => {
-  const now = new Date();
-  const hourUtc = now.getUTCHours();
-  
-  // Naktinis režimas (00:00 - 08:00 Lietuvos laiku = 21:00 - 05:00 UTC)
-  const isNight = hourUtc >= 21 || hourUtc < 5;
-  
-  if (isNight && c.req.path.includes('/scrape')) {
-    return c.json({ status: 'Skipped - Night Mode', hourUtc }, 200);
-  }
-  await next();
-});
+
 
 // ---------------------------------------------------------
 // API ENDPOINTS
