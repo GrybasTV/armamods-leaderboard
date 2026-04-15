@@ -1,45 +1,37 @@
 import express from 'express';
 import cors from 'cors';
-import { prisma } from './lib/db.js';
-import { CollectorService } from './services/collector.js';
-import { getPopularMods, getModDetails } from './api/mods.js';
-import { getServers, getServerDetails } from './api/servers.js';
-import { getGlobalStats } from './api/stats.js';
+import 'dotenv/config';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const WORKER_URL = process.env.WORKER_URL || 'https://api.reforgermods.com';
 
 app.use(cors());
 app.use(express.json());
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Proxy all requests to Cloudflare Worker (JSON Source)
+app.all('*', async (req, res) => {
+  const url = `${WORKER_URL}${req.originalUrl}`;
+  console.log(`[Local Proxy] Fetching from JSON source: ${url}`);
+
+  try {
+    const response = await fetch(url, {
+      method: req.method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined,
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('[Proxy Error]', error);
+    res.status(502).json({ error: 'Failed to fetch from JSON source' });
+  }
 });
 
-// API Routes
-app.get('/api/mods', getPopularMods);
-app.get('/api/mods/:modId', getModDetails);
-app.get('/api/servers', getServers);
-app.get('/api/servers/:serverId', getServerDetails);
-app.get('/api/stats', getGlobalStats);
-
-// Start server
-async function main() {
-  await prisma.$connect();
-  console.log('✅ Database connected');
-
-  // Start collector
-  const collector = new CollectorService();
-  collector.startCron();
-
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 API docs:`);
-    console.log(`   GET  /api/mods        - Popular mods`);
-    console.log(`   GET  /api/mods/:modId - Mod details`);
-    console.log(`   GET  /api/servers     - Server list`);
-  });
-}
-
-main().catch(console.error);
+app.listen(PORT, () => {
+  console.log(`🚀 Local JSON-Only Dev Server: http://localhost:${PORT}`);
+  console.log(`📡 Mirroring data from: ${WORKER_URL}`);
+});

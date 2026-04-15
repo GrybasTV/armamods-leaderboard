@@ -50,7 +50,6 @@ interface HistoryPoint {
 }
 
 interface Bindings {
-  DB: D1Database;
   TRENDING_KV: KVNamespace;
   BATTLEMETRICS_API_KEY?: string;
   WEBHOOK_SECRET: string;

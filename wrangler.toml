@@ -2,11 +2,7 @@ name = "armamods-leaderboard"
 main = "worker-src/index.ts"
 compatibility_date = "2024-03-24"
 
-# DB connection
-[[d1_databases]]
-binding = "DB"
-database_name = "armamods-db"
-database_id = "bb802671-d28d-4e92-9427-7c29cd83735c"
+# Node configuration for Worker is in main property
 
 # KV for trending snapshots
 [[kv_namespaces]]
