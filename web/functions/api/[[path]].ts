@@ -1,3 +1,7 @@
+export const config = {
+  runtime: 'edge',
+};
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -14,26 +18,54 @@ export async function onRequest(context) {
     });
   }
 
-  // Forward API requests
   const baseWorkerUrl = env.WORKER_URL || 'https://armamods-leaderboard.pauliusmed.workers.dev';
   const workerUrl = `${baseWorkerUrl}${url.pathname}${url.search}`;
-  console.log(`[Proxy] Forwarding to: ${workerUrl}`);
 
   try {
+    // Optimizuotas Cron: jei tai scrape užduotis, tiesiog "paleidžiame" ir uždarome ryšį
+    if (url.pathname.includes('/api/cron/scrape')) {
+      const now = new Date();
+      const hourUtc = now.getUTCHours();
+      
+      // Naktinis režimas (00:00 - 08:00 Lietuvos laiku = 21:00 - 05:00 UTC)
+      const isNight = hourUtc >= 21 || hourUtc < 5;
+      
+      if (isNight) {
+        return new Response(JSON.stringify({ status: 'Skipped - Night Mode', hourUtc }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+
+      if (context.waitUntil) {
+        context.waitUntil(fetch(workerUrl, {
+          method: request.method,
+          headers: request.headers,
+        }));
+      } else {
+        fetch(workerUrl, { method: request.method, headers: request.headers });
+      }
+      
+      return new Response(JSON.stringify({ status: 'Triggered', hourUtc }), {
+        status: 202,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
     const response = await fetch(workerUrl, {
       method: request.method,
       headers: request.headers,
       body: request.body,
     });
 
-    // Handle error responses - return proper JSON structure
     if (!response.ok) {
-      const errorBody = await response.text();
+      // Tikriname tik pirmus 1000 simbolių klaidos, kad netaupytume CPU dideliems tekstams
+      const errorText = await response.text();
+      const shortError = errorText.slice(0, 1000);
+      
       return new Response(JSON.stringify({ 
-        error: `Worker API error: ${response.status}`, 
-        details: errorBody,
-        data: null,
-        meta: null
+        error: `API error: ${response.status}`, 
+        details: shortError
       }), {
         status: response.status,
         headers: {
@@ -43,7 +75,7 @@ export async function onRequest(context) {
       });
     }
 
-    // Add CORS headers to response
+    // Naudojame tiesioginį streaming - tai efektyviausias būdas CPU atžvilgiu
     const newResponse = new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -51,17 +83,13 @@ export async function onRequest(context) {
     });
     
     newResponse.headers.set('Access-Control-Allow-Origin', '*');
-
     return newResponse;
   } catch (error) {
-    // Handle network errors
     return new Response(JSON.stringify({ 
-      error: 'Worker unreachable', 
-      details: error instanceof Error ? error.message : 'Unknown error',
-      data: null,
-      meta: null
+      error: 'Proxy connection failed', 
+      details: error instanceof Error ? error.message : 'Unknown'
     }), {
-      status: 503,
+      status: 502,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',

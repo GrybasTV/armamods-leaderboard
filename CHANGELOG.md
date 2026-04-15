@@ -1,8 +1,21 @@
-# Changelog
+## [1.2.2] - 2026-04-15 (Dabartinė)
 
-Visų svarbių projekto pakeitimų protokolas.
+### 🚀 Galingas istorijos atnaujinimas
+- **KV -> D1 Migracija:** Modų istorija perkelta iš riboto KV (25MB limitas) į D1 SQL bazę. Tai išsprendė grafikų dingimo problemą.
+- **D1 Optimizacija:** Sukurtas „multi-row insert“ skriptas, kuris per vieną užklausą atnaujina 50 modų istoriją. Tai 50 kartų pagreitino duomenų rinkimą.
+- **413 Klaidos sprendimas:** Galutinai sutvarkyta „Record Too Large“ klaida sumažinus KV blokų dydžius iki 500.
 
-## [1.1.0] - 2026-04-15 (Dabartinė)
+## [1.2.1] - 2026-04-15
+### 🚀 Efektyvumas
+- **Naktinis režimas:** Cron stabdomas tarp 00:00 ir 08:00 (LT laiku), taip sutaupant dar ~33% dienos resursų.
+
+## [1.2.0] - 2026-04-15
+### 🚀 Efektyvumas ir Optimizacija
+- **CPU sąnaudų mažinimas:** Perėjimas prie `Edge Runtime`, kuris sunaudoja tūkstančius kartų mažiau resursų nei standartinės Node.js funkcijos.
+- **Non-blocking Cron:** `/api/cron/scrape` dabar veikia "fire-and-forget" principu – signalas siunčiamas į Cloudflare ir atsakymas grąžinamas iškart, visiškai eliminuojant CPU laukimo laiką Vercel pusėje.
+- **Klaidų tekstų limitavimas:** Apribotas grąžinamų klaidų dydis (max 1000 simbolių) atminties ir resursų taupymui.
+
+## [1.1.0] - 2026-04-15
 
 ### 🚀 Naujos funkcijos
 - **Domeno palaikymas:** Sistema paruošta `reforgermods.com` domenui.
