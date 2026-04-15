@@ -92,23 +92,6 @@ app.get('/mods', async (c) => {
   });
 });
 
-async function getServersForMod(kv: KVNamespace, baseKey: string, modId: string): Promise<any[]> {
-  const meta = await kv.get(`${baseKey}:meta`, 'json') as any;
-  if (!meta || !meta.chunks) return [];
-
-  // Read all chunks in parallel, filter for mod
-  const chunkPromises = Array.from({ length: meta.chunks }, (_, i) =>
-    kv.get(`${baseKey}:${i}`, 'text').then(raw => {
-      if (!raw || !raw.includes(modId)) return [];
-      const chunk = JSON.parse(raw) as any[];
-      return chunk.filter(s => s.mods?.some(m => m?.id === modId));
-    })
-  );
-  const results = await Promise.all(chunkPromises);
-  const all = results.flat();
-  return all.slice(0, 100);
-}
-
 app.get('/mods/:modId', async (c) => {
   const game = getGameFromQuery(c);
   const modId = c.req.param('modId');
@@ -118,8 +101,7 @@ app.get('/mods/:modId', async (c) => {
   const mod = mods.find(m => m.id === modId);
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
-  const modServers = await getServersForMod(c.env.TRENDING_KV, keys.SERVERS, modId);
-  return c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
+  return c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: [] } });
 });
 
 app.get('/mods/:modId/history', async (c) => {
