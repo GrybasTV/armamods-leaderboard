@@ -1,4 +1,4 @@
-# Arma Reforger Mod Leaderboard - Projektas
+# Arma Reforger Mod Leaderboard (reforgermods.com)
 
 ## 🎯 Vizija
 
@@ -223,9 +223,9 @@ if (cached) return Response.json(cached);
 
 1. ✅ Automatinis duomenų rinkimas (veikia)
 2. ✅ API endpoint'ai (veikia)
-3. ⏳ Frontend su modų sąrašu (reikia padaryti)
-4. ⏳ Deploy į Cloudflare (reikia padaryti)
-5. ⏳ Domain + SSL (reikia padaryti)
+3. ✅ Frontend su modų sąrašu (veikia)
+4. ✅ Deploy į Cloudflare (veikia)
+5. ✅ Domain + SSL (reforgermods.com)
 
 **Estimas**: 2-3 savaitės iki MVP
 

@@ -5,10 +5,7 @@ export type GameType = 'reforger' | 'arma3';
 
 // Produkcijoje – tiesiogiai į Worker (Pages Functions neveikia patikimai)
 // Lokaliai – Vite proxy peradresuoja /api į Worker
-const IS_PROD = import.meta.env.PROD;
-const API_BASE = IS_PROD
-  ? 'https://armamods-leaderboard.pauliusmed.workers.dev/api'
-  : '/api';
+const API_BASE = '/api';
 
 export const api = axios.create({
   baseURL: API_BASE,
