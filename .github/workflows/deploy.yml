@@ -46,13 +46,10 @@ jobs:
         run: echo "Backend build not required (using TS directly)"
 
       - name: Deploy backend to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.x'
-          command: deploy
-          workingDirectory: .
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       # ========== FRONTEND (Pages) ==========
       - name: Install web dependencies
@@ -68,10 +65,8 @@ jobs:
           NODE_ENV: production
 
       - name: Deploy frontend to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4.x'
-          command: pages deploy dist --project-name=armamods-leaderboard --commit-dirty=true
-          workingDirectory: web
+        working-directory: web
+        run: npx wrangler pages deploy dist --project-name=armamods-leaderboard --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
