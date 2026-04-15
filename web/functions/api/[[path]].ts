@@ -27,6 +27,7 @@ function getKVKeys(game: GameType) {
     SERVERS: `cache:servers${suffix}`,
     STATS: `cache:stats${suffix}`,
     LAST_UPDATE: `cache:lastUpdate${suffix}`,
+    TRENDING: `cache:trending${suffix}`,
     HISTORY_HOURLY: `history:hourly:${game}`,
     HISTORY_DAILY: `history:daily:${game}`,
   };

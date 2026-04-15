@@ -75,6 +75,7 @@ function getKVKeys(game: GameType) {
     SERVERS: `cache:servers${suffix}`,
     STATS: `cache:stats${suffix}`,
     LAST_UPDATE: `cache:lastUpdate${suffix}`,
+    TRENDING: `cache:trending${suffix}`,
   };
 }
 
