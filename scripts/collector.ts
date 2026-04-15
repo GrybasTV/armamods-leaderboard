@@ -216,7 +216,7 @@ async function runCollector() {
 
   try {
     // Split mods into chunks (KV limit is 25MB)
-    const CHUNK_SIZE = 1800; // Reduced to fit overallRank field
+    const CHUNK_SIZE = 500; // Small enough to fit in Cloudflare KV 25MB limit
     const modChunks = [];
     for (let i = 0; i < modList.length; i += CHUNK_SIZE) {
       modChunks.push(modList.slice(i, i + CHUNK_SIZE));
