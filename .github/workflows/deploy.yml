@@ -41,15 +41,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ========== BACKEND (Workers) ==========
-      - name: Build backend
-        run: echo "Backend build not required (using TS directly)"
-
-      - name: Deploy backend to Cloudflare Workers
-        run: npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # ========== DEPLOY (Frontend + API) ==========
 
       # ========== FRONTEND (Pages) ==========
       - name: Install web dependencies
