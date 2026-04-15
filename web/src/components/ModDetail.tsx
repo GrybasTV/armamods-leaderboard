@@ -121,10 +121,9 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
             <div className="flex gap-2 p-1 bg-zinc-900 border border-white/10">
               {[
                 { label: '24H', value: 1 },
-                { label: '7D', value: 7 },
                 { label: '30D', value: 30 },
-                { label: '90D', value: 90 },
-                { label: '1Y', value: 365 }
+                { label: '1M', value: 32 },
+                { label: '1Y', value: 366 }
               ].map(opt => (
                 <button
                   key={opt.label}

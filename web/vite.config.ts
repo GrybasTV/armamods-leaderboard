@@ -11,7 +11,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://armamods-leaderboard.pauliusmed.workers.dev',
+        target: 'https://reforgermods.com',
         changeOrigin: true,
         secure: false,
       }

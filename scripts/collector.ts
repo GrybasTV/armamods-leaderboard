@@ -263,16 +263,39 @@ async function runCollector() {
     throw kvWriteErr;
   }
 
-  console.log("💾 UPDATING KV HOURLY HISTORY...");
+  console.log("💾 UPDATING KV HISTORY...");
+  const statsMap: Record<string, { p: number, s: number, r: number }> = {};
+  for (const m of modList) {
+    statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
+  }
+
   try {
+    // Hourly (24 points)
     const historyHourly = await kv.get(`history:hourly:${game}`, 'json') || [];
-    const statsMap: Record<string, { p: number, s: number, r: number }> = {};
-    for (const m of modList) {
-      statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
-    }
     const updatedHourly = [...historyHourly, { time: new Date().toISOString(), mods: statsMap }].slice(-24);
     await kv.put(`history:hourly:${game}`, JSON.stringify(updatedHourly));
-    console.log("✅ HOURLY KV HISTORY UPDATED!");
+    console.log("✅ HOURLY updated (24 points)");
+
+    // Daily (31 points)
+    const today = new Date().toISOString().split('T')[0];
+    const historyDaily = await kv.get(`history:daily:${game}`, 'json') as any[] || [];
+    const updatedDaily = [...historyDaily.filter((d: any) => d.time !== today), { time: today, mods: statsMap }].slice(-31);
+    await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
+    console.log("✅ DAILY updated (31 points)");
+
+    // Monthly (60 points)
+    const thisMonth = today.substring(0, 7);
+    const historyMonthly = await kv.get(`history:monthly:${game}`, 'json') as any[] || [];
+    const updatedMonthly = [...historyMonthly.filter((d: any) => d.time !== thisMonth), { time: thisMonth, mods: statsMap }].slice(-60);
+    await kv.put(`history:monthly:${game}`, JSON.stringify(updatedMonthly));
+    console.log("✅ MONTHLY updated (60 points)");
+
+    // Yearly (10 points)
+    const thisYear = today.substring(0, 4);
+    const historyYearly = await kv.get(`history:yearly:${game}`, 'json') as any[] || [];
+    const updatedYearly = [...historyYearly.filter((d: any) => d.time !== thisYear), { time: thisYear, mods: statsMap }].slice(-10);
+    await kv.put(`history:yearly:${game}`, JSON.stringify(updatedYearly));
+    console.log("✅ YEARLY updated (10 points)");
   } catch (kvErr) {
     console.error("⚠️ KV Error:", kvErr);
   }
@@ -301,17 +324,22 @@ async function runTrendingSnapshot() {
   const kv = new CloudflareKVClient();
   const KV_KEYS = getKVKeys(game);
 
-  const mods = await getChunkedData(kv, KV_KEYS.MODS) as any[];
-  if (!mods || mods.length === 0) {
-    throw new Error('No mods in cache - run collector first');
-  }
-
-  const today = new Date().toISOString().split('T')[0];
-  console.log("📊 SAVING DAILY KV SNAPSHOT...");
-
   try {
-    const historyDaily = await kv.get(`history:daily:${game}`, 'json') || [];
+    const [mods, historyDaily] = await Promise.all([
+        getChunkedData(kv, KV_KEYS.MODS),
+        kv.get(`history:daily:${game}`, 'json') as Promise<any[]>
+    ]);
+
+    if (!mods || mods.length === 0) {
+      throw new Error('No mods in cache - run collector first');
+    }
+
+    const safeHistory = historyDaily || [];
+    const today = new Date().toISOString().split('T')[0];
     
+    // ---------------------------------------------------------
+    // 1. ROLLUP LOGIC (Daily, Monthly, Yearly)
+    // ---------------------------------------------------------
     const statsMap: Record<string, { p: number, s: number, r: number }> = {};
     for (const m of mods) {
       statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
@@ -319,29 +347,74 @@ async function runTrendingSnapshot() {
 
     const dailyPoint = { time: today, mods: statsMap };
 
-    // 1. DIENOS ISTORIJA (Iki 40 dienų)
-    const updatedDaily = [...historyDaily.filter((d:any) => d.time !== today), dailyPoint].slice(-40);
+    // Update Daily
+    const updatedDaily = [...safeHistory.filter((d:any) => d.time !== today), dailyPoint].slice(-40);
     await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
     
-    // 2. MĖNESIO ISTORIJA (Iki 60 mėnesių = 5 metai)
-    const thisMonth = today.substring(0, 7); // pvz. "2026-04"
+    // Update Monthly
+    const thisMonth = today.substring(0, 7);
     const historyMonthly = await kv.get(`history:monthly:${game}`, 'json') || [];
     const updatedMonthly = [...(historyMonthly as any[]).filter((d:any) => d.time !== thisMonth), { time: thisMonth, mods: statsMap }].slice(-60);
     await kv.put(`history:monthly:${game}`, JSON.stringify(updatedMonthly));
 
-    // 3. METŲ ISTORIJA (Iki 10 metų)
-    const thisYear = today.substring(0, 4); // pvz. "2026"
+    // Update Yearly
+    const thisYear = today.substring(0, 4);
     const historyYearly = await kv.get(`history:yearly:${game}`, 'json') || [];
     const updatedYearly = [...(historyYearly as any[]).filter((d:any) => d.time !== thisYear), { time: thisYear, mods: statsMap }].slice(-10);
     await kv.put(`history:yearly:${game}`, JSON.stringify(updatedYearly));
 
-    console.log(`✅ ROLLUP HISTORY UPDATED: Daily, Monthly, Yearly`);
-    return { success: true, date: today };
+    // ---------------------------------------------------------
+    // 2. TRENDING CALCULATION (Pre-calculate for specific periods)
+    // ---------------------------------------------------------
+    const periods = [
+        { name: '24h', days: 1 },
+        { name: '7d', days: 7 },
+        { name: '30d', days: 30 }
+    ];
+
+    for (const p of periods) {
+        const prevEntry = updatedDaily[updatedDaily.length - p.days] || updatedDaily[0];
+        const prevMap = new Map();
+        if (prevEntry?.mods) {
+            Object.entries(prevEntry.mods).forEach(([id, s]: any) => prevMap.set(id, s));
+        }
+
+        const rising: any[] = [];
+        const newMods: any[] = [];
+        const MIN_SERVERS = 5;
+
+        for (const mod of mods) {
+            const prev = prevMap.get(mod.id);
+            if (!prev) {
+                if (mod.serverCount >= MIN_SERVERS) newMods.push(mod);
+            } else {
+                const serverDelta = mod.serverCount - (prev.s || 0);
+                if (serverDelta > 0) {
+                    rising.push({ ...mod, changeServers: serverDelta });
+                }
+            }
+        }
+
+        rising.sort((a, b) => b.changeServers - a.changeServers);
+        const result = {
+            rising: rising.slice(0, 50),
+            new: newMods.slice(0, 50),
+            falling: []
+        };
+
+        await kv.put(`${KV_KEYS.TRENDING}:${p.name}`, JSON.stringify(result));
+        console.log(`✅ TRENDING UPDATED for ${p.name}`);
+    }
+
+    console.log(`✅ ROLLUP & TRENDING COMPLETED SUCCESSFULLY`);
+    return { success: true };
+
   } catch (kvErr) {
-    console.error("⚠️ Failed to update daily KV:", kvErr);
+    console.error("⚠️ Failed to update history/trending:", kvErr);
     throw kvErr;
   }
 }
+
 
 // CLI
 const command = process.argv[2];

@@ -92,20 +92,33 @@ app.get('/mods', async (c) => {
   });
 });
 
+async function getServersForMod(kv: KVNamespace, baseKey: string, modId: string): Promise<any[]> {
+  const meta = await kv.get(`${baseKey}:meta`, 'json') as any;
+  if (!meta || !meta.chunks) return [];
+
+  const foundServers = [];
+  for (let i = 0; i < meta.chunks; i++) {
+    const rawChunk = await kv.get(`${baseKey}:${i}`, 'text'); 
+    if (rawChunk && rawChunk.includes(modId)) {
+        const chunk = JSON.parse(rawChunk) as any[];
+        const matches = chunk.filter(s => s.mods?.some(m => m?.id === modId));
+        foundServers.push(...matches);
+    }
+    if (foundServers.length >= 100) break; 
+  }
+  return foundServers;
+}
+
 app.get('/mods/:modId', async (c) => {
   const game = getGameFromQuery(c);
-  const keys = getKVKeys(game);
   const modId = c.req.param('modId');
+  const keys = getKVKeys(game);
 
-  const [mods, servers] = await Promise.all([
-    getChunkedData(c.env.TRENDING_KV, keys.MODS),
-    getChunkedData(c.env.TRENDING_KV, keys.SERVERS)
-  ]);
-
+  const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
   const mod = mods.find(m => m.id === modId);
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
-  const modServers = servers.filter(s => s.mods?.some(sm => sm?.id === modId));
+  const modServers = await getServersForMod(c.env.TRENDING_KV, keys.SERVERS, modId);
   return c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
 });
 
@@ -122,14 +135,14 @@ app.get('/mods/:modId/history', async (c) => {
   if (days <= 1) {
     key = `history:hourly:${game}`;
     sliceCount = -24;
-  } else if (days > 40 && days <= 365) {
+  } else if (days > 31 && days <= 365) {
     key = `history:monthly:${game}`;
     sliceCount = -12; // paskutiniai 12 mėnesių
   } else if (days > 365 || requestingAll) {
     key = `history:yearly:${game}`;
     sliceCount = -10; // paskutiniai 10 metų
   } else {
-    // 2-40 days window
+    // 2-31 days (30D)
     key = `history:daily:${game}`;
     sliceCount = -days;
   }
@@ -171,35 +184,16 @@ app.get('/servers', async (c) => {
 app.get('/trending', async (c) => {
     const game = getGameFromQuery(c);
     const keys = getKVKeys(game);
-    const period = (c.req.query('period') || '30d') as '24h' | '7d' | '30d';
+    const period = (c.req.query('period') || '24h') as '24h' | '7d' | '30d';
 
-    const currentMods = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
-    if (!currentMods.length) return c.json({ data: { rising: [], falling: [], new: [] } });
-
-    const dailyHistory = await c.env.TRENDING_KV.get(keys.HISTORY_DAILY, 'json') as any[] || [];
-    const targetDays = period === '7d' ? 7 : (period === '30d' ? 30 : 1);
-    const prevEntry = dailyHistory[dailyHistory.length - targetDays] || dailyHistory[0];
-
-    const prevMap = new Map();
-    if (prevEntry?.mods) Object.entries(prevEntry.mods).forEach(([id, s]) => prevMap.set(id, s));
-
-    const MIN_SERVERS = 5;
-    const rising: any[] = [];
-    const newMods: any[] = [];
-
-    for (const mod of currentMods) {
-        const prev = prevMap.get(mod.id);
-        if (!prev) {
-            if (mod.serverCount >= MIN_SERVERS) newMods.push(mod);
-        } else {
-            const serverDelta = mod.serverCount - (prev.s || 0);
-            if (serverDelta > 0) rising.push({ ...mod, changeServers: serverDelta });
-        }
+    const trendingData = await c.env.TRENDING_KV.get(`${keys.TRENDING}:${period}`, 'json') as any;
+    
+    if (!trendingData) {
+        return c.json({ data: { rising: [], falling: [], new: [] }, meta: { lastUpdated: new Date().toISOString() } });
     }
 
-    rising.sort((a, b) => b.changeServers - a.changeServers);
-
-    return c.json({ data: { rising: rising.slice(0, 50), new: newMods.slice(0, 50), falling: [] } });
+    return c.json({ data: trendingData, meta: { lastUpdated: new Date().toISOString() } });
 });
+
 
 export const onRequest = handle(app);
