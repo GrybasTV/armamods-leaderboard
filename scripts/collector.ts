@@ -222,10 +222,16 @@ async function runCollector() {
       modChunks.push(modList.slice(i, i + CHUNK_SIZE));
     }
 
-    console.log(`  - Writing ${modChunks.length} mod chunks in parallel...`);
-    await Promise.all(modChunks.map((chunk, i) => 
-      kv.put(`${KV_KEYS.MODS}:${i}`, JSON.stringify(chunk))
-    ));
+    console.log(`  - Writing mod chunks...`);
+    for (let i = 0; i < modChunks.length; i++) {
+      try {
+        await kv.put(`${KV_KEYS.MODS}:${i}`, JSON.stringify(modChunks[i]));
+        console.log(`    [OK] Mod chunk ${i+1}/${modChunks.length}`);
+      } catch (err) {
+        console.error(`    [FAIL] Mod chunk ${i+1}:`, err);
+        throw err;
+      }
+    }
 
     // Store metadata
     await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
@@ -236,17 +242,23 @@ async function runCollector() {
       serverChunks.push(serverList.slice(i, i + CHUNK_SIZE));
     }
 
-    console.log(`  - Writing ${serverChunks.length} server chunks in parallel...`);
-    await Promise.all(serverChunks.map((chunk, i) => 
-      kv.put(`${KV_KEYS.SERVERS}:${i}`, JSON.stringify(chunk))
-    ));
+    console.log(`  - Writing server chunks...`);
+    for (let i = 0; i < serverChunks.length; i++) {
+      try {
+        await kv.put(`${KV_KEYS.SERVERS}:${i}`, JSON.stringify(serverChunks[i]));
+        console.log(`    [OK] Server chunk ${i+1}/${serverChunks.length}`);
+      } catch (err) {
+        console.error(`    [FAIL] Server chunk ${i+1}:`, err);
+        throw err;
+      }
+    }
     await kv.put(`${KV_KEYS.SERVERS}:meta`, JSON.stringify({ total: serverList.length, chunks: serverChunks.length }));
 
     await kv.put(KV_KEYS.STATS, JSON.stringify({ totalMods, totalPlayers: currentPlayers, totalServers }));
     await kv.put(KV_KEYS.LAST_UPDATE, new Date().toISOString());
     console.log(`✅ KV write completed successfully`);
   } catch (kvWriteErr) {
-    console.error(`❌ Failed to write primary data to KV:`, kvWriteErr);
+    console.error(`❌ KV Sync Error Detail:`, kvWriteErr);
     throw kvWriteErr;
   }
 
