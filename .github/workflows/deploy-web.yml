@@ -54,6 +54,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '3.101.0'
+          wranglerVersion: '4.x'
           command: pages deploy dist --project-name=armamods-leaderboard --commit-dirty=true
           workingDirectory: web
