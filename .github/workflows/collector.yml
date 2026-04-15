@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,6 +39,8 @@ jobs:
     timeout-minutes: 15
     needs: collect-reforger  # Runs after Reforger completes
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,6 +67,8 @@ jobs:
     timeout-minutes: 5
     needs: collect-reforger
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,6 +94,8 @@ jobs:
     timeout-minutes: 5
     needs: trending-reforger
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
