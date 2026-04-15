@@ -52,5 +52,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=armamods-web --commit-dirty=true
+          command: pages deploy dist --project-name=armamods-leaderboard --commit-dirty=true
           workingDirectory: web
