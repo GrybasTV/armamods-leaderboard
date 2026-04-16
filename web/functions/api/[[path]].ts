@@ -98,14 +98,27 @@ app.get('/mods/:modId', async (c) => {
   const modId = c.req.param('modId');
   const keys = getKVKeys(game);
 
-  const [mods, allServers] = await Promise.all([
-    getChunkedData(c.env.TRENDING_KV, keys.MODS),
-    getChunkedData(c.env.TRENDING_KV, keys.SERVERS)
-  ]);
+  const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
   const mod = mods.find(m => m.id === modId);
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
-  const modServers = allServers.filter(s => s.mods && s.mods.some((m: any) => m.id === modId));
+  // Optimized server fetching to reduce CPU usage (prevent 503)
+  let modServers: any[] = [];
+  try {
+    const meta = await c.env.TRENDING_KV.get(`${keys.SERVERS}:meta`, 'json') as any;
+    if (meta && meta.chunks) {
+        for (let i = 0; i < meta.chunks; i++) {
+            const chunkText = await c.env.TRENDING_KV.get(`${keys.SERVERS}:${i}`, 'text');
+            if (chunkText && chunkText.includes(`"id":"${modId}"`)) {
+                const chunk = JSON.parse(chunkText);
+                const filtered = chunk.filter((s: any) => s.mods && s.mods.some((m: any) => m.id === modId));
+                modServers.push(...filtered);
+            }
+        }
+    }
+  } catch (err) {
+      console.error('Server chunk error:', err);
+  }
 
   return c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
 });
@@ -135,14 +148,33 @@ app.get('/mods/:modId/history', async (c) => {
     sliceCount = -days;
   }
 
-  const historyData = await c.env.TRENDING_KV.get(key, 'json') as any[] || [];
-  
-  const modHistory = historyData.slice(sliceCount).map(point => {
-    const stats = (point.mods && point.mods[modId]) ? point.mods[modId] : { p: 0, s: 0, r: 9999 };
-    return { date: point.time, totalPlayers: stats.p, serverCount: stats.s, overallRank: stats.r };
-  });
+  const historyText = await c.env.TRENDING_KV.get(key, 'text');
+  if (!historyText) return c.json({ data: [] });
 
-  return c.json({ data: modHistory });
+  const points = historyText.split('"time":"');
+  const modHistory = [];
+
+  for (let i = 1; i < points.length; i++) {
+    const pointStr = points[i];
+    const timeEnd = pointStr.indexOf('"');
+    if (timeEnd === -1) continue;
+    const time = pointStr.slice(0, timeEnd);
+    
+    const modStrPos = pointStr.indexOf(`"${modId}":{`);
+    if (modStrPos !== -1) {
+      const endPos = pointStr.indexOf('}', modStrPos);
+      const modStatsStr = pointStr.slice(modStrPos + `"${modId}":`.length, endPos + 1);
+      try {
+        const stats = JSON.parse(modStatsStr);
+        modHistory.push({ date: time, totalPlayers: stats.p || 0, serverCount: stats.s || 0, overallRank: stats.r || 9999 });
+      } catch(e) {}
+    } else {
+      modHistory.push({ date: time, totalPlayers: 0, serverCount: 0, overallRank: 9999 });
+    }
+  }
+
+  const finalHistory = modHistory.slice(sliceCount);
+  return c.json({ data: finalHistory });
 });
 
 app.get('/servers', async (c) => {
