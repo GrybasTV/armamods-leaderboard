@@ -86,6 +86,49 @@ Only mods meeting **both** criteria appear in trending:
 
 ---
 
+---
+
+## Server Quality & Efficiency Index (SQE)
+
+The SQE Index is designed to rank servers not just by their instantaneous player count, but by their overall technical quality, optimization, and uniqueness relative to the global network.
+
+### Goal
+To reward server owners who:
+1. **Optimize**: Achieve high player counts with minimal mod overhead (Console & performance friendly).
+2. **Innovate**: Create unique experiences using niche/original mods rather than common "copy-paste" setups.
+3. **Consistency**: Maintain activity over 30 days.
+
+### Snapshot Formula
+Points are calculated 3 times daily (every 8 hours) to capture all regional peaks:
+
+```
+SnapshotScore = (Players × 5) - (ModCount × 1) + UniquenessBonus
+```
+
+**Variables:**
+- **Players**: Number of active players at snapshot time.
+- **ModCount**: Number of mods required to join the server (lower is better).
+- **UniquenessBonus**: A value from **-100 to +100** based on the rarity of mods used.
+
+### Uniqueness Bonus/Penalty Calculation
+The bonus compares the server's average mod rank to the global network average (~7,000).
+
+```
+Bonus = Clamp((ServerAvgModRank - 7000) / 70, -100, 100)
+```
+
+- **Penalty (-100 to 0)**: Applied to servers using only Top 100 / Vanilla mods. This rewards developers who move away from "the herd".
+- **Bonus (0 to +100)**: Applied to servers using niche, unique, or high-quality artisanal mods.
+- **Vanilla Exception**: Vanilla servers (0 mods) receive a flat **-100** uniqueness bonus for using the default configuration.
+
+### 30-Day Trailing Leaderboard
+The final leaderboard is a **rolling 30-day sum** of all snapshots (90 points in total). 
+
+- **Long-term stability**: Servers that are active 24/7 will naturally outrank weekend-only servers.
+- **Drift Protection**: Old snapshots are automatically removed to ensure the ranking reflects current activity.
+
+---
+
 ## References
 
 - [Bayesian Statistics](https://en.wikipedia.org/wiki/Bayesian_statistics)

@@ -290,9 +290,9 @@ async function runCollector() {
 
     const periods = [
       { name: 'hourly', key: `history:hourly:${game}`, limit: 24 },
-      { name: 'daily', key: `history:daily:${game}`, limit: 90 },
-      { name: 'monthly', key: `history:monthly:${game}`, limit: 60 },
-      { name: 'yearly', key: `history:yearly:${game}`, limit: 10 }
+      { name: 'daily', key: `history:daily:${game}`, limit: 31 },
+      { name: 'monthly', key: `history:monthly:${game}`, limit: 12 },
+      { name: 'yearly', key: `history:yearly:${game}`, limit: 5 }
     ];
 
     for (const period of periods) {
@@ -328,6 +328,12 @@ async function runCollector() {
     }
   } catch (kvErr) {
     console.error("⚠️ KV History Error:", kvErr);
+  }
+  // 4. Server Scoring & Ranking (3 times a day)
+  const currentHour = new Date().getUTCHours();
+  if (currentHour % 8 === 0) {
+      console.log(`[SERVER_SCORING] Running for ${game}...`);
+      await runServerScoring(game, kv, serverList, modList);
   }
 
   console.log('✅ COLLECTOR: Complete!');
@@ -387,8 +393,7 @@ async function runTrendingSnapshot() {
     const periods = [
         { name: '24h', days: 1, baseKey: `history:daily:${game}` },
         { name: '7d', days: 7, baseKey: `history:daily:${game}` },
-        { name: '30d', days: 30, baseKey: `history:daily:${game}` },
-        { name: '90d', days: 90, baseKey: `history:daily:${game}` }
+        { name: '30d', days: 30, baseKey: `history:daily:${game}` }
     ];
 
     for (const p of periods) {
@@ -512,3 +517,82 @@ const command = process.argv[2];
 // npm run collect -- --game=arma3  # Collect Arma 3
 // npm run trending             # Trending snapshot for Reforger
 // npm run trending -- --game=arma3 # Trending snapshot for Arma 3
+
+/**
+ * Server Quality & Efficiency Index Scoring
+ */
+async function runServerScoring(game: string, kv: CloudflareKVClient, serverList: any[], modList: any[]) {
+  try {
+      const historyKey = `history:server_scores:${game}`;
+      const leaderboardKey = `cache:ranking:servers:${game}`;
+      
+      // 1. Prepare Mod Rank Lookup
+      const modRankMap = new Map();
+      modList.forEach(m => modRankMap.set(m.id, m.overallRank || 14000));
+      const GLOBAL_AVG = 7000;
+
+      // 2. Calculate current scores for ALL servers
+      const currentScores: Record<string, number> = {};
+      for (const s of serverList) {
+          const players = s.players || 0;
+          const modCount = s.mods?.length || 0;
+          
+          // Formula part 1: Players vs Mods
+          const baseScore = (players * 5) - (modCount * 1);
+          
+          // Formula part 2: Uniqueness
+          let avgRank = 0;
+          if (modCount > 0) {
+              const totalRank = s.mods.reduce((acc: number, m: any) => acc + (modRankMap.get(m.id) || 14000), 0);
+              avgRank = totalRank / modCount;
+          }
+          
+          // Bonus Mapping: (AvgRank-7000) / 70 => Range -100 to +100
+          let uniquenessBonus = Math.floor((avgRank - GLOBAL_AVG) / 70);
+          uniquenessBonus = Math.min(100, Math.max(-100, uniquenessBonus));
+          
+          currentScores[s.id] = baseScore + uniquenessBonus;
+      }
+
+      // 3. Update History (Trailing 30 Days = 90 snapshots)
+      let history = await kv.get(historyKey, 'json') || [];
+      history.push({
+          time: new Date().toISOString(),
+          scores: currentScores
+      });
+      
+      // Keep last 30 days (90 snapshots)
+      if (history.length > 90) history = history.slice(-90);
+      await kv.put(historyKey, JSON.stringify(history));
+
+      // 4. Generate Leaderboard (Sum of all history)
+      const totalPoints: Record<string, number> = {};
+      for (const entry of history) {
+          for (const [id, score] of Object.entries(entry.scores)) {
+              totalPoints[id] = (totalPoints[id] || 0) + (score as number);
+          }
+      }
+
+      // Convert to sorted list for the frontend
+      const leaderboard = serverList
+          .map(s => ({
+              id: s.id,
+              name: s.name,
+              points: totalPoints[s.id] || 0,
+              players: s.players,
+              modCount: s.mods?.length || 0,
+              rank: 0
+          }))
+          .filter(s => s.points > 0 || (s.players > 0)) // Keep active servers or those with history
+          .sort((a, b) => b.points - a.points);
+
+      leaderboard.forEach((s, i) => s.rank = i + 1);
+
+      // Save TOP 200 to cache for the website
+      await kv.put(leaderboardKey, JSON.stringify(leaderboard.slice(0, 200)));
+      console.log(`[SERVER_SCORING] Leaderboard updated with ${leaderboard.length} ranked servers.`);
+
+  } catch (err) {
+      console.error(`[SERVER_SCORING] Error:`, err);
+  }
+}
