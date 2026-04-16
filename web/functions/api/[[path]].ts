@@ -128,6 +128,13 @@ app.get('/mods', async (c) => {
 });
 
 app.get('/mods/:modId', async (c) => {
+  const cache = await caches.open('armamods:details');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) {
+      console.log(`[CACHE HIT] Detail data for ${c.req.url}`);
+      return cacheResponse;
+  }
+
   const start = Date.now();
   const game = getGameFromQuery(c);
   const modId = c.req.param('modId');
@@ -167,10 +174,23 @@ app.get('/mods/:modId', async (c) => {
 
   const finished = Date.now() - start;
   console.log(`[MODS_DETAIL] Response ready for ${modId} in ${finished}ms`);
-  return c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
+  const finalResponse = c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
+  
+  // Cache the response for 1 hour
+  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
+  
+  return finalResponse;
 });
 
 app.get('/mods/:modId/history', async (c) => {
+  const cache = await caches.open('armamods:history');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) {
+      console.log(`[CACHE HIT] History data for ${c.req.url}`);
+      return cacheResponse;
+  }
+
   const start = Date.now();
   const game = getGameFromQuery(c);
   const modId = c.req.param('modId');
@@ -252,7 +272,14 @@ app.get('/mods/:modId/history', async (c) => {
   const finalHistory = modHistory.slice(sliceCount);
   const finished = Date.now() - start;
   console.log(`[HISTORY] Prepared ${finalHistory.length} nodes in ${finished}ms`);
-  return c.json({ data: finalHistory });
+  
+  const finalResponse = c.json({ data: finalHistory });
+  
+  // Cache the response for 1 hour
+  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
+  
+  return finalResponse;
 });
 
 app.get('/servers', async (c) => {
