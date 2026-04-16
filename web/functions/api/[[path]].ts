@@ -146,7 +146,7 @@ app.get('/mods/:modId', async (c) => {
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
   // Ultra-optimized server fetching (prevent 503)
-  let modServers: any[] = [];
+  const modServers: any[] = [];
   const MAX_SERVERS_PER_MOD = 100; // Limit to 100 servers to save CPU
   
   try {
@@ -183,17 +183,6 @@ app.get('/mods/:modId', async (c) => {
   return finalResponse;
 });
 
-  const finished = Date.now() - start;
-  console.log(`[HISTORY] Prepared ${finalHistory.length} nodes in ${finished}ms`);
-  
-  const finalResponse = c.json({ data: finalHistory });
-  
-  // Cache the response for 1 hour
-  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
-  c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
-  
-  return finalResponse;
-});
 
 // Helper to scan history text for a specific modId (Used in shards)
 function scanHistoryPoints(historyText: string, modId: string): any[] {
@@ -232,7 +221,7 @@ function scanHistoryPoints(historyText: string, modId: string): any[] {
                 serverCount: stats.s || 0, 
                 overallRank: stats.r || 9999 
             });
-          } catch(e) {}
+          } catch { /* ignore parse errors */ }
       }
     } else {
         modHistory.push({ date: time, totalPlayers: 0, serverCount: 0, overallRank: 9999 });

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { serversApi, modsApi, type GameType } from '../api/client';
 import type { Server } from '../types';
 
@@ -23,7 +23,7 @@ export function useServers(options: UseServersOptions = {}) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24;
 
-  const loadServers = async () => {
+  const loadServers = useCallback(async () => {
     try {
       setLoading(true);
       const [serversData, statsData] = await Promise.all([
@@ -52,11 +52,11 @@ export function useServers(options: UseServersOptions = {}) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [game]);
 
   useEffect(() => {
     loadServers();
-  }, []);
+  }, [loadServers]);
 
   const filteredServers = useMemo(() => {
     if (!Array.isArray(servers)) return [];
