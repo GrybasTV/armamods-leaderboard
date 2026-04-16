@@ -1,12 +1,12 @@
 ## [1.3.0] - 2026-04-16
 
 ### Pridėta
-- **Momentum Score modelis**: Įdiegtas logaritminis matematinis modelis tendencijoms skaičiuoti. Modelis subalansuoja rango pokytį su realiu žaidėjų ("Personnel") ir serverių ("Deployments") aktyvumu.
-- **Išmanieji filtrai**: Įdiegti papildomi barjerai, kurie paslepia nereikšmingą "triukšmą" (modifikacijas be žaidėjų ar mažiau nei 3 serverius turinčius projektus) "Rising" ir "Falling" sąrašuose.
-- **Rango slenkstis**: Pokyčiai už #5000 ribos dabar automatiškai slopinami, nebent modifikacija iškrenta iš Top 5000 zonos.
+- **Dinaminis „Trending“ filtravimas**: Įdiegtas 0.5% aktyvumo slenkstis (Personnel ir Deployments) tendencijų skaičiavimui. Tai automatiškai išvalo „Rising“ ir „Falling“ sąrašus nuo neaktyvių modų („triukšmo“).
+- **Svertinis aktyvumo modelis**: Tendencijų balas (`trendScore`) dabar papildomai dauginamas iš logaritminio žaidėjų kiekio koeficiento, suteikiant pirmenybę didesniems projektams.
+- **Dinamika pagal populiarumą**: Kartelė automatiškai kyla arba leidžiasi priklausomai nuo bendro visų modų populiarumo (pvz., jei žaidimas auga, slenkstis didėja).
 
 ### Pakeista
-- **Svorio skaičiavimas**: Atsisakyta bazinio svertinio vidurkio ir pereita prie `log2` santykio, užtikrinančio teisingą augimo vertinimą visuose ranguose.
+- **Numatytasis reitingas**: Padidinta bazinė reitingo reikšmė iki 50 000 pozicijų naujiems ar nerastiems modams, geriau atspindint dabartinę 14k+ modų ekosistemą.
 
 ## [1.2.5] - 2026-04-16
 

@@ -396,56 +396,57 @@ async function runTrendingSnapshot() {
         const falling: any[] = [];
         const newMods: any[] = [];
         
-        const MIN_SERVERS_ACTIVE = 3;   // Reikia bent 3 serverių, kad būtų "aktyvus"
-        const MIN_SERVERS_NEW = 5;      // Naujiems populiariems reikia bent 5
-        const MIN_PLAYERS_RISING = 1;   // Kylančiam modui reikia bent 1 žaidėjo
-        const RANK_THRESHOLD = 5000;    // Ignoruojame Triukšmą už #5000 ribos
+        // Gauname bendrą statistiką dinaminiams slenksčiams (0.5%)
+        const stats = await kv.get(KV_KEYS.STATS, 'json') || { totalPlayers: 5000, totalServers: 500 };
+        const MIN_TREND_PLAYERS = Math.max(5, Math.floor(stats.totalPlayers * 0.005));
+        const MIN_TREND_SERVERS = Math.max(2, Math.floor(stats.totalServers * 0.005));
+
+        console.log(`📊 Dynamic Thresholds: Personnel >= ${MIN_TREND_PLAYERS}, Deployments >= ${MIN_TREND_SERVERS}`);
 
         for (const mod of mods) {
             const prev = prevMap.get(mod.id);
-            const currentRank = mod.overallRank || 9999;
+            const currentRank = mod.overallRank || 50000;
             const currentPlayers = mod.totalPlayers || 0;
             const currentServers = mod.serverCount || 0;
+            
+            const prevRank = prev?.r || 50000;
+            const prevPlayers = prev?.p || 0;
+            const prevServers = prev?.s || 0;
+
+            // Reikšmingumo filtras: modas turi turėti pakankamai veiklos dabar arba praeityje
+            const isSignificant = (currentPlayers >= MIN_TREND_PLAYERS || prevPlayers >= MIN_TREND_PLAYERS) &&
+                                  (currentServers >= MIN_TREND_SERVERS || prevServers >= MIN_TREND_SERVERS);
 
             if (!prev) {
-                // Was not in index X days ago - candidate for New Popular
-                // Reikalaujame bent 5 serverių ir bent 5 žaidėjų naujoms modifikacijoms
-                if (currentServers >= MIN_SERVERS_NEW && currentPlayers >= 5) {
-                    newMods.push({ ...mod, trendScore: (10000 - currentRank) });
+                // New Popular: traukiami tik tie nauji modai, kurie pasiekė bazinį aktyvumo lygį
+                if (isSignificant && currentRank < 10000) {
+                    newMods.push({ ...mod, trendScore: (50000 - currentRank) });
                 }
             } else {
-                const prevRank = prev.r || 9999;
                 const rankDelta = prevRank - currentRank;
                 
-                // Ignoruojame pokyčius, jei abi pozicijos yra už 5000 ribos (triukšmas)
-                if (currentRank > RANK_THRESHOLD && prevRank > RANK_THRESHOLD) continue;
+                // Ignoruojame neaktyvius modus arba tuos, kieno reitingas nepakito
+                if (!isSignificant || rankDelta === 0) continue;
 
-                // --- MATEMATINIS MODELIS: Momentum Score ---
-                // 1. Rango santykio logaritmas (log2 užtikrina, kad dvigubas pagerėjimas visur būtų lygus 1 balui)
-                const rankRatio = prevRank / currentRank;
-                const rankLog = Math.log2(rankRatio);
-
-                // 2. Aktyvumo daugiklis (log10 naudojamas, kad žaidėjų/serverių skaičius neperimtų visos įtakos)
-                // log10(101) = 2, log10(1001) = 3. Tai subalansuoja mases.
-                const activityLog = Math.log10(currentPlayers + 1) + Math.log10(currentServers + 1);
-
-                // Galutinis balas: Rango "greitis" * Aktyvumo "svoris"
-                const momentumScore = rankLog * activityLog;
+                // Matematinis modelis:
+                // 1. Pozicijos svoris (sunkiau pakilti Top 100 nei Top 5000)
+                const positionWeight = 100 / Math.sqrt(Math.min(currentRank, prevRank));
+                
+                // 2. Aktyvumo daugiklis (logaritminis žaidėjų skaičius)
+                const activityMultiplier = Math.log10(Math.max(currentPlayers, prevPlayers) + 1.1);
+                
+                const trendScore = rankDelta * positionWeight * activityMultiplier;
 
                 if (rankDelta > 0) {
-                    // Rising: reikalaujame bent min aktyvumo
-                    if (currentServers >= MIN_SERVERS_ACTIVE && currentPlayers >= MIN_PLAYERS_RISING) {
-                        rising.push({ ...mod, currentRank, prevRank, rankDelta, trendScore: momentumScore });
-                    }
-                } else if (rankDelta < 0) {
-                    // Falling: tas pats modelis veikia ir kritimui (bus neigiamas balas)
-                    falling.push({ ...mod, currentRank, prevRank, rankDelta, trendScore: momentumScore });
+                    rising.push({ ...mod, currentRank, prevRank, rankDelta, trendScore });
+                } else {
+                    falling.push({ ...mod, currentRank, prevRank, rankDelta, trendScore });
                 }
             }
         }
 
         rising.sort((a, b) => b.trendScore - a.trendScore);
-        falling.sort((a, b) => a.trendScore - b.trendScore); // Mažiausias (labiausiai neigiamas) balas pirmas
+        falling.sort((a, b) => a.trendScore - b.trendScore);
         newMods.sort((a, b) => a.overallRank - b.overallRank);
 
         const result = {
