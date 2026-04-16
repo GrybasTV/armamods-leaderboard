@@ -277,12 +277,12 @@ async function runCollector() {
     await kv.put(`history:hourly:${game}`, JSON.stringify(updatedHourly));
     console.log("✅ HOURLY updated (24 points)");
 
-    // Daily (31 points)
+    // Daily (90 points for quarterly trends)
     const today = new Date().toISOString().split('T')[0];
     const historyDaily = await kv.get(`history:daily:${game}`, 'json') as any[] || [];
-    const updatedDaily = [...historyDaily.filter((d: any) => d.time !== today), { time: today, mods: statsMap }].slice(-31);
+    const updatedDaily = [...historyDaily.filter((d: any) => d.time !== today), { time: today, mods: statsMap }].slice(-90);
     await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
-    console.log("✅ DAILY updated (31 points)");
+    console.log("✅ DAILY updated (90 points)");
 
     // Monthly (60 points)
     const thisMonth = today.substring(0, 7);
@@ -349,7 +349,7 @@ async function runTrendingSnapshot() {
     const dailyPoint = { time: today, mods: statsMap };
 
     // Update Daily
-    const updatedDaily = [...safeHistory.filter((d:any) => d.time !== today), dailyPoint].slice(-40);
+    const updatedDaily = [...safeHistory.filter((d:any) => d.time !== today), dailyPoint].slice(-90);
     await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
     
     // Update Monthly
@@ -370,37 +370,67 @@ async function runTrendingSnapshot() {
     const periods = [
         { name: '24h', days: 1 },
         { name: '7d', days: 7 },
-        { name: '30d', days: 30 }
+        { name: '30d', days: 30 },
+        { name: '90d', days: 90 }
     ];
 
     for (const p of periods) {
-        const prevEntry = updatedDaily[updatedDaily.length - p.days] || updatedDaily[0];
+        let prevEntry = updatedDaily[updatedDaily.length - p.days];
+        
+        // Smart Lookup: if daily is too short, use monthly snapshots for long periods
+        if (!prevEntry && p.days > 30) {
+            const monthsBack = Math.ceil(p.days / 30);
+            const historyMonthly = await kv.get(`history:monthly:${game}`, 'json') || [];
+            prevEntry = (historyMonthly as any[])[(historyMonthly as any[]).length - monthsBack];
+            if (prevEntry) console.log(`  [SMART LOOKUP] Using monthly snapshot for ${p.name} trend`);
+        }
+        
+        if (!prevEntry) prevEntry = updatedDaily[0] || { mods: {} };
+
         const prevMap = new Map();
         if (prevEntry?.mods) {
             Object.entries(prevEntry.mods).forEach(([id, s]: any) => prevMap.set(id, s));
         }
 
         const rising: any[] = [];
+        const falling: any[] = [];
         const newMods: any[] = [];
         const MIN_SERVERS = 5;
 
         for (const mod of mods) {
             const prev = prevMap.get(mod.id);
+            const currentRank = mod.overallRank || 9999;
+
             if (!prev) {
-                if (mod.serverCount >= MIN_SERVERS) newMods.push(mod);
+                // Was not in index X days ago - candidate for New Popular
+                if (mod.serverCount >= MIN_SERVERS) {
+                    newMods.push({ ...mod, trendScore: (10000 - currentRank) });
+                }
             } else {
-                const serverDelta = mod.serverCount - (prev.s || 0);
-                if (serverDelta > 0) {
-                    rising.push({ ...mod, changeServers: serverDelta });
+                const prevRank = prev.r || 9999;
+                const rankDelta = prevRank - currentRank;
+                
+                // Weight: Improving from Rank 10 to 5 is harder than 1000 to 995
+                // We use (1 / Math.sqrt(currentRank)) as a multiplier to favor Top Rank movements
+                const weight = 100 / Math.sqrt(currentRank);
+                const weightedScore = rankDelta * weight;
+
+                if (rankDelta > 0) {
+                    rising.push({ ...mod, currentRank, prevRank, rankDelta, trendScore: weightedScore });
+                } else if (rankDelta < 0) {
+                    falling.push({ ...mod, currentRank, prevRank, rankDelta, trendScore: weightedScore });
                 }
             }
         }
 
-        rising.sort((a, b) => b.changeServers - a.changeServers);
+        rising.sort((a, b) => b.trendScore - a.trendScore);
+        falling.sort((a, b) => a.trendScore - b.trendScore); // Most negative score first
+        newMods.sort((a, b) => a.overallRank - b.overallRank); // Lowest rank (best) first
+
         const result = {
             rising: rising.slice(0, 50),
             new: newMods.slice(0, 50),
-            falling: []
+            falling: falling.slice(0, 50)
         };
 
         await kv.put(`${KV_KEYS.TRENDING}:${p.name}`, JSON.stringify(result));

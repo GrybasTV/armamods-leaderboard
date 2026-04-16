@@ -49,15 +49,14 @@ Visa informacija saugoma Cloudflare KV kaip JSON objektai:
 
 ## 🚧 Planuojami darbai
 
-### Workshop Scraping
-```
-□ Arma Workshop scraper (modų papildomi metaduomenys)
+□ Arma Workshop scraper (modų papildomi metaduomenys) - [IN PROGRESS]
   - Thumbnail/image
   - Autorius
   - Aprašymas
   - Kategorija
   - Failo dydis
-```
+- [x] Implement Rank-based Intelligence trending (Overall Rank Delta)
+- [x] Extend history tracking to 90 days with monthly hybrid lookup
 
 ---
 
