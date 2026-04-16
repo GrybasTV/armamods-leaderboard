@@ -138,18 +138,26 @@ app.get('/mods/:modId', async (c) => {
   const mod = mods.find(m => m.id === modId);
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
-  // Optimized server fetching to reduce CPU usage (prevent 503)
+  // Ultra-optimized server fetching (prevent 503)
   let modServers: any[] = [];
+  const MAX_SERVERS_PER_MOD = 100; // Limit to 100 servers to save CPU
+  
   try {
     const meta = await c.env.TRENDING_KV.get(`${keys.SERVERS}:meta`, 'json') as any;
     if (meta && meta.chunks) {
-        console.log(`[MODS_DETAIL] Scanning ${meta.chunks} server chunks for mod inclusion...`);
+        console.log(`[MODS_DETAIL] Scanning server chunks for mod inclusion (max ${MAX_SERVERS_PER_MOD} results)...`);
         for (let i = 0; i < meta.chunks; i++) {
+            if (modServers.length >= MAX_SERVERS_PER_MOD) break;
+            
             const chunkText = await c.env.TRENDING_KV.get(`${keys.SERVERS}:${i}`, 'text');
             if (chunkText && chunkText.includes(`"id":"${modId}"`)) {
                 const chunk = JSON.parse(chunkText);
-                const filtered = chunk.filter((s: any) => s.mods && s.mods.some((m: any) => m.id === modId));
-                modServers.push(...filtered);
+                for (const s of chunk) {
+                    if (s.mods && s.mods.some((m: any) => m.id === modId)) {
+                        modServers.push(s);
+                        if (modServers.length >= MAX_SERVERS_PER_MOD) break;
+                    }
+                }
             }
         }
     }
@@ -192,32 +200,51 @@ app.get('/mods/:modId/history', async (c) => {
   const historyText = await c.env.TRENDING_KV.get(key, 'text');
   if (!historyText) return c.json({ data: [] });
 
-  const points = historyText.split('"time":"');
-  console.log(`[HISTORY] Processing ${points.length} raw time points...`);
   const modHistory = [];
+  const searchStr = '"time":"';
+  let pos = historyText.indexOf(searchStr);
 
-  for (let i = 1; i < points.length; i++) {
-    const pointStr = points[i];
-    const timeEnd = pointStr.indexOf('"');
-    if (timeEnd === -1) continue;
-    const time = pointStr.slice(0, timeEnd);
+  console.log(`[HISTORY] Scanning huge text file for ${modId} stats using index search...`);
+  
+  while (pos !== -1) {
+    const timeStart = pos + searchStr.length;
+    const timeEnd = historyText.indexOf('"', timeStart);
+    if (timeEnd === -1) break;
+    const time = historyText.slice(timeStart, timeEnd);
     
-    const modStrPos = pointStr.indexOf(`"${modId}":{`);
+    // Find where THIS data point ends (next time point or end of array)
+    let nextPoint = historyText.indexOf(searchStr, timeEnd);
+    if (nextPoint === -1) nextPoint = historyText.length;
+    
+    const pointBlock = historyText.slice(timeEnd, nextPoint);
+    const modStrPos = pointBlock.indexOf(`"${modId}":{`);
+    
     if (modStrPos !== -1) {
-      const endPos = pointStr.indexOf('}', modStrPos);
-      const modStatsStr = pointStr.slice(modStrPos + `"${modId}":`.length, endPos + 1);
-      try {
-        const stats = JSON.parse(modStatsStr);
-        modHistory.push({ date: time, totalPlayers: stats.p || 0, serverCount: stats.s || 0, overallRank: stats.r || 9999 });
-      } catch(e) {}
+      const startStats = pointBlock.indexOf('{', modStrPos);
+      const endStats = pointBlock.indexOf('}', startStats);
+      if (startStats !== -1 && endStats !== -1) {
+          try {
+            const statsStr = pointBlock.slice(startStats, endStats + 1);
+            const stats = JSON.parse(statsStr);
+            modHistory.push({ 
+                date: time, 
+                totalPlayers: stats.p || 0, 
+                serverCount: stats.s || 0, 
+                overallRank: stats.r || 9999 
+            });
+          } catch(e) {}
+      }
     } else {
-      modHistory.push({ date: time, totalPlayers: 0, serverCount: 0, overallRank: 9999 });
+        // If we want to show 0s for missing points (for the graph continuity)
+        modHistory.push({ date: time, totalPlayers: 0, serverCount: 0, overallRank: 9999 });
     }
+    
+    pos = historyText.indexOf(searchStr, nextPoint - 1);
   }
 
   const finalHistory = modHistory.slice(sliceCount);
   const finished = Date.now() - start;
-  console.log(`[HISTORY] Prepared ${finalHistory.length} data points in ${finished}ms`);
+  console.log(`[HISTORY] Prepared ${finalHistory.length} nodes in ${finished}ms`);
   return c.json({ data: finalHistory });
 });
 
