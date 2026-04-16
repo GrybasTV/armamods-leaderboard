@@ -1,4 +1,10 @@
-## [1.2.2] - 2026-04-15 (Dabartinė)
+## [1.2.3] - 2026-04-16
+### 🛠 Klaidų taisymai
+- **Modų detalės:** Sutvarkytas serverių sąrašo atvaizdavimas modifikacijų puslapiuose (anksčiau rodydavo 0 serverių).
+- **Istorijos grafikai:** Modifikacijų istorijos grafikai dabar rodomi visada, net jei istoriniai taškai yra lygūs nuliui (pašalintas klaidingas filtravimas).
+- **Tuščios būsenos:** Pridėti informatyvūs pranešimai, kai nėra istorijos duomenų ar aktyvių serverių.
+
+## [1.2.2] - 2026-04-15
 
 ### 🚀 Galingas istorijos atnaujinimas
 - **KV -> D1 Migracija:** Modų istorija perkelta iš riboto KV (25MB limitas) į D1 SQL bazę. Tai išsprendė grafikų dingimo problemą.

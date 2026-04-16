@@ -98,11 +98,16 @@ app.get('/mods/:modId', async (c) => {
   const modId = c.req.param('modId');
   const keys = getKVKeys(game);
 
-  const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
+  const [mods, allServers] = await Promise.all([
+    getChunkedData(c.env.TRENDING_KV, keys.MODS),
+    getChunkedData(c.env.TRENDING_KV, keys.SERVERS)
+  ]);
   const mod = mods.find(m => m.id === modId);
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
-  return c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: [] } });
+  const modServers = allServers.filter(s => s.mods && s.mods.some((m: any) => m.id === modId));
+
+  return c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
 });
 
 app.get('/mods/:modId/history', async (c) => {
@@ -133,9 +138,9 @@ app.get('/mods/:modId/history', async (c) => {
   const historyData = await c.env.TRENDING_KV.get(key, 'json') as any[] || [];
   
   const modHistory = historyData.slice(sliceCount).map(point => {
-    const stats = point.mods[modId] || { p: 0, s: 0, r: 9999 };
+    const stats = (point.mods && point.mods[modId]) ? point.mods[modId] : { p: 0, s: 0, r: 9999 };
     return { date: point.time, totalPlayers: stats.p, serverCount: stats.s, overallRank: stats.r };
-  }).filter(d => d.totalPlayers > 0 || d.serverCount > 0);
+  });
 
   return c.json({ data: modHistory });
 });

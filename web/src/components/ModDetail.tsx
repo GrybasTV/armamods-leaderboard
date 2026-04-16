@@ -112,8 +112,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
         subtitle="Real-time module performance tracking across global network"
       />
 
-      {history && history.length > 0 && (
-        <section className="space-y-6 sm:space-y-8">
+      <section className="space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
             <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter">
               📈 Performance Timeline
@@ -141,7 +140,11 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
           </div>
           <Card className="border-l-4 border-l-tactical-orange bg-zinc-900/50 backdrop-blur-sm">
             <CardContent ref={chartRef} className="p-4 sm:p-6 lg:p-8 h-[400px]">
-              {chartReady && (
+              {!history || history.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-gray-500 font-bold uppercase tracking-widest text-[10px]">
+                  No timeline data available
+                </div>
+              ) : chartReady && (
                 <LineChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
                   <XAxis 
@@ -217,7 +220,6 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
             </CardContent>
           </Card>
         </section>
-      )}
 
       <section className="space-y-6 sm:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-6">
