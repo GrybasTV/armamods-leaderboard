@@ -4,7 +4,7 @@ import { modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Mod, Server, ModHistory } from '../types';
 
 interface ModDetailData extends Mod {
@@ -50,17 +50,9 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
   }, [modId, selectedDays, loadMod]);
 
   useEffect(() => {
-    setChartReady(false);
-    if (!history || history.length === 0) return;
-    const el = chartRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-        setChartReady(true);
-      }
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
+    if (history && history.length > 0) {
+      setChartReady(true);
+    }
   }, [history]);
 
   if (loading) return <StatusState type="loading" />;
@@ -144,78 +136,80 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                 <div className="flex items-center justify-center h-full text-gray-500 font-bold uppercase tracking-widest text-[10px]">
                   No timeline data available
                 </div>
-              ) : chartReady && (
-                <LineChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#666" 
-                    tickFormatter={(tick) => {
-                      const d = new Date(tick);
-                      if (selectedDays === 1) {
-                        return `${d.getHours().toString().padStart(2, '0')}:00`;
-                      }
-                      return `${d.getMonth()+1}/${d.getDate()}`;
-                    }}
-                    tick={{ fontSize: 10, fill: '#666', fontWeight: 'bold' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    yAxisId="players"
-                    stroke="#f97316" 
-                    tick={{ fontSize: 10, fill: '#f97316', fontWeight: 'bold' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={40}
-                  />
-                  <YAxis 
-                    yAxisId="rank"
-                    orientation="right"
-                    reversed
-                    stroke="#3b82f6" 
-                    tick={{ fontSize: 10, fill: '#3b82f6', fontWeight: 'bold' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={40}
-                  />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '4px' }}
-                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
-                    labelStyle={{ color: '#666', fontSize: '10px', fontWeight: 'bold', marginBottom: '8px' }}
-                  />
-                  <Line 
-                    yAxisId="players"
-                    type="monotone" 
-                    dataKey="totalPlayers" 
-                    name="Deployed Personnel"
-                    stroke="#f97316" 
-                    strokeWidth={3}
-                    dot={false}
-                    activeDot={{ r: 6, fill: '#f97316', stroke: '#18181b', strokeWidth: 2 }}
-                  />
-                  <Line 
-                    yAxisId="players"
-                    type="monotone" 
-                    dataKey="serverCount" 
-                    name="Active Servers"
-                    stroke="#db2777" 
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4, fill: '#db2777', stroke: '#18181b', strokeWidth: 2 }}
-                  />
-                  <Line 
-                    yAxisId="rank"
-                    type="stepAfter" 
-                    dataKey="overallRank" 
-                    name="Strategic Rank"
-                    stroke="#3b82f6" 
-                    strokeWidth={1}
-                    strokeDasharray="5 5"
-                    dot={false}
-                    activeDot={{ r: 4, fill: '#3b82f6', stroke: '#18181b', strokeWidth: 2 }}
-                  />
-                </LineChart>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#666" 
+                      tickFormatter={(tick) => {
+                        const d = new Date(tick);
+                        if (selectedDays === 1) {
+                          return `${d.getHours().toString().padStart(2, '0')}:00`;
+                        }
+                        return `${d.getMonth()+1}/${d.getDate()}`;
+                      }}
+                      tick={{ fontSize: 10, fill: '#666', fontWeight: 'bold' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      yAxisId="players"
+                      stroke="#f97316" 
+                      tick={{ fontSize: 10, fill: '#f97316', fontWeight: 'bold' }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={40}
+                    />
+                    <YAxis 
+                      yAxisId="rank"
+                      orientation="right"
+                      reversed
+                      stroke="#3b82f6" 
+                      tick={{ fontSize: 10, fill: '#3b82f6', fontWeight: 'bold' }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={40}
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '4px' }}
+                      itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                      labelStyle={{ color: '#666', fontSize: '10px', fontWeight: 'bold', marginBottom: '8px' }}
+                    />
+                    <Line 
+                      yAxisId="players"
+                      type="monotone" 
+                      dataKey="totalPlayers" 
+                      name="Deployed Personnel"
+                      stroke="#f97316" 
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{ r: 6, fill: '#f97316', stroke: '#18181b', strokeWidth: 2 }}
+                    />
+                    <Line 
+                      yAxisId="players"
+                      type="monotone" 
+                      dataKey="serverCount" 
+                      name="Active Servers"
+                      stroke="#db2777" 
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4, fill: '#db2777', stroke: '#18181b', strokeWidth: 2 }}
+                    />
+                    <Line 
+                      yAxisId="rank"
+                      type="stepAfter" 
+                      dataKey="overallRank" 
+                      name="Strategic Rank"
+                      stroke="#3b82f6" 
+                      strokeWidth={1}
+                      strokeDasharray="5 5"
+                      dot={false}
+                      activeDot={{ r: 4, fill: '#3b82f6', stroke: '#18181b', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
