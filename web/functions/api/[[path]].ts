@@ -14,6 +14,26 @@ const app = new Hono<{ Bindings: Bindings }>().basePath('/api');
 // Setup Middleware
 app.use('*', cors());
 
+// Debug logging for every request
+app.use('*', async (c, next) => {
+  const start = Date.now();
+  console.log(`[REQUEST] ${c.req.method} ${c.req.url} started`);
+  await next();
+  const ms = Date.now() - start;
+  console.log(`[RESPONSE] ${c.req.method} ${c.req.url} finished in ${ms}ms - Status: ${c.res.status}`);
+});
+
+// Global Error Handler
+app.onError((err, c) => {
+    console.error(`[CRITICAL ERROR]`, err);
+    return c.json({ 
+        error: 'Internal Worker error', 
+        message: err.message,
+        stack: err.stack,
+        time: new Date().toISOString()
+    }, 503);
+});
+
 // Helper logic
 function getGameFromQuery(c: any): GameType {
   const game = c.req.query('game');
@@ -34,18 +54,32 @@ function getKVKeys(game: GameType) {
 }
 
 async function getChunkedData(kv: KVNamespace, baseKey: string): Promise<any[]> {
+  const start = Date.now();
   try {
     const meta = await kv.get(`${baseKey}:meta`, 'json') as any;
-    if (!meta || !meta.chunks) return [];
+    if (!meta || !meta.chunks) {
+        console.log(`[KV] No meta or chunks for ${baseKey}`);
+        return [];
+    }
 
+    console.log(`[KV] Fetching ${meta.chunks} chunks for ${baseKey} (total expected items: ${meta.total || 'unknown'})`);
     const chunks = [];
     for (let i = 0; i < meta.chunks; i++) {
+      const chunkStart = Date.now();
       const chunk = await kv.get(`${baseKey}:${i}`, 'json') as any[];
-      if (chunk) chunks.push(...chunk);
+      if (chunk) {
+        chunks.push(...chunk);
+        const chunkTime = Date.now() - chunkStart;
+        if (chunkTime > 10) { // Log slow chunks
+            console.log(`  [KV] Slow chunk ${i} for ${baseKey} took ${chunkTime}ms`);
+        }
+      }
     }
+    const totalTime = Date.now() - start;
+    console.log(`[KV] Finished ${baseKey} total fetch in ${totalTime}ms`);
     return chunks;
   } catch (err) {
-    console.error(`Error reading chunks for ${baseKey}:`, err);
+    console.error(`[KV ERROR] Error reading chunks for ${baseKey}:`, err);
     return [];
   }
 }
@@ -94,10 +128,12 @@ app.get('/mods', async (c) => {
 });
 
 app.get('/mods/:modId', async (c) => {
+  const start = Date.now();
   const game = getGameFromQuery(c);
   const modId = c.req.param('modId');
   const keys = getKVKeys(game);
 
+  console.log(`[MODS_DETAIL] Starting fetch for ${modId}...`);
   const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
   const mod = mods.find(m => m.id === modId);
   if (!mod) return c.json({ error: 'Not found' }, 404);
@@ -107,6 +143,7 @@ app.get('/mods/:modId', async (c) => {
   try {
     const meta = await c.env.TRENDING_KV.get(`${keys.SERVERS}:meta`, 'json') as any;
     if (meta && meta.chunks) {
+        console.log(`[MODS_DETAIL] Scanning ${meta.chunks} server chunks for mod inclusion...`);
         for (let i = 0; i < meta.chunks; i++) {
             const chunkText = await c.env.TRENDING_KV.get(`${keys.SERVERS}:${i}`, 'text');
             if (chunkText && chunkText.includes(`"id":"${modId}"`)) {
@@ -117,19 +154,23 @@ app.get('/mods/:modId', async (c) => {
         }
     }
   } catch (err) {
-      console.error('Server chunk error:', err);
+      console.error('[MODS_DETAIL] Server chunk error:', err);
   }
 
+  const finished = Date.now() - start;
+  console.log(`[MODS_DETAIL] Response ready for ${modId} in ${finished}ms`);
   return c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
 });
 
 app.get('/mods/:modId/history', async (c) => {
+  const start = Date.now();
   const game = getGameFromQuery(c);
   const modId = c.req.param('modId');
   const daysString = c.req.query('days') || '30';
   const requestingAll = daysString === 'all';
   const days = requestingAll ? 9999 : parseInt(daysString);
 
+  console.log(`[HISTORY] Fetching history for ${modId} (${days} days)...`);
   let key = `history:daily:${game}`;
   let sliceCount = -days;
 
@@ -152,6 +193,7 @@ app.get('/mods/:modId/history', async (c) => {
   if (!historyText) return c.json({ data: [] });
 
   const points = historyText.split('"time":"');
+  console.log(`[HISTORY] Processing ${points.length} raw time points...`);
   const modHistory = [];
 
   for (let i = 1; i < points.length; i++) {
@@ -174,6 +216,8 @@ app.get('/mods/:modId/history', async (c) => {
   }
 
   const finalHistory = modHistory.slice(sliceCount);
+  const finished = Date.now() - start;
+  console.log(`[HISTORY] Prepared ${finalHistory.length} data points in ${finished}ms`);
   return c.json({ data: finalHistory });
 });
 
