@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
@@ -24,8 +24,6 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDays, setSelectedDays] = useState(30);
-  const [chartReady, setChartReady] = useState(false);
-  const chartRef = useRef<HTMLDivElement>(null);
 
   const loadMod = useCallback(async (days: number) => {
     if (!modId) return;
@@ -49,11 +47,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
     loadMod(selectedDays);
   }, [modId, selectedDays, loadMod]);
 
-  useEffect(() => {
-    if (history && history.length > 0) {
-      setChartReady(true);
-    }
-  }, [history]);
+
 
   if (loading) return <StatusState type="loading" />;
   if (error || !mod) return (
@@ -131,7 +125,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
             </div>
           </div>
           <Card className="border-l-4 border-l-tactical-orange bg-zinc-900/50 backdrop-blur-sm">
-            <CardContent ref={chartRef} className="p-4 sm:p-6 lg:p-8 h-[400px]">
+            <CardContent className="p-4 sm:p-6 lg:p-8 h-[400px]">
               {!history || history.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-gray-500 font-bold uppercase tracking-widest text-[10px]">
                   No timeline data available
