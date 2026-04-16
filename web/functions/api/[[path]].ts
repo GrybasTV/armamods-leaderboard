@@ -183,49 +183,24 @@ app.get('/mods/:modId', async (c) => {
   return finalResponse;
 });
 
-app.get('/mods/:modId/history', async (c) => {
-  const cache = await caches.open('armamods:history');
-  const cacheResponse = await cache.match(c.req.raw);
-  if (cacheResponse) {
-      console.log(`[CACHE HIT] History data for ${c.req.url}`);
-      return cacheResponse;
-  }
+  const finished = Date.now() - start;
+  console.log(`[HISTORY] Prepared ${finalHistory.length} nodes in ${finished}ms`);
+  
+  const finalResponse = c.json({ data: finalHistory });
+  
+  // Cache the response for 1 hour
+  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
+  
+  return finalResponse;
+});
 
-  const start = Date.now();
-  const game = getGameFromQuery(c);
-  const modId = c.req.param('modId');
-  const daysString = c.req.query('days') || '30';
-  const requestingAll = daysString === 'all';
-  const days = requestingAll ? 9999 : parseInt(daysString);
-
-  console.log(`[HISTORY] Fetching history for ${modId} (${days} days)...`);
-  let key = `history:daily:${game}`;
-  let sliceCount = -days;
-
-  if (days <= 1) {
-    key = `history:hourly:${game}`;
-    sliceCount = -24;
-  } else if (days > 31 && days <= 365) {
-    key = `history:monthly:${game}`;
-    sliceCount = -12; // paskutiniai 12 mėnesių
-  } else if (days > 365 || requestingAll) {
-    key = `history:yearly:${game}`;
-    sliceCount = -10; // paskutiniai 10 metų
-  } else {
-    // 2-31 days (30D)
-    key = `history:daily:${game}`;
-    sliceCount = -days;
-  }
-
-  const historyText = await c.env.TRENDING_KV.get(key, 'text');
-  if (!historyText) return c.json({ data: [] });
-
+// Helper to scan history text for a specific modId (Used in shards)
+function scanHistoryPoints(historyText: string, modId: string): any[] {
   const modHistory = [];
   const searchStr = '"time":"';
   let pos = historyText.indexOf(searchStr);
 
-  console.log(`[HISTORY] Scanning huge text file for ${modId} stats using index search...`);
-  
   while (pos !== -1) {
     const timeStart = pos + searchStr.length;
     const timeEnd = historyText.indexOf('"', timeStart);
@@ -265,8 +240,50 @@ app.get('/mods/:modId/history', async (c) => {
     
     pos = historyText.indexOf(searchStr, nextTimePos - 1);
     if (pos === -1) break;
-    // Safety against infinite loop if something goes wrong with offsets
     if (pos <= modsStartPos) pos = historyText.indexOf(searchStr, nextTimePos + 1);
+  }
+  return modHistory;
+}
+
+app.get('/mods/:modId/history', async (c) => {
+  const cache = await caches.open('armamods:history');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) return cacheResponse;
+
+  const start = Date.now();
+  const game = getGameFromQuery(c);
+  const modId = c.req.param('modId');
+  const daysString = c.req.query('days') || '30';
+  const requestingAll = daysString === 'all';
+  const days = requestingAll ? 9999 : parseInt(daysString);
+
+  let baseKey = `history:daily:${game}`;
+  let sliceCount = -days;
+
+  if (days <= 1) { baseKey = `history:hourly:${game}`; sliceCount = -24; }
+  else if (days > 31 && days <= 365) { baseKey = `history:monthly:${game}`; sliceCount = -12; }
+  else if (days > 365 || requestingAll) { baseKey = `history:yearly:${game}`; sliceCount = -10; }
+
+  console.log(`[HISTORY] Fetching ${baseKey} shards for ${modId}...`);
+  
+  let modHistory: any[] = [];
+  const meta = await c.env.TRENDING_KV.get(`${baseKey}:meta`, 'json') as any;
+
+  if (meta && meta.chunks) {
+      // Sharded logic
+      for (let i = 0; i < meta.chunks; i++) {
+          const shardKey = `${baseKey}:${i}`;
+          // Greitas patikrinimas ar šis blokas turi mūsų modą
+          const shardText = await c.env.TRENDING_KV.get(shardKey, 'text');
+          if (shardText && shardText.includes(`"${modId}":{`)) {
+              modHistory = scanHistoryPoints(shardText, modId);
+              break;
+          }
+      }
+  } else {
+      // Legacy single-file logic
+      const historyText = await c.env.TRENDING_KV.get(baseKey, 'text');
+      if (historyText) modHistory = scanHistoryPoints(historyText, modId);
   }
 
   const finalHistory = modHistory.slice(sliceCount);

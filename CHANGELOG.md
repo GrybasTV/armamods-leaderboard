@@ -1,12 +1,13 @@
 ## [1.3.0] - 2026-04-16
 
 ### Pridėta
-- **Dinaminis „Trending“ filtravimas**: Įdiegtas 0.5% aktyvumo slenkstis (Personnel ir Deployments) tendencijų skaičiavimui. Tai automatiškai išvalo „Rising“ ir „Falling“ sąrašus nuo neaktyvių modų („triukšmo“).
-- **Svertinis aktyvumo modelis**: Tendencijų balas (`trendScore`) dabar papildomai dauginamas iš logaritminio žaidėjų kiekio koeficiento, suteikiant pirmenybę didesniems projektams.
-- **Dinamika pagal populiarumą**: Kartelė automatiškai kyla arba leidžiasi priklausomai nuo bendro visų modų populiarumo (pvz., jei žaidimas auga, slenkstis didėja).
+- **100% JSON Architektūra (SQL Removal)**: Remiantis projekto taisyklėmis, visiškai atsisakyta SQL (D1). Suprogramuotas **Time-Series Sharding** mechanizmas, leidžiantis saugoti neribotą istoriją Cloudflare KV blokais (apeinant 25MB limitą).
+- **Dinaminis „Trending“ filtravimas**: Įdiegtas griežtas `&&` (Personnel IR Deployments) 0.5% slenkstis tendencijoms. Tai visiškai išvalė sąrašus nuo neaktyvių modų („triukšmo“).
+- **Stabilumo overhaul**: Įdiegtas užklausų perbandymo (retry) ir pauzių (throttling) mechanizmas Cloudflare API užklausoms.
 
 ### Pakeista
-- **Numatytasis reitingas**: Padidinta bazinė reitingo reikšmė iki 50 000 pozicijų naujiems ar nerastiems modams, geriau atspindint dabartinę 14k+ modų ekosistemą.
+- **API Worker**: Atnaujintas `/api/mods/:id/history` endpoint'as palaikantis blokų skenavimą.
+- **Numatytasis reitingas**: Padidinta bazinė reitingo reikšmė iki 50 000 pozicijų.
 
 ## [1.2.5] - 2026-04-16
 

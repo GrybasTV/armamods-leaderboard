@@ -278,45 +278,81 @@ async function runCollector() {
     throw kvWriteErr;
   }
 
-  console.log("💾 UPDATING KV HISTORY...");
-  const statsMap: Record<string, { p: number, s: number, r: number }> = {};
-  for (const m of modList) {
-    statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
-  }
-
+  console.log("💾 UPDATING KV HISTORY (SHARDED JSON)...");
+  const today = new Date().toISOString().split('T')[0];
+  const MOD_HISTORY_CHUNK_SIZE = 5000;
+  
   try {
-    // Hourly (24 points)
-    const historyHourly = await kv.get(`history:hourly:${game}`, 'json') || [];
-    const updatedHourly = [...historyHourly, { time: new Date().toISOString(), mods: statsMap }].slice(-24);
-    await kv.put(`history:hourly:${game}`, JSON.stringify(updatedHourly));
-    console.log("✅ HOURLY updated (24 points)");
+    const statsMap: Record<string, { p: number, s: number, r: number }> = {};
+    for (const m of modList) {
+      statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
+    }
 
-    // Daily (90 points for quarterly trends)
-    const today = new Date().toISOString().split('T')[0];
-    const historyDaily = await kv.get(`history:daily:${game}`, 'json') as any[] || [];
-    const updatedDaily = [...historyDaily.filter((d: any) => d.time !== today), { time: today, mods: statsMap }].slice(-90);
-    await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
-    console.log("✅ DAILY updated (90 points)");
+    const periods = [
+      { name: 'hourly', key: `history:hourly:${game}`, limit: 24 },
+      { name: 'daily', key: `history:daily:${game}`, limit: 90 },
+      { name: 'monthly', key: `history:monthly:${game}`, limit: 60 },
+      { name: 'yearly', key: `history:yearly:${game}`, limit: 10 }
+    ];
 
-    // Monthly (60 points)
-    const thisMonth = today.substring(0, 7);
-    const historyMonthly = await kv.get(`history:monthly:${game}`, 'json') as any[] || [];
-    const updatedMonthly = [...historyMonthly.filter((d: any) => d.time !== thisMonth), { time: thisMonth, mods: statsMap }].slice(-60);
-    await kv.put(`history:monthly:${game}`, JSON.stringify(updatedMonthly));
-    console.log("✅ MONTHLY updated (60 points)");
+    for (const period of periods) {
+      const timeLabel = period.name === 'hourly' ? new Date().toISOString() : 
+                        period.name === 'monthly' ? today.substring(0, 7) : 
+                        period.name === 'yearly' ? today.substring(0, 4) : today;
 
-    // Yearly (10 points)
-    const thisYear = today.substring(0, 4);
-    const historyYearly = await kv.get(`history:yearly:${game}`, 'json') as any[] || [];
-    const updatedYearly = [...historyYearly.filter((d: any) => d.time !== thisYear), { time: thisYear, mods: statsMap }].slice(-10);
-    await kv.put(`history:yearly:${game}`, JSON.stringify(updatedYearly));
-    console.log("✅ YEARLY updated (10 points)");
+      // Skaidome modus į blokus istorijai
+      const modIds = Object.keys(statsMap);
+      const chunks = [];
+      for (let i = 0; i < modIds.length; i += MOD_HISTORY_CHUNK_SIZE) {
+        chunks.push(modIds.slice(i, i + MOD_HISTORY_CHUNK_SIZE));
+      }
+
+      console.log(`  - Processing ${period.name} history (${chunks.length} shards)...`);
+
+      for (let i = 0; i < chunks.length; i++) {
+        const shardKey = `${period.key}:${i}`;
+        const shardModIds = chunks[i];
+        const shardStats: Record<string, any> = {};
+        for (const id of shardModIds) shardStats[id] = statsMap[id];
+
+        const history = await kv.get(shardKey, 'json') || [];
+        const updated = [...history.filter((d: any) => d.time !== timeLabel), { time: timeLabel, mods: shardStats }].slice(-period.limit);
+        
+        await kv.put(shardKey, JSON.stringify(updated));
+        await sleep(500);
+      }
+      
+      // Store meta for this period
+      await kv.put(`${period.key}:meta`, JSON.stringify({ chunks: chunks.length, totalMods: modIds.length, lastUpdate: new Date().toISOString() }));
+      console.log(`    ✅ ${period.name.toUpperCase()} shards updated`);
+    }
   } catch (kvErr) {
-    console.error("⚠️ KV Error:", kvErr);
+    console.error("⚠️ KV History Error:", kvErr);
   }
 
   console.log('✅ COLLECTOR: Complete!');
   return { servers: totalServers, mods: totalMods };
+}
+
+// Pagalbinė funkcija surinkti visus istorijos blokus į vieną map'ą (skirta trending skaičiavimams)
+async function getFullHistoryPoint(kv: CloudflareKVClient, baseKey: string, offsetFromEnd: number): Promise<any> {
+    const meta = await kv.get(`${baseKey}:meta`, 'json');
+    if (!meta) return null;
+
+    const fullMods: Record<string, any> = {};
+    let pointTime = '';
+
+    for (let i = 0; i < meta.chunks; i++) {
+        const shard = await kv.get(`${baseKey}:${i}`, 'json');
+        if (shard && shard.length > 0) {
+            const point = shard[shard.length - offsetFromEnd] || shard[0];
+            if (point) {
+                pointTime = point.time;
+                Object.assign(fullMods, point.mods);
+            }
+        }
+    }
+    return pointTime ? { time: pointTime, mods: fullMods } : null;
 }
 
 // Helper to read chunked data from KV
@@ -340,69 +376,34 @@ async function runTrendingSnapshot() {
   const KV_KEYS = getKVKeys(game);
 
   try {
-    const [mods, historyDaily] = await Promise.all([
-        getChunkedData(kv, KV_KEYS.MODS),
-        kv.get(`history:daily:${game}`, 'json') as Promise<any[]>
-    ]);
-
+    const mods = await getChunkedData(kv, KV_KEYS.MODS);
     if (!mods || mods.length === 0) {
       throw new Error('No mods in cache - run collector first');
     }
 
-    const safeHistory = historyDaily || [];
-    const today = new Date().toISOString().split('T')[0];
-    
     // ---------------------------------------------------------
-    // 1. ROLLUP LOGIC (Daily, Monthly, Yearly)
-    // ---------------------------------------------------------
-    const statsMap: Record<string, { p: number, s: number, r: number }> = {};
-    for (const m of mods) {
-      statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
-    }
-
-    const dailyPoint = { time: today, mods: statsMap };
-
-    // Update Daily
-    const updatedDaily = [...safeHistory.filter((d:any) => d.time !== today), dailyPoint].slice(-90);
-    await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
-    await sleep(500);
-    
-    // Update Monthly
-    const thisMonth = today.substring(0, 7);
-    const historyMonthly = await kv.get(`history:monthly:${game}`, 'json') || [];
-    const updatedMonthly = [...(historyMonthly as any[]).filter((d:any) => d.time !== thisMonth), { time: thisMonth, mods: statsMap }].slice(-60);
-    await kv.put(`history:monthly:${game}`, JSON.stringify(updatedMonthly));
-    await sleep(500);
-
-    // Update Yearly
-    const thisYear = today.substring(0, 4);
-    const historyYearly = await kv.get(`history:yearly:${game}`, 'json') || [];
-    const updatedYearly = [...(historyYearly as any[]).filter((d:any) => d.time !== thisYear), { time: thisYear, mods: statsMap }].slice(-10);
-    await kv.put(`history:yearly:${game}`, JSON.stringify(updatedYearly));
-    await sleep(500);
-
-    // ---------------------------------------------------------
-    // 2. TRENDING CALCULATION (Pre-calculate for specific periods)
+    // TRENDING CALCULATION (Using sharded history)
     // ---------------------------------------------------------
     const periods = [
-        { name: '24h', days: 1 },
-        { name: '7d', days: 7 },
-        { name: '30d', days: 30 },
-        { name: '90d', days: 90 }
+        { name: '24h', days: 1, baseKey: `history:daily:${game}` },
+        { name: '7d', days: 7, baseKey: `history:daily:${game}` },
+        { name: '30d', days: 30, baseKey: `history:daily:${game}` },
+        { name: '90d', days: 90, baseKey: `history:daily:${game}` }
     ];
 
     for (const p of periods) {
-        let prevEntry = updatedDaily[updatedDaily.length - p.days];
+        // Paimame istorinį tašką iš visų blokų
+        let prevEntry = await getFullHistoryPoint(kv, p.baseKey, p.days);
         
-        // Smart Lookup: if daily is too short, use monthly snapshots for long periods
         if (!prevEntry && p.days > 30) {
             const monthsBack = Math.ceil(p.days / 30);
-            const historyMonthly = await kv.get(`history:monthly:${game}`, 'json') || [];
-            prevEntry = (historyMonthly as any[])[(historyMonthly as any[]).length - monthsBack];
-            if (prevEntry) console.log(`  [SMART LOOKUP] Using monthly snapshot for ${p.name} trend`);
+            prevEntry = await getFullHistoryPoint(kv, `history:monthly:${game}`, monthsBack);
+            if (prevEntry) console.log(`  [SMART LOOKUP] Using monthly sharded snapshot for ${p.name} trend`);
         }
         
-        if (!prevEntry) prevEntry = updatedDaily[0] || { mods: {} };
+        if (!prevEntry) {
+            prevEntry = await getFullHistoryPoint(kv, p.baseKey, 999); // Fallback to oldest available
+        }
 
         const prevMap = new Map();
         if (prevEntry?.mods) {
