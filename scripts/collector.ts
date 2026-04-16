@@ -526,10 +526,12 @@ async function runServerScoring(game: string, kv: CloudflareKVClient, serverList
       const historyKey = `history:server_scores:${game}`;
       const leaderboardKey = `cache:ranking:servers:${game}`;
       
-      // 1. Prepare Mod Rank Lookup
+      // 1. Prepare Mod Rank Lookup (Dynamic Averages)
       const modRankMap = new Map();
-      modList.forEach(m => modRankMap.set(m.id, m.overallRank || 14000));
-      const GLOBAL_AVG = 7000;
+      modList.forEach(m => modRankMap.set(m.id, m.overallRank || modList.length));
+      
+      const GLOBAL_AVG = modList.length / 2;
+      const SCALING_FACTOR = GLOBAL_AVG / 100;
 
       // 2. Calculate current scores for ALL servers
       const currentScores: Record<string, number> = {};
@@ -547,8 +549,8 @@ async function runServerScoring(game: string, kv: CloudflareKVClient, serverList
               avgRank = totalRank / modCount;
           }
           
-          // Bonus Mapping: (AvgRank-7000) / 70 => Range -100 to +100
-          let uniquenessBonus = Math.floor((avgRank - GLOBAL_AVG) / 70);
+          // Bonus Mapping: (AvgRank - GlobalAvg) / ScalingFactor => Range -100 to +100
+          let uniquenessBonus = Math.floor((avgRank - GLOBAL_AVG) / SCALING_FACTOR);
           uniquenessBonus = Math.min(100, Math.max(-100, uniquenessBonus));
           
           currentScores[s.id] = baseScore + uniquenessBonus;

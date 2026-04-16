@@ -353,4 +353,46 @@ app.get('/debug/raw/:key', async (c) => {
 });
 
 
+
+// --- SERVER RANKING ENDPOINTS ---
+
+// Get Top Ranked Servers (Leaderboard)
+app.get('/servers/ranking', async (c) => {
+  const game = c.req.query('game') || 'reforger';
+  const cache = await caches.open('armamods:ranking:servers');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) return cacheResponse;
+
+  const ranking = await c.env.TRENDING_SNAPSHOTS.get(`cache:ranking:servers:${game}`, 'json');
+  if (!ranking) return c.json({ data: [] });
+
+  const response = c.json({ data: ranking });
+  response.headers.set('Cache-Control', 'public, max-age=3600');
+  c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
+  return response;
+});
+
+// Get Points History for a specific server (For Charts)
+app.get('/servers/:serverId/history', async (c) => {
+  const serverId = c.req.param('serverId');
+  const game = c.req.query('game') || 'reforger';
+  const cache = await caches.open('armamods:server_history');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) return cacheResponse;
+
+  const history = await c.env.TRENDING_SNAPSHOTS.get(`history:server_scores:${game}`, 'json') as any[];
+  if (!history) return c.json({ data: [] });
+
+  // Extract points for ONLY this server to keep response small
+  const serverHistory = history.map(entry => ({
+    time: entry.time,
+    points: entry.scores[serverId] || 0
+  })).filter(h => h.points !== 0 || h.time === history[history.length-1].time);
+
+  const response = c.json({ data: serverHistory });
+  response.headers.set('Cache-Control', 'public, max-age=3600');
+  c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
+  return response;
+});
+
 export const onRequest = handle(app);

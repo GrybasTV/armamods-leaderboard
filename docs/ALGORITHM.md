@@ -111,15 +111,19 @@ SnapshotScore = (Players × 5) - (ModCount × 1) + UniquenessBonus
 - **UniquenessBonus**: A value from **-100 to +100** based on the rarity of mods used.
 
 ### Uniqueness Bonus/Penalty Calculation
-The bonus compares the server's average mod rank to the global network average (~7,000).
+The bonus compares the server's average mod rank to the global network mean rank to penalize generic setups and reward true innovation.
 
 ```
-Bonus = Clamp((ServerAvgModRank - 7000) / 70, -100, 100)
+Bonus = Clamp((ServerAvgModRank - GlobalMeanRank) / ScalingFactor, -100, 100)
 ```
+
+**Where:**
+- **GlobalMeanRank**: `TotalMods / 2`. The mathematical center of the current mod registry.
+- **ScalingFactor**: `GlobalMeanRank / 100`. Ensures the bonus always scales neatly between -100 and +100 regardless of total mod count.
 
 - **Penalty (-100 to 0)**: Applied to servers using only Top 100 / Vanilla mods. This rewards developers who move away from "the herd".
 - **Bonus (0 to +100)**: Applied to servers using niche, unique, or high-quality artisanal mods.
-- **Vanilla Exception**: Vanilla servers (0 mods) receive a flat **-100** uniqueness bonus for using the default configuration.
+- **Vanilla Exception**: Vanilla servers (0 mods) receive the maximum penalty of **-100** for using the default configuration without any community content.
 
 ### 30-Day Trailing Leaderboard
 The final leaderboard is a **rolling 30-day sum** of all snapshots (90 points in total). 
