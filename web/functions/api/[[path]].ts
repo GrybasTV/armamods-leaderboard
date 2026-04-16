@@ -300,12 +300,21 @@ app.get('/mods/:modId/history', async (c) => {
 });
 
 app.get('/servers', async (c) => {
+  const cache = await caches.open('armamods:servers');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) {
+      console.log(`[CACHE HIT] Servers data for ${c.req.url}`);
+      return cacheResponse;
+  }
+
+  const start = Date.now();
   const game = getGameFromQuery(c);
   const keys = getKVKeys(game);
   const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
   const offset = parseInt(c.req.query('offset') || '0');
   const search = c.req.query('search') || '';
 
+  console.log(`[SERVERS] Fetching data for ${game}...`);
   const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS);
   let filtered = [...servers];
 
@@ -316,10 +325,19 @@ app.get('/servers', async (c) => {
 
   filtered.sort((a, b) => (b.players || 0) - (a.players || 0));
 
-  return c.json({ 
+  const finalResponse = c.json({ 
     data: filtered.slice(offset, offset + limit), 
     meta: { total: filtered.length, limit, offset } 
   });
+
+  // Cache fixed result for 1 hour to prevent CPU overload
+  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
+
+  const finished = Date.now() - start;
+  console.log(`[SERVERS] Prepared in ${finished}ms`);
+  
+  return finalResponse;
 });
 
 // Bayesian Trending logic

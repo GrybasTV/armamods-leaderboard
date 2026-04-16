@@ -252,7 +252,7 @@ async function runCollector() {
     await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
 
     // Split servers into chunks
-    const SERVER_CHUNK_SIZE = 500;
+    const SERVER_CHUNK_SIZE = 200;
     const serverChunks = [];
     for (let i = 0; i < serverList.length; i += SERVER_CHUNK_SIZE) {
       serverChunks.push(serverList.slice(i, i + SERVER_CHUNK_SIZE));
