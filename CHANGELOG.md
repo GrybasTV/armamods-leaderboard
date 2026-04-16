@@ -1,3 +1,13 @@
+## [1.3.0] - 2026-04-16
+
+### Pridėta
+- **Momentum Score modelis**: Įdiegtas logaritminis matematinis modelis tendencijoms skaičiuoti. Modelis subalansuoja rango pokytį su realiu žaidėjų ("Personnel") ir serverių ("Deployments") aktyvumu.
+- **Išmanieji filtrai**: Įdiegti papildomi barjerai, kurie paslepia nereikšmingą "triukšmą" (modifikacijas be žaidėjų ar mažiau nei 3 serverius turinčius projektus) "Rising" ir "Falling" sąrašuose.
+- **Rango slenkstis**: Pokyčiai už #5000 ribos dabar automatiškai slopinami, nebent modifikacija iškrenta iš Top 5000 zonos.
+
+### Pakeista
+- **Svorio skaičiavimas**: Atsisakyta bazinio svertinio vidurkio ir pereita prie `log2` santykio, užtikrinančio teisingą augimo vertinimą visuose ranguose.
+
 ## [1.2.5] - 2026-04-16
 
 ### Pridėta

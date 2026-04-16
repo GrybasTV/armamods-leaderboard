@@ -1,6 +1,6 @@
 # Cloudflare Pages Configuration
 name = "armamods-leaderboard"
-pages_build_output_dir = "web/dist"
+pages_build_output_dir = "dist"
 compatibility_date = "2024-03-24"
 
 # KV Namespace for mods, servers and history

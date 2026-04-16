@@ -395,37 +395,58 @@ async function runTrendingSnapshot() {
         const rising: any[] = [];
         const falling: any[] = [];
         const newMods: any[] = [];
-        const MIN_SERVERS = 5;
+        
+        const MIN_SERVERS_ACTIVE = 3;   // Reikia bent 3 serverių, kad būtų "aktyvus"
+        const MIN_SERVERS_NEW = 5;      // Naujiems populiariems reikia bent 5
+        const MIN_PLAYERS_RISING = 1;   // Kylančiam modui reikia bent 1 žaidėjo
+        const RANK_THRESHOLD = 5000;    // Ignoruojame Triukšmą už #5000 ribos
 
         for (const mod of mods) {
             const prev = prevMap.get(mod.id);
             const currentRank = mod.overallRank || 9999;
+            const currentPlayers = mod.totalPlayers || 0;
+            const currentServers = mod.serverCount || 0;
 
             if (!prev) {
                 // Was not in index X days ago - candidate for New Popular
-                if (mod.serverCount >= MIN_SERVERS) {
+                // Reikalaujame bent 5 serverių ir bent 5 žaidėjų naujoms modifikacijoms
+                if (currentServers >= MIN_SERVERS_NEW && currentPlayers >= 5) {
                     newMods.push({ ...mod, trendScore: (10000 - currentRank) });
                 }
             } else {
                 const prevRank = prev.r || 9999;
                 const rankDelta = prevRank - currentRank;
                 
-                // Weight: Improving from Rank 10 to 5 is harder than 1000 to 995
-                // We use (1 / Math.sqrt(currentRank)) as a multiplier to favor Top Rank movements
-                const weight = 100 / Math.sqrt(currentRank);
-                const weightedScore = rankDelta * weight;
+                // Ignoruojame pokyčius, jei abi pozicijos yra už 5000 ribos (triukšmas)
+                if (currentRank > RANK_THRESHOLD && prevRank > RANK_THRESHOLD) continue;
+
+                // --- MATEMATINIS MODELIS: Momentum Score ---
+                // 1. Rango santykio logaritmas (log2 užtikrina, kad dvigubas pagerėjimas visur būtų lygus 1 balui)
+                const rankRatio = prevRank / currentRank;
+                const rankLog = Math.log2(rankRatio);
+
+                // 2. Aktyvumo daugiklis (log10 naudojamas, kad žaidėjų/serverių skaičius neperimtų visos įtakos)
+                // log10(101) = 2, log10(1001) = 3. Tai subalansuoja mases.
+                const activityLog = Math.log10(currentPlayers + 1) + Math.log10(currentServers + 1);
+
+                // Galutinis balas: Rango "greitis" * Aktyvumo "svoris"
+                const momentumScore = rankLog * activityLog;
 
                 if (rankDelta > 0) {
-                    rising.push({ ...mod, currentRank, prevRank, rankDelta, trendScore: weightedScore });
+                    // Rising: reikalaujame bent min aktyvumo
+                    if (currentServers >= MIN_SERVERS_ACTIVE && currentPlayers >= MIN_PLAYERS_RISING) {
+                        rising.push({ ...mod, currentRank, prevRank, rankDelta, trendScore: momentumScore });
+                    }
                 } else if (rankDelta < 0) {
-                    falling.push({ ...mod, currentRank, prevRank, rankDelta, trendScore: weightedScore });
+                    // Falling: tas pats modelis veikia ir kritimui (bus neigiamas balas)
+                    falling.push({ ...mod, currentRank, prevRank, rankDelta, trendScore: momentumScore });
                 }
             }
         }
 
         rising.sort((a, b) => b.trendScore - a.trendScore);
-        falling.sort((a, b) => a.trendScore - b.trendScore); // Most negative score first
-        newMods.sort((a, b) => a.overallRank - b.overallRank); // Lowest rank (best) first
+        falling.sort((a, b) => a.trendScore - b.trendScore); // Mažiausias (labiausiai neigiamas) balas pirmas
+        newMods.sort((a, b) => a.overallRank - b.overallRank);
 
         const result = {
             rising: rising.slice(0, 50),
