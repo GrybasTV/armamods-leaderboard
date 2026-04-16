@@ -212,11 +212,16 @@ app.get('/mods/:modId/history', async (c) => {
     if (timeEnd === -1) break;
     const time = historyText.slice(timeStart, timeEnd);
     
-    // Find where THIS data point ends (next time point or end of array)
-    let nextPoint = historyText.indexOf(searchStr, timeEnd);
-    if (nextPoint === -1) nextPoint = historyText.length;
-    
-    const pointBlock = historyText.slice(timeEnd, nextPoint);
+    // Find where the "mods" object starts for this time point
+    const modsKeyStr = '"mods":{';
+    const modsStartPos = historyText.indexOf(modsKeyStr, timeEnd);
+    if (modsStartPos === -1) break;
+
+    // Find where the NEXT time point starts to know where this block ends
+    let nextTimePos = historyText.indexOf(searchStr, modsStartPos);
+    if (nextTimePos === -1) nextTimePos = historyText.length;
+
+    const pointBlock = historyText.slice(modsStartPos, nextTimePos);
     const modStrPos = pointBlock.indexOf(`"${modId}":{`);
     
     if (modStrPos !== -1) {
@@ -235,11 +240,13 @@ app.get('/mods/:modId/history', async (c) => {
           } catch(e) {}
       }
     } else {
-        // If we want to show 0s for missing points (for the graph continuity)
         modHistory.push({ date: time, totalPlayers: 0, serverCount: 0, overallRank: 9999 });
     }
     
-    pos = historyText.indexOf(searchStr, nextPoint - 1);
+    pos = historyText.indexOf(searchStr, nextTimePos - 1);
+    if (pos === -1) break;
+    // Safety against infinite loop if something goes wrong with offsets
+    if (pos <= modsStartPos) pos = historyText.indexOf(searchStr, nextTimePos + 1);
   }
 
   const finalHistory = modHistory.slice(sliceCount);
@@ -284,6 +291,14 @@ app.get('/trending', async (c) => {
     }
 
     return c.json({ data: trendingData, meta: { lastUpdated: new Date().toISOString() } });
+});
+
+// DEBUG ENDPOINT: See raw KV data structure
+app.get('/debug/raw/:key', async (c) => {
+    const key = c.req.param('key');
+    const data = await c.env.TRENDING_KV.get(key, 'text');
+    if (!data) return c.json({ error: 'Not found' });
+    return c.text(data.slice(0, 5000));
 });
 
 
