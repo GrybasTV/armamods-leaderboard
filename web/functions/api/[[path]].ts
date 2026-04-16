@@ -329,6 +329,31 @@ app.get('/servers', async (c) => {
   return finalResponse;
 });
 
+// Get Single Server Details
+app.get('/servers/:serverId', async (c) => {
+  const cache = await caches.open('armamods:server_details');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) return cacheResponse;
+
+  const serverId = c.req.param('serverId');
+  const game = getGameFromQuery(c);
+  const keys = getKVKeys(game);
+
+  console.log(`[SERVERS_DETAIL] Fetching server ${serverId}...`);
+  const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS);
+  const server = servers.find(s => s.id === serverId);
+
+  if (!server) return c.json({ error: 'Server not found' }, 404);
+
+  const response = c.json({ data: server });
+  
+  // Cache for 1 hour
+  response.headers.set('Cache-Control', 'public, max-age=3600');
+  c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
+  
+  return response;
+});
+
 // Bayesian Trending logic
 app.get('/trending', async (c) => {
     const game = getGameFromQuery(c);
