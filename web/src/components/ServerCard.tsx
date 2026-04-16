@@ -22,6 +22,10 @@ export function ServerCard({ server }: ServerCardProps) {
     <Card className="group overflow-hidden border-none border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all duration-300 bg-zinc-900/50 backdrop-blur-sm">
       <CardHeader className="bg-black/30 p-8 border-b border-white/5">
         <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <span className="text-[8px] text-tactical-orange font-black uppercase tracking-[0.4em]">OVERALL RANK</span>
+            <span className="text-xl text-white font-black font-mono tracking-tighter italic"># {server.sqeRank || 'UNRANKED'}</span>
+          </div>
           <div className="flex items-center justify-between">
             <div className={`px-4 py-2 ${status.color} border flex items-center gap-3 transition-colors shadow-lg`}>
               <span className="text-sm">{status.icon}</span>

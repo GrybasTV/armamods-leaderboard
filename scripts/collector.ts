@@ -575,24 +575,33 @@ async function runServerScoring(game: string, kv: CloudflareKVClient, serverList
           }
       }
 
-      // Convert to sorted list for the frontend
+      // Convert to sorted list for history scoring
+      const rankedIds = Object.keys(totalPoints).sort((a, b) => totalPoints[b] - totalPoints[a]);
+      const rankLookup = new Map(rankedIds.map((id, index) => [id, index + 1]));
+
+      // 5. CRITICAL: Update the original serverList objects with rank and points
+      // This ensures that when the collector saves chunks, they include the SQE data
+      for (const s of serverList) {
+          s.sqePoints = Math.floor(totalPoints[s.id] || 0);
+          s.sqeRank = rankLookup.get(s.id) || (rankedIds.length + 1);
+      }
+
+      // Save TOP 200 for the dedicated leaderboard cache
       const leaderboard = serverList
+          .filter(s => s.sqePoints > 0 || s.players > 0)
+          .sort((a, b) => a.sqeRank - b.sqeRank)
+          .slice(0, 200)
           .map(s => ({
               id: s.id,
               name: s.name,
-              points: totalPoints[s.id] || 0,
+              points: s.sqePoints,
               players: s.players,
               modCount: s.mods?.length || 0,
-              rank: 0
-          }))
-          .filter(s => s.points > 0 || (s.players > 0)) // Keep active servers or those with history
-          .sort((a, b) => b.points - a.points);
+              rank: s.sqeRank
+          }));
 
-      leaderboard.forEach((s, i) => s.rank = i + 1);
-
-      // Save TOP 200 to cache for the website
-      await kv.put(leaderboardKey, JSON.stringify(leaderboard.slice(0, 200)));
-      console.log(`[SERVER_SCORING] Leaderboard updated with ${leaderboard.length} ranked servers.`);
+      await kv.put(leaderboardKey, JSON.stringify(leaderboard));
+      console.log(`[SERVER_SCORING] Leaderboard updated and ${serverList.length} servers enriched with SQE data.`);
 
   } catch (err) {
       console.error(`[SERVER_SCORING] Error:`, err);

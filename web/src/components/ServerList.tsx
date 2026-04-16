@@ -86,6 +86,7 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
               onChange={(e) => setSortBy(e.target.value as any)}
               className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-purple-500 focus:bg-black transition-all font-black text-white appearance-none cursor-pointer uppercase tracking-widest text-[11px] rounded-none outline-none"
             >
+              <option value="rank">SQE_LEADERBOARD</option>
               <option value="players">PERSONNEL_IDX</option>
               <option value="mods">MODULE_IDX</option>
               <option value="name">IDENTIFIER_IDX</option>

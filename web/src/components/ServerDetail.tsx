@@ -4,6 +4,7 @@ import { serversApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Server } from '../types';
 
 interface ServerDetailProps {
@@ -13,8 +14,10 @@ interface ServerDetailProps {
 export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   const { serverId } = useParams<{ serverId: string }>();
   const [server, setServer] = useState<Server | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDays, setSelectedDays] = useState(30);
 
   // Local filtering/sorting for the mod stack
   const [modSearch, setModSearch] = useState('');
@@ -22,12 +25,16 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   const [personnelFilter, setPersonnelFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [rankFilter, setRankFilter] = useState<'all' | 'top100' | 'top500' | 'top1000'>('all');
 
-  const loadServer = useCallback(async () => {
+  const loadServer = useCallback(async (days: number) => {
     if (!serverId) return;
     try {
       setLoading(true);
-      const data = await serversApi.getById(serverId, game);
-      setServer(data.data);
+      const [serverData, historyData] = await Promise.all([
+        serversApi.getById(serverId, game),
+        fetch(`/api/servers/${serverId}/history?game=${game}&days=${days}`).then(res => res.json())
+      ]);
+      setServer(serverData.data);
+      setHistory(historyData.data || []);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load server');
@@ -37,8 +44,8 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   }, [serverId, game]);
 
   useEffect(() => {
-    loadServer();
-  }, [serverId, loadServer]);
+    loadServer(selectedDays);
+  }, [serverId, selectedDays, loadServer]);
 
   const sortedAndFilteredMods = useMemo(() => {
     if (!server?.mods || !Array.isArray(server.mods)) return [];
@@ -110,12 +117,107 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
               {server.ip}:{server.port}
             </p>
           </div>
-          <div className="px-10 py-6 bg-zinc-900 border border-white/10 text-center">
-             <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1 italic">Engagement Status</p>
-             <p className={`text-3xl font-black uppercase tracking-tighter ${status.color}`}>{status.label}</p>
+          <div className="flex gap-4">
+            <div className="px-10 py-6 bg-zinc-900 border border-white/10 text-center">
+              <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Overall Rank</p>
+              <p className="text-3xl font-black text-tactical-orange tracking-tighter italic">#{server.sqeRank || '-'}</p>
+            </div>
+            <div className="px-10 py-6 bg-zinc-900 border border-white/10 text-center hidden md:block">
+              <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1 italic">Engagement</p>
+              <p className={`text-3xl font-black uppercase tracking-tighter ${status.color}`}>{status.label}</p>
+            </div>
           </div>
         </div>
       </header>
+
+      <StatsHero
+        stats={[
+          { label: 'Personnel Present', value: `${server.players || 0} / ${server.maxPlayers || 0}` },
+          { label: 'Module Count', value: server?.mods?.length || 0 },
+          { label: 'SQE Points', value: server.sqePoints || 0 },
+          { label: 'Encryption', value: 'AES-256' }
+        ]}
+        title="Field Intelligence Report"
+        subtitle="Detailed analysis of deployed assets and personnel distribution"
+      />
+
+      <section className="space-y-6 sm:space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter">
+              📈 Strategic Performance
+            </h2>
+            <div className="flex gap-2 p-1 bg-zinc-900 border border-white/10">
+              {[
+                { label: '24H', value: 1 },
+                { label: '30D', value: 30 },
+                { label: '1M', value: 32 },
+                { label: '1Y', value: 366 }
+              ].map(opt => (
+                <button
+                  key={opt.label}
+                  onClick={() => setSelectedDays(opt.value)}
+                  className={`px-4 py-1 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    selectedDays === opt.value 
+                      ? 'bg-tactical-orange text-black' 
+                      : 'text-gray-500 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Card className="border-l-4 border-l-tactical-orange bg-zinc-900/50 backdrop-blur-sm">
+            <CardContent className="p-4 sm:p-6 lg:p-8 h-[400px]">
+              {!history || history.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-gray-500 font-bold uppercase tracking-widest text-[10px]">
+                  No timeline data available
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                    <XAxis 
+                      dataKey="time" 
+                      stroke="#666" 
+                      tickFormatter={(tick) => {
+                        const d = new Date(tick);
+                        if (selectedDays === 1) {
+                          return `${d.getHours().toString().padStart(2, '0')}:00`;
+                        }
+                        return `${d.getMonth()+1}/${d.getDate()}`;
+                      }}
+                      tick={{ fontSize: 10, fill: '#666', fontWeight: 'bold' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke="#f97316" 
+                      tick={{ fontSize: 10, fill: '#f97316', fontWeight: 'bold' }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={40}
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '4px' }}
+                      itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                      labelStyle={{ color: '#666', fontSize: '10px', fontWeight: 'bold', marginBottom: '8px' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="points" 
+                      name="SQE Points"
+                      stroke="#f97316" 
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{ r: 6, fill: '#f97316', stroke: '#18181b', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </section>
 
       <StatsHero
         stats={[

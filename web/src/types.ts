@@ -18,7 +18,8 @@ export interface Server {
   port: number | null;
   players: number;
   maxPlayers: number;
-  modCount: number;
+  sqePoints?: number;
+  sqeRank?: number;
   mods: Array<{
     id: string;
     name: string;

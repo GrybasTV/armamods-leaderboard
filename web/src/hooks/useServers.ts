@@ -3,7 +3,7 @@ import { serversApi, modsApi, type GameType } from '../api/client';
 import type { Server } from '../types';
 
 export type StatusFilter = 'all' | 'full' | 'active' | 'available' | 'low';
-export type ServerSortBy = 'players' | 'name' | 'mods';
+export type ServerSortBy = 'rank' | 'players' | 'name' | 'mods';
 
 interface UseServersOptions {
   game?: GameType;
@@ -19,7 +19,7 @@ export function useServers(options: UseServersOptions = {}) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sortBy, setSortBy] = useState<ServerSortBy>('players');
+  const [sortBy, setSortBy] = useState<ServerSortBy>('rank');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24;
 
@@ -78,6 +78,11 @@ export function useServers(options: UseServersOptions = {}) {
 
       return true;
     }).sort((a, b) => {
+      if (sortBy === 'rank') {
+        const rankA = a.sqeRank || 99999;
+        const rankB = b.sqeRank || 99999;
+        return rankA - rankB;
+      }
       if (sortBy === 'players') return b.players - a.players;
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'mods') return b.modCount - a.modCount;
