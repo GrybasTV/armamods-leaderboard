@@ -33,16 +33,28 @@ class CloudflareKVClient {
   }
 
   async put(key: string, value: string): Promise<void> {
-    const response = await fetch(this.baseUrl(`/values/${key}`), {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'text/plain',
-      },
-      body: value,
-    });
-    if (!response.ok) {
-      throw new Error(`KV put failed: ${response.status}`);
+    const maxRetries = 3;
+    for (let i = 0; i < maxRetries; i++) {
+      const response = await fetch(this.baseUrl(`/values/${key}`), {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'text/plain',
+        },
+        body: value,
+      });
+      
+      if (response.status === 429 && i < maxRetries - 1) {
+        const delay = 2000 * (i + 1);
+        console.log(`  ⚠️ Rate limited (429). Retrying in ${delay/1000}s... (Bandymas ${i+1}/${maxRetries})`);
+        await sleep(delay);
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`KV put failed: ${response.status}`);
+      }
+      return;
     }
   }
 
@@ -60,6 +72,8 @@ class CloudflareKVClient {
     return type === 'json' ? JSON.parse(text) : text;
   }
 }
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Parse game type from CLI
 function parseGameType(): GameType {
@@ -351,18 +365,21 @@ async function runTrendingSnapshot() {
     // Update Daily
     const updatedDaily = [...safeHistory.filter((d:any) => d.time !== today), dailyPoint].slice(-90);
     await kv.put(`history:daily:${game}`, JSON.stringify(updatedDaily));
+    await sleep(500);
     
     // Update Monthly
     const thisMonth = today.substring(0, 7);
     const historyMonthly = await kv.get(`history:monthly:${game}`, 'json') || [];
     const updatedMonthly = [...(historyMonthly as any[]).filter((d:any) => d.time !== thisMonth), { time: thisMonth, mods: statsMap }].slice(-60);
     await kv.put(`history:monthly:${game}`, JSON.stringify(updatedMonthly));
+    await sleep(500);
 
     // Update Yearly
     const thisYear = today.substring(0, 4);
     const historyYearly = await kv.get(`history:yearly:${game}`, 'json') || [];
     const updatedYearly = [...(historyYearly as any[]).filter((d:any) => d.time !== thisYear), { time: thisYear, mods: statsMap }].slice(-10);
     await kv.put(`history:yearly:${game}`, JSON.stringify(updatedYearly));
+    await sleep(500);
 
     // ---------------------------------------------------------
     // 2. TRENDING CALCULATION (Pre-calculate for specific periods)
@@ -457,6 +474,7 @@ async function runTrendingSnapshot() {
 
         await kv.put(`${KV_KEYS.TRENDING}:${p.name}`, JSON.stringify(result));
         console.log(`✅ TRENDING UPDATED for ${p.name}`);
+        await sleep(500);
     }
 
     console.log(`✅ ROLLUP & TRENDING COMPLETED SUCCESSFULLY`);
