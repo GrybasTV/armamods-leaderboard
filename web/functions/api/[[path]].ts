@@ -91,13 +91,26 @@ async function getChunkedData(kv: KVNamespace, baseKey: string): Promise<any[]> 
 // ---------------------------------------------------------
 
 app.get('/stats', async (c) => {
+  const cache = await caches.open('armamods:stats');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) return cacheResponse;
+
   const game = getGameFromQuery(c);
   const keys = getKVKeys(game);
   const stats = await c.env.TRENDING_KV.get(keys.STATS, 'json');
-  return c.json(stats || { totalMods: 0, totalPlayers: 0, totalServers: 0, game });
+  const data = stats || { totalMods: 0, totalPlayers: 0, totalServers: 0, game };
+  
+  const response = c.json(data);
+  response.headers.set('Cache-Control', 'public, max-age=300'); // 5 minutes cache
+  c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
+  return response;
 });
 
 app.get('/mods', async (c) => {
+  const cache = await caches.open('armamods:mods');
+  const cacheResponse = await cache.match(c.req.raw);
+  if (cacheResponse) return cacheResponse;
+
   const game = getGameFromQuery(c);
   const keys = getKVKeys(game);
   const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
@@ -121,10 +134,15 @@ app.get('/mods', async (c) => {
     filtered.sort((a, b) => (a.overallRank || 9999) - (b.overallRank || 9999));
   }
 
-  return c.json({ 
+  const response = c.json({ 
     data: filtered.slice(offset, offset + limit), 
     meta: { total: filtered.length, limit, offset } 
   });
+
+  // Short lived cache for mods list to allow filtering while reducing KV hits
+  response.headers.set('Cache-Control', 'public, max-age=600'); // 10 minutes cache
+  c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
+  return response;
 });
 
 app.get('/mods/:modId', async (c) => {
@@ -356,6 +374,10 @@ app.get('/servers/:serverId', async (c) => {
 
 // Bayesian Trending logic
 app.get('/trending', async (c) => {
+    const cache = await caches.open('armamods:trending');
+    const cacheResponse = await cache.match(c.req.raw);
+    if (cacheResponse) return cacheResponse;
+
     const game = getGameFromQuery(c);
     const keys = getKVKeys(game);
     const period = (c.req.query('period') || '24h') as '24h' | '7d' | '30d';
@@ -366,7 +388,10 @@ app.get('/trending', async (c) => {
         return c.json({ data: { rising: [], falling: [], new: [] }, meta: { lastUpdated: new Date().toISOString() } });
     }
 
-    return c.json({ data: trendingData, meta: { lastUpdated: new Date().toISOString() } });
+    const response = c.json({ data: trendingData, meta: { lastUpdated: new Date().toISOString() } });
+    response.headers.set('Cache-Control', 'public, max-age=3600'); // 1 hour cache
+    c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
+    return response;
 });
 
 // DEBUG ENDPOINT: See raw KV data structure

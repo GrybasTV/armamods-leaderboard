@@ -3,66 +3,102 @@ import type { Mod, Server, ApiResponse, TrendingResponse } from '../types';
 
 export type GameType = 'reforger' | 'arma3';
 
-// Produkcijoje – tiesiogiai į Worker (Pages Functions neveikia patikimai)
-// Lokaliai – Vite proxy peradresuoja /api į Worker
 const API_BASE = '/api';
 
 export const api = axios.create({
   baseURL: API_BASE,
-  timeout: 30000, // Increased timeout for proxy
+  timeout: 30000,
 });
+
+// Simple in-memory cache to prevent redundant requests
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 120000; // 2 minutes
+
+async function getCached<T>(key: string, fetcher: () => Promise<T>, ttl = CACHE_TTL): Promise<T> {
+  const cached = cache.get(key);
+  const now = Date.now();
+  
+  if (cached && (now - cached.timestamp < ttl)) {
+    return cached.data;
+  }
+  
+  const data = await fetcher();
+  cache.set(key, { data, timestamp: now });
+  return data;
+}
 
 export const modsApi = {
   getPopular: async (limit = 50, offset = 0, search?: string, sortBy?: string, game: GameType = 'reforger') => {
-    const response = await api.get<ApiResponse<Mod>>('mods', {
-      params: { limit, offset, search, sortBy, game },
+    const key = `mods:${game}:${limit}:${offset}:${search}:${sortBy}`;
+    return getCached(key, async () => {
+      const response = await api.get<ApiResponse<Mod>>('mods', {
+        params: { limit, offset, search, sortBy, game },
+      });
+      return response.data;
     });
-    return response.data;
   },
 
   getById: async (modId: string, game: GameType = 'reforger') => {
-    const response = await api.get<{ data: Mod & { stats: Mod & { totalMods: number }; servers: Server[] } }>(`mods/${modId}`, {
-      params: { game }
+    const key = `mod:${game}:${modId}`;
+    return getCached(key, async () => {
+      const response = await api.get<{ data: Mod & { stats: Mod & { totalMods: number }; servers: Server[] } }>(`mods/${modId}`, {
+        params: { game }
+      });
+      return response.data;
     });
-    return response.data;
   },
 
   getHistory: async (modId: string, days = 30, game: GameType = 'reforger') => {
-    const response = await api.get<{ data: import('../types').ModHistory[] }>(`mods/${modId}/history`, {
-      params: { days, game }
-    });
-    return response.data;
+    const key = `history:${game}:${modId}:${days}`;
+    return getCached(key, async () => {
+      const response = await api.get<{ data: import('../types').ModHistory[] }>(`mods/${modId}/history`, {
+        params: { days, game }
+      });
+      return response.data;
+    }, 3600000); // History can be cached for 1 hour
   },
 
   getGlobalStats: async (game: GameType = 'reforger') => {
-    const response = await api.get<{ totalServers: number; totalPlayers: number; totalMods: number }>('stats', {
-      params: { game }
-    });
-    return response.data;
+    const key = `stats:${game}`;
+    return getCached(key, async () => {
+      const response = await api.get<{ totalServers: number; totalPlayers: number; totalMods: number }>('stats', {
+        params: { game }
+      });
+      return response.data;
+    }, 300000); // Stats cached for 5 mins
   }
 };
 
 export const serversApi = {
   getList: async (limit = 100, offset = 0, search?: string, game: GameType = 'reforger') => {
-    const response = await api.get<ApiResponse<Server>>('servers', {
-      params: { limit, offset, search, game },
-    });
-    return response.data;
+    const key = `servers:${game}:${limit}:${offset}:${search}`;
+    return getCached(key, async () => {
+      const response = await api.get<ApiResponse<Server>>('servers', {
+        params: { limit, offset, search, game },
+      });
+      return response.data;
+    }, 60000); // Servers cached for 1 min
   },
 
   getById: async (serverId: string, game: GameType = 'reforger') => {
-    const response = await api.get<{ data: Server }>(`servers/${serverId}`, {
-      params: { game }
+    const key = `server:${game}:${serverId}`;
+    return getCached(key, async () => {
+      const response = await api.get<{ data: Server }>(`servers/${serverId}`, {
+        params: { game }
+      });
+      return response.data;
     });
-    return response.data;
   },
 };
 
 export const trendingApi = {
   getTrending: async (period: import('../types').TrendPeriod = '24h', game: GameType = 'reforger') => {
-    const response = await api.get<TrendingResponse>('trending', {
-      params: { period, game }
-    });
-    return response.data;
+    const key = `trending:${game}:${period}`;
+    return getCached(key, async () => {
+      const response = await api.get<TrendingResponse>('trending', {
+        params: { period, game }
+      });
+      return response.data;
+    }, 600000); // 10 mins cache
   },
 };

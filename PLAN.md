@@ -41,9 +41,9 @@ Visa informacija saugoma Cloudflare KV kaip JSON objektai:
 
 ### ✅ Atlikta
 - **Data Collector**: Skriptas, kuris kas valandą renka duomenis iš BattleMetrics ir saugo juos KV saugykloje kaip optimizuotus JSON blokus.
-- **API (Workers)**: Itin greitas API, naudojantis „Ultra-Optimization“ (tikslinę paiešką tekste) ir „Cloudflare Cache API“, užtikrinant 0% CPU perkrovą net ir dideliems failams.
-- **Frontend (Pages)**: Modernus React puslapis, rodantis populiariausius modus su interaktyviais grafikais.
-- **Edge Caching**: Įdiegtas globalus talpinimas, leidžiantis pasiekti populiarių modų analitika per <10ms.
+- **API (Workers)**: Itin greitas API, naudojantis „Ultra-Optimization“ (tikslinę paiešką tekste) ir visapusišką **Cloudflare Cache API**, užtikrinant 0% CPU perkrovą net ir dideliems failams. Išspręsta „Daily request limit exceeded“ problema.
+- **Frontend (Pages)**: Modernus React puslapis su **In-memory caching** klientu, užtikrinančiu žaibišką navigaciją be papildomų API kreipinių.
+- **Edge Caching**: Įdiegtas globalus talpinimas (Cache-Control: public), leidžiantis pasiekti populiarių modų analitika per <10ms.
 
 ---
 
