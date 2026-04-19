@@ -251,8 +251,8 @@ async function runCollector() {
     // Store metadata
     await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
 
-    // Split servers into chunks
-    const SERVER_CHUNK_SIZE = 200;
+    // Split servers into chunks (25MB KV limit, 2000 servers ≈ 8-10MB safe margin)
+    const SERVER_CHUNK_SIZE = 2000;
     const serverChunks = [];
     for (let i = 0; i < serverList.length; i += SERVER_CHUNK_SIZE) {
       serverChunks.push(serverList.slice(i, i + SERVER_CHUNK_SIZE));
@@ -278,10 +278,9 @@ async function runCollector() {
     throw kvWriteErr;
   }
 
-  console.log("💾 UPDATING KV HISTORY (SHARDED JSON)...");
+  console.log("💾 UPDATING KV HISTORY...");
   const today = new Date().toISOString().split('T')[0];
-  const MOD_HISTORY_CHUNK_SIZE = 5000;
-  
+
   try {
     const statsMap: Record<string, { p: number, s: number, r: number }> = {};
     for (const m of modList) {
@@ -296,35 +295,19 @@ async function runCollector() {
     ];
 
     for (const period of periods) {
-      const timeLabel = period.name === 'hourly' ? new Date().toISOString() : 
-                        period.name === 'monthly' ? today.substring(0, 7) : 
+      const timeLabel = period.name === 'hourly' ? new Date().toISOString() :
+                        period.name === 'monthly' ? today.substring(0, 7) :
                         period.name === 'yearly' ? today.substring(0, 4) : today;
 
-      // Skaidome modus į blokus istorijai
-      const modIds = Object.keys(statsMap);
-      const chunks = [];
-      for (let i = 0; i < modIds.length; i += MOD_HISTORY_CHUNK_SIZE) {
-        chunks.push(modIds.slice(i, i + MOD_HISTORY_CHUNK_SIZE));
-      }
+      console.log(`  - Processing ${period.name} history...`);
 
-      console.log(`  - Processing ${period.name} history (${chunks.length} shards)...`);
+      const history = await kv.get(period.key, 'json') || [];
+      const updated = [...history.filter((d: any) => d.time !== timeLabel), { time: timeLabel, mods: statsMap }].slice(-period.limit);
 
-      for (let i = 0; i < chunks.length; i++) {
-        const shardKey = `${period.key}:${i}`;
-        const shardModIds = chunks[i];
-        const shardStats: Record<string, any> = {};
-        for (const id of shardModIds) shardStats[id] = statsMap[id];
+      await kv.put(period.key, JSON.stringify(updated));
+      await sleep(500);
 
-        const history = await kv.get(shardKey, 'json') || [];
-        const updated = [...history.filter((d: any) => d.time !== timeLabel), { time: timeLabel, mods: shardStats }].slice(-period.limit);
-        
-        await kv.put(shardKey, JSON.stringify(updated));
-        await sleep(500);
-      }
-      
-      // Store meta for this period
-      await kv.put(`${period.key}:meta`, JSON.stringify({ chunks: chunks.length, totalMods: modIds.length, lastUpdate: new Date().toISOString() }));
-      console.log(`    ✅ ${period.name.toUpperCase()} shards updated`);
+      console.log(`    ✅ ${period.name.toUpperCase()} updated (${updated.length} points, ${Object.keys(statsMap).length} mods)`);
     }
   } catch (kvErr) {
     console.error("⚠️ KV History Error:", kvErr);
@@ -340,25 +323,13 @@ async function runCollector() {
   return { servers: totalServers, mods: totalMods };
 }
 
-// Pagalbinė funkcija surinkti visus istorijos blokus į vieną map'ą (skirta trending skaičiavimams)
+// Pagalbinė funkcija gauti istorijos tašką (skirta trending skaičiavimams)
 async function getFullHistoryPoint(kv: CloudflareKVClient, baseKey: string, offsetFromEnd: number): Promise<any> {
-    const meta = await kv.get(`${baseKey}:meta`, 'json');
-    if (!meta) return null;
+    const history = await kv.get(baseKey, 'json');
+    if (!history || history.length === 0) return null;
 
-    const fullMods: Record<string, any> = {};
-    let pointTime = '';
-
-    for (let i = 0; i < meta.chunks; i++) {
-        const shard = await kv.get(`${baseKey}:${i}`, 'json');
-        if (shard && shard.length > 0) {
-            const point = shard[shard.length - offsetFromEnd] || shard[0];
-            if (point) {
-                pointTime = point.time;
-                Object.assign(fullMods, point.mods);
-            }
-        }
-    }
-    return pointTime ? { time: pointTime, mods: fullMods } : null;
+    const point = history[history.length - offsetFromEnd] || history[0];
+    return point || null;
 }
 
 // Helper to read chunked data from KV
@@ -388,7 +359,7 @@ async function runTrendingSnapshot() {
     }
 
     // ---------------------------------------------------------
-    // TRENDING CALCULATION (Using sharded history)
+    // TRENDING CALCULATION
     // ---------------------------------------------------------
     const periods = [
         { name: '24h', days: 1, baseKey: `history:daily:${game}` },
