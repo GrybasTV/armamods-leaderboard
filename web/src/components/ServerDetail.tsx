@@ -81,7 +81,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
       <StatusState 
         type="error" 
         message={error || 'Server connection lost'} 
-        onAction={loadServer} 
+        onAction={() => loadServer(selectedDays)}
         actionText="Re-establish Connection" 
       />
       <Link to="/servers" className="block text-center text-tactical-orange font-black uppercase tracking-[0.4em] text-[10px] hover:underline">

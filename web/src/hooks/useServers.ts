@@ -85,7 +85,7 @@ export function useServers(options: UseServersOptions = {}) {
       }
       if (sortBy === 'players') return b.players - a.players;
       if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'mods') return b.modCount - a.modCount;
+      if (sortBy === 'mods') return (b.mods?.length ?? 0) - (a.mods?.length ?? 0);
       return 0;
     });
   }, [servers, searchQuery, statusFilter, sortBy]);

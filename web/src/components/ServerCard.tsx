@@ -34,7 +34,7 @@ export function ServerCard({ server }: ServerCardProps) {
             
             <div className="flex flex-col items-end gap-1">
               <span className="text-[8px] text-gray-600 font-black uppercase tracking-[0.4em]">DEPLOYED-MODS</span>
-              <span className="text-xl text-white font-black font-mono tracking-tighter">[{server.modCount}]</span>
+              <span className="text-xl text-white font-black font-mono tracking-tighter">[{server.mods?.length ?? 0}]</span>
             </div>
           </div>
           
