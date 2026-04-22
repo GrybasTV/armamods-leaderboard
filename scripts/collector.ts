@@ -302,7 +302,7 @@ async function runCollector() {
     }
 
     const periods = [
-      { name: 'hourly', key: `history:hourly:${game}`, limit: 24 },
+      { name: 'hourly', key: `history:hourly:${game}`, limit: 12 },
       { name: 'daily', key: `history:daily:${game}`, limit: 31 },
       { name: 'monthly', key: `history:monthly:${game}`, limit: 12 },
       { name: 'yearly', key: `history:yearly:${game}`, limit: 5 }
