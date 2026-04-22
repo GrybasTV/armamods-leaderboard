@@ -230,12 +230,30 @@ async function runCollector() {
   console.log(`  - ${currentPlayers} current players`);
 
   try {
-    // Split mods into chunks (KV limit is 25MB)
-    const MOD_CHUNK_SIZE = 5000; 
-    const modChunks = [];
-    for (let i = 0; i < modList.length; i += MOD_CHUNK_SIZE) {
-      modChunks.push(modList.slice(i, i + MOD_CHUNK_SIZE));
+    // Dynamic chunking: split by actual JSON size to stay under KV 25MB limit
+    const MAX_CHUNK_BYTES = 20 * 1024 * 1024; // 20MB safety margin (KV limit is 25MB)
+
+    function buildChunks(items: any[]): any[][] {
+      const chunks: any[][] = [];
+      let current: any[] = [];
+      let currentSize = 2; // "[]"
+
+      for (const item of items) {
+        const itemBytes = Buffer.byteLength(JSON.stringify(item), 'utf8');
+        if (current.length > 0 && currentSize + itemBytes + 1 > MAX_CHUNK_BYTES) {
+          chunks.push(current);
+          current = [];
+          currentSize = 2;
+        }
+        current.push(item);
+        currentSize += itemBytes + (current.length > 1 ? 1 : 0);
+      }
+      if (current.length > 0) chunks.push(current);
+      return chunks;
     }
+
+    // Split mods into size-safe chunks
+    const modChunks = buildChunks(modList);
 
     console.log(`  - Writing mod chunks...`);
     for (let i = 0; i < modChunks.length; i++) {
@@ -251,12 +269,8 @@ async function runCollector() {
     // Store metadata
     await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
 
-    // Split servers into chunks (25MB KV limit, 2000 servers ≈ 8-10MB safe margin)
-    const SERVER_CHUNK_SIZE = 2000;
-    const serverChunks = [];
-    for (let i = 0; i < serverList.length; i += SERVER_CHUNK_SIZE) {
-      serverChunks.push(serverList.slice(i, i + SERVER_CHUNK_SIZE));
-    }
+    // Split servers into size-safe chunks
+    const serverChunks = buildChunks(serverList);
 
     console.log(`  - Writing server chunks...`);
     for (let i = 0; i < serverChunks.length; i++) {
