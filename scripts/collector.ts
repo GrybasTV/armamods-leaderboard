@@ -315,11 +315,32 @@ async function runCollector() {
 
       console.log(`  - Processing ${period.name} history...`);
 
-      const history = await kv.get(period.key, 'json') || [];
+      // 1. Get existing history (handle both legacy and sharded)
+      let history: any[] = [];
+      const meta = await kv.get(`${period.key}:meta`, 'json');
+      if (meta && meta.chunks) {
+        for (let i = 0; i < meta.chunks; i++) {
+          const chunk = await kv.get(`${period.key}:${i}`, 'json');
+          if (chunk) history.push(...chunk);
+        }
+      } else {
+        history = await kv.get(period.key, 'json') || [];
+      }
+
+      // 2. Filter and append new point
       const updated = [...history.filter((d: any) => d.time !== timeLabel), { time: timeLabel, mods: statsMap }].slice(-period.limit);
 
-      await kv.put(period.key, JSON.stringify(updated));
-      await sleep(500);
+      // 3. Write sharded
+      const chunks = buildChunks(updated);
+      console.log(`    - Writing ${period.name} history in ${chunks.length} chunks...`);
+      
+      for (let i = 0; i < chunks.length; i++) {
+        await kv.put(`${period.key}:${i}`, JSON.stringify(chunks[i]));
+      }
+      await kv.put(`${period.key}:meta`, JSON.stringify({ total: updated.length, chunks: chunks.length }));
+      
+      // Cleanup legacy key if exists
+      // await kv.delete(period.key); 
 
       console.log(`    ✅ ${period.name.toUpperCase()} updated (${updated.length} points, ${Object.keys(statsMap).length} mods)`);
     }

@@ -283,8 +283,8 @@ app.get('/mods/:modId/history', async (c) => {
           // Greitas patikrinimas ar šis blokas turi mūsų modą
           const shardText = await c.env.TRENDING_KV.get(shardKey, 'text');
           if (shardText && shardText.includes(`"${modId}":{`)) {
-              modHistory = scanHistoryPoints(shardText, modId);
-              break;
+              const shardHistory = scanHistoryPoints(shardText, modId);
+              modHistory.push(...shardHistory);
           }
       }
   } else {
