@@ -394,6 +394,48 @@ app.get('/trending', async (c) => {
     return response;
 });
 
+// DEBUG & DIAGNOSTICS ENDPOINT: Full system health check
+app.get('/diagnostics', async (c) => {
+    const game = getGameFromQuery(c);
+    const keys = getKVKeys(game);
+    
+    const [stats, lastUpdate, modsMeta, serversMeta, historyMeta] = await Promise.all([
+        c.env.TRENDING_KV.get(keys.STATS, 'json'),
+        c.env.TRENDING_KV.get(keys.LAST_UPDATE, 'text'),
+        c.env.TRENDING_KV.get(`${keys.MODS}:meta`, 'json') as Promise<any>,
+        c.env.TRENDING_KV.get(`${keys.SERVERS}:meta`, 'json') as Promise<any>,
+        c.env.TRENDING_KV.get(`${keys.HISTORY_DAILY}:meta`, 'json') as Promise<any>
+    ]);
+
+    // Check history integrity (get first and last point if sharded)
+    let historyRange = { start: null, end: null, count: 0 };
+    if (historyMeta && historyMeta.chunks) {
+        const firstChunk = await c.env.TRENDING_KV.get(`${keys.HISTORY_DAILY}:0`, 'json') as any[];
+        const lastChunk = await c.env.TRENDING_KV.get(`${keys.HISTORY_DAILY}:${historyMeta.chunks - 1}`, 'json') as any[];
+        
+        if (firstChunk && firstChunk.length > 0) historyRange.start = firstChunk[0].time;
+        if (lastChunk && lastChunk.length > 0) historyRange.end = lastChunk[lastChunk.length - 1].time;
+        historyRange.count = historyMeta.total;
+    }
+
+    return c.json({
+        status: 'HEALTHY',
+        game,
+        timestamp: new Date().toISOString(),
+        data: {
+            lastUpdate,
+            stats,
+            kv: {
+                mods: modsMeta,
+                servers: serversMeta,
+                history: historyMeta
+            },
+            historyRange
+        },
+        version: '1.4.0-diag'
+    });
+});
+
 // DEBUG ENDPOINT: See raw KV data structure
 app.get('/debug/raw/:key', async (c) => {
     const key = c.req.param('key');
