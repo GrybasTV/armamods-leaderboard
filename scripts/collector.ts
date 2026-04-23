@@ -98,13 +98,35 @@ interface ServerMod {
   modId: string;
 }
 
-async function runCollector() {
+  async function runCollector() {
   const game = parseGameType();
   console.log(`🚀 COLLECTOR: Starting for ${game.toUpperCase()}...`);
 
   const kv = new CloudflareKVClient();
   const bm = new BattleMetricsService(game);
   const KV_KEYS = getKVKeys(game);
+
+  // Dynamic chunking: split by actual JSON size to stay under KV 25MB limit
+  const MAX_CHUNK_BYTES = 20 * 1024 * 1024; // 20MB safety margin (KV limit is 25MB)
+
+  function buildChunks(items: any[]): any[][] {
+    const chunks: any[][] = [];
+    let current: any[] = [];
+    let currentSize = 2; // "[]"
+
+    for (const item of items) {
+      const itemBytes = Buffer.byteLength(JSON.stringify(item), 'utf8');
+      if (current.length > 0 && currentSize + itemBytes + 1 > MAX_CHUNK_BYTES) {
+        chunks.push(current);
+        current = [];
+        currentSize = 2;
+      }
+      current.push(item);
+      currentSize += itemBytes + (current.length > 1 ? 1 : 0);
+    }
+    if (current.length > 0) chunks.push(current);
+    return chunks;
+  }
 
   console.log('📡 Fetching servers from BattleMetrics...');
   const servers = await bm.fetchAllServers(false); // fetch ALL servers
@@ -230,27 +252,6 @@ async function runCollector() {
   console.log(`  - ${currentPlayers} current players`);
 
   try {
-    // Dynamic chunking: split by actual JSON size to stay under KV 25MB limit
-    const MAX_CHUNK_BYTES = 20 * 1024 * 1024; // 20MB safety margin (KV limit is 25MB)
-
-    function buildChunks(items: any[]): any[][] {
-      const chunks: any[][] = [];
-      let current: any[] = [];
-      let currentSize = 2; // "[]"
-
-      for (const item of items) {
-        const itemBytes = Buffer.byteLength(JSON.stringify(item), 'utf8');
-        if (current.length > 0 && currentSize + itemBytes + 1 > MAX_CHUNK_BYTES) {
-          chunks.push(current);
-          current = [];
-          currentSize = 2;
-        }
-        current.push(item);
-        currentSize += itemBytes + (current.length > 1 ? 1 : 0);
-      }
-      if (current.length > 0) chunks.push(current);
-      return chunks;
-    }
 
     // Split mods into size-safe chunks
     const modChunks = buildChunks(modList);
