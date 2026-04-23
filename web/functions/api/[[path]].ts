@@ -252,6 +252,56 @@ function scanHistoryPoints(historyText: string, modId: string): any[] {
   return modHistory;
 }
 
+// Helper to fill gaps (zeros) in history data with average values
+function smoothHistoryData(data: any[]) {
+  if (data.length < 3) return data;
+  
+  const smoothed = [...data];
+  for (let i = 0; i < smoothed.length; i++) {
+    // If we have a zero point but it's likely a missing data gap
+    if (smoothed[i].totalPlayers === 0 || smoothed[i].serverCount === 0) {
+      // Find previous non-zero point
+      let prev = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (smoothed[j].totalPlayers > 0) {
+          prev = { valP: smoothed[j].totalPlayers, valS: smoothed[j].serverCount, idx: j };
+          break;
+        }
+      }
+      
+      // Find next non-zero point
+      let next = null;
+      for (let j = i + 1; j < smoothed.length; j++) {
+        if (smoothed[j].totalPlayers > 0) {
+          next = { valP: smoothed[j].totalPlayers, valS: smoothed[j].serverCount, idx: j };
+          break;
+        }
+      }
+      
+      if (prev && next) {
+        // Linear interpolation
+        const step = (i - prev.idx) / (next.idx - prev.idx);
+        smoothed[i].totalPlayers = Math.round(prev.valP + (next.valP - prev.valP) * step);
+        smoothed[i].serverCount = Math.round(prev.valS + (next.valS - prev.valS) * step);
+        // Also smooth rank if missing
+        if (smoothed[i].overallRank >= 9999) {
+          smoothed[i].overallRank = Math.round(prev.valS + (next.valS - prev.valS) * step); // Use servers as proxy for rank logic
+        }
+        smoothed[i].isInterpolated = true; // Mark for debugging
+      } else if (prev) {
+        // Fallback to previous
+        smoothed[i].totalPlayers = prev.valP;
+        smoothed[i].serverCount = prev.valS;
+      } else if (next) {
+        // Fallback to next
+        smoothed[i].totalPlayers = next.valP;
+        smoothed[i].serverCount = next.valS;
+      }
+    }
+  }
+  return smoothed;
+}
+
 app.get('/mods/:modId/history', async (c) => {
   const cache = await caches.open('armamods:history');
   const cacheResponse = await cache.match(c.req.raw);
@@ -293,7 +343,7 @@ app.get('/mods/:modId/history', async (c) => {
       if (historyText) modHistory = scanHistoryPoints(historyText, modId);
   }
 
-  const finalHistory = modHistory.slice(sliceCount);
+  const finalHistory = smoothHistoryData(modHistory.slice(sliceCount));
   const finished = Date.now() - start;
   console.log(`[HISTORY] Prepared ${finalHistory.length} nodes in ${finished}ms`);
   
