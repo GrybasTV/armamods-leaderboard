@@ -1,9 +1,16 @@
 #!/usr/bin/env node
 /**
- * Collector - fetches data from BattleMetrics and pushes to Cloudflare KV
- * Runs outside of Cloudflare (GitHub Actions, local machine) to avoid IP blocks
- *
- * Usage: npm run collect [-- --game=reforger|arma3]
+ * @file collector.ts
+ * @description Core data ingestion engine for Arma Mods Leaderboard.
+ * Fetches real-time server and mod data from BattleMetrics, processes rankings, 
+ * calculates trending metrics, and synchronizes with Cloudflare KV.
+ * 
+ * DESIGN DECISIONS:
+ * 1. Sharded Storage: KV has a 25MB limit per key. We implement dynamic chunking 
+ *    to handle large datasets without performance degradation.
+ * 2. Logarithmic Trending: We use a hybrid mathematical model to weight mod 
+ *    popularity growth, preventing "top-heavy" rankings.
+ * 3. Rate-Limit Resilience: Implements exponential backoff for KV API writes.
  */
 
 import 'dotenv/config';
@@ -14,7 +21,11 @@ interface CloudflareKV {
   get: (key: string, type: 'json') => Promise<any>;
 }
 
-// Cloudflare KV API via REST
+/**
+ * CloudflareKVClient
+ * @description A specialized REST client for Cloudflare KV storage.
+ * Designed to handle large payloads through persistence and rate-limit awareness.
+ */
 class CloudflareKVClient {
   private apiKey: string;
   private accountId: string;
@@ -75,6 +86,9 @@ class CloudflareKVClient {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Cloudflare KV has a 25MB value limit; use 24MB to leave buffer for JSON overhead
+const MAX_CHUNK_BYTES = 24 * 1024 * 1024;
+
 // Parse game type from CLI
 function parseGameType(): GameType {
   const gameArg = process.argv.find(arg => arg.startsWith('--game='));
@@ -106,9 +120,12 @@ interface ServerMod {
   const bm = new BattleMetricsService(game);
   const KV_KEYS = getKVKeys(game);
 
-  // Dynamic chunking: split by actual JSON size to stay under KV 25MB limit
-  const MAX_CHUNK_BYTES = 20 * 1024 * 1024; // 20MB safety margin (KV limit is 25MB)
-
+  /**
+   * buildChunks
+   * @description Segments data arrays into size-optimized blocks to comply with 
+   * Cloudflare KV's 25MB value limit. Each chunk is calculated by actual byte length.
+   * @param items Array of objects to be sharded
+   */
   function buildChunks(items: any[]): any[][] {
     const chunks: any[][] = [];
     let current: any[] = [];
@@ -348,11 +365,30 @@ interface ServerMod {
   } catch (kvErr) {
     console.error("⚠️ KV History Error:", kvErr);
   }
-  // 4. Server Scoring & Ranking (3 times a day)
+  // 4. Server Scoring & Ranking (3 times a day: 0, 8, 16 UTC)
   const currentHour = new Date().getUTCHours();
-  if (currentHour % 8 === 0) {
-      console.log(`[SERVER_SCORING] Running for ${game}...`);
+  const shouldScore = currentHour % 8 === 0;
+
+  if (shouldScore) {
+      console.log(`[SERVER_SCORING] Running for ${game} at ${currentHour}:00 UTC...`);
       await runServerScoring(game, kv, serverList, modList);
+
+      // CRITICAL: Re-write server chunks WITH SQE data included
+      console.log(`[SERVER_SCORING] Re-writing server chunks with SQE data...`);
+      const serverChunks = buildChunks(serverList);
+      for (let i = 0; i < serverChunks.length; i++) {
+        try {
+          await kv.put(`${KV_KEYS.SERVERS}:${i}`, JSON.stringify(serverChunks[i]));
+          console.log(`    [OK] Server chunk ${i+1}/${serverChunks.length} with SQE`);
+        } catch (err) {
+          console.error(`    [FAIL] Server chunk ${i+1}:`, err);
+          throw err;
+        }
+      }
+      await kv.put(`${KV_KEYS.SERVERS}:meta`, JSON.stringify({ total: serverList.length, chunks: serverChunks.length }));
+      console.log(`✅ Server chunks updated with SQE data`);
+  } else {
+      console.log(`[SERVER_SCORING] Skipped (next run at ${8 - (currentHour % 8)}:00 UTC)`);
   }
 
   console.log('✅ COLLECTOR: Complete!');
@@ -394,9 +430,13 @@ async function runTrendingSnapshot() {
       throw new Error('No mods in cache - run collector first');
     }
 
-    // ---------------------------------------------------------
-    // TRENDING CALCULATION
-    // ---------------------------------------------------------
+    /**
+     * TRENDING CALCULATION MODEL:
+     * We calculate a 'trendScore' based on:
+     * - rankDelta: The change in position (rising/falling).
+     * - positionWeight: Harder to rise in Top 100 than Top 5000 (1/sqrt(rank)).
+     * - activityMultiplier: Logarithmic player count to ensure active mods get priority.
+     */
     const periods = [
         { name: '24h', days: 1, baseKey: `history:daily:${game}` },
         { name: '7d', days: 7, baseKey: `history:daily:${game}` },

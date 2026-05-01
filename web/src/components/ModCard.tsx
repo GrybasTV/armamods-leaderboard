@@ -5,9 +5,11 @@ import type { Mod } from '../types';
 interface ModCardProps {
   mod: Mod;
   rank?: number;
+  game?: string;
 }
 
-export function ModCard({ mod, rank }: ModCardProps) {
+export function ModCard({ mod, rank, game = 'reforger' }: ModCardProps) {
+  const gp = game === 'reforger' ? '' : `/${game}`;
   const isTop3 = rank && rank <= 3;
 
   return (
@@ -28,7 +30,7 @@ export function ModCard({ mod, rank }: ModCardProps) {
             </div>
           </div>
 
-          <Link to={`/mod/${mod.id}`}>
+          <Link to={`${gp}/mod/${mod.id}`}>
             <h3 className="text-lg sm:text-xl lg:text-2xl font-black text-white leading-[1.1] uppercase tracking-tight group-hover:translate-x-1 transition-transform hover:text-tactical-orange line-clamp-2" title={mod.name}>
               {mod.name}
             </h3>
@@ -65,7 +67,7 @@ export function ModCard({ mod, rank }: ModCardProps) {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-2">
            <Link
-            to={`/mod/${mod.id}`}
+            to={`${gp}/mod/${mod.id}`}
             className="w-full sm:flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-zinc-900 border border-white/5 text-center text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
            >
              Full Intel →

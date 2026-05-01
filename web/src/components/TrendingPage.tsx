@@ -12,6 +12,7 @@ interface TrendingPageProps {
 }
 
 export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
+  const gp = game === 'reforger' ? '' : `/${game}`;
   const [trending, setTrending] = useState<{
     rising: TrendingMod[];
     falling: TrendingMod[];
@@ -187,7 +188,7 @@ export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
               <Card key={mod.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group">
                 <CardContent className="p-6 space-y-4">
                   <div className="space-y-2">
-                    <Link to={`/mod/${mod.id}`}>
+                    <Link to={`${gp}/mod/${mod.id}`}>
                       <h3 className="text-lg font-black text-white uppercase leading-tight group-hover:text-tactical-orange transition-colors">
                         {mod.name}
                       </h3>
@@ -205,11 +206,11 @@ export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
                         <p className="text-xl font-black text-white">#{mod.overallRank}</p>
                       </div>
                     </div>
-                    {activeCategory !== 'new' && mod.prevRank !== undefined && (
+                    {activeCategory !== 'new' && mod.prevRank != null && mod.currentRank != null && (
                       <div className="text-right">
                         <p className="text-[8px] text-gray-600 font-black uppercase tracking-[0.2em]">Rank Change</p>
-                        <p className={`text-sm font-black ${mod.currentRank! < mod.prevRank ? 'text-green-500' : 'text-red-500'}`}>
-                          {mod.currentRank! < mod.prevRank ? '↑' : '↓'} {Math.abs(mod.currentRank! - mod.prevRank)} positions
+                        <p className={`text-sm font-black ${mod.currentRank < mod.prevRank ? 'text-green-500' : 'text-red-500'}`}>
+                          {mod.currentRank < mod.prevRank ? '↑' : '↓'} {Math.abs(mod.currentRank - mod.prevRank)} positions
                         </p>
                         <p className="text-[8px] text-gray-700 font-mono">#{mod.prevRank} → #{mod.currentRank}</p>
                       </div>
@@ -231,7 +232,7 @@ export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
                   {/* Actions */}
                   <div className="flex gap-3 pt-1">
                     <Link
-                      to={`/mod/${mod.id}`}
+                      to={`${gp}/mod/${mod.id}`}
                       className="flex-1 px-3 py-2 bg-white/5 border border-white/10 text-[9px] font-black text-gray-400 text-center uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
                     >
                       Full Intel

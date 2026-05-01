@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { serversApi, type GameType } from '../api/client';
+import { serversApi, modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import type { Server } from '../types';
+import type { Server, ServerMod } from '../types';
 
 interface ServerDetailProps {
   game?: GameType;
@@ -14,27 +14,31 @@ interface ServerDetailProps {
 export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   const { serverId } = useParams<{ serverId: string }>();
   const [server, setServer] = useState<Server | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<{ time: string; points: number }[]>([]);
+  const [totalServers, setTotalServers] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDays, setSelectedDays] = useState(30);
 
-  // Local filtering/sorting for the mod stack
   const [modSearch, setModSearch] = useState('');
   const [modSort, setModSort] = useState<'rank' | 'name' | 'players'>('players');
   const [personnelFilter, setPersonnelFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [rankFilter, setRankFilter] = useState<'all' | 'top100' | 'top500' | 'top1000'>('all');
 
+  const gp = game === 'reforger' ? '' : `/${game}`;
+
   const loadServer = useCallback(async (days: number) => {
     if (!serverId) return;
     try {
       setLoading(true);
-      const [serverData, historyData] = await Promise.all([
+      const [serverData, historyData, statsData] = await Promise.all([
         serversApi.getById(serverId, game),
-        fetch(`/api/servers/${serverId}/history?game=${game}&days=${days}`).then(res => res.json())
+        serversApi.getHistory(serverId, days, game),
+        modsApi.getGlobalStats(game)
       ]);
       setServer(serverData.data);
       setHistory(historyData.data || []);
+      setTotalServers(statsData?.totalServers || 1);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load server');
@@ -50,16 +54,17 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   const sortedAndFilteredMods = useMemo(() => {
     if (!server?.mods || !Array.isArray(server.mods)) return [];
 
-    const filtered = (server?.mods || []).filter((m: any) =>
+    const filtered = (server.mods as ServerMod[]).filter(m =>
       (m.name.toLowerCase().includes(modSearch.toLowerCase()) ||
-       m.id.toLowerCase().includes(modSearch.toLowerCase())) &&
-       // ...
+       m.id.toLowerCase().includes(modSearch.toLowerCase()))
+      &&
       (
         personnelFilter === 'all' ||
         (personnelFilter === 'high' && m.totalPlayers >= 500) ||
         (personnelFilter === 'medium' && m.totalPlayers >= 100 && m.totalPlayers < 500) ||
         (personnelFilter === 'low' && m.totalPlayers < 100)
-      ) &&
+      )
+      &&
       (
         rankFilter === 'all' ||
         (rankFilter === 'top100' && m.playerRank <= 100) ||
@@ -68,7 +73,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
       )
     );
 
-    return [...filtered].sort((a: any, b: any) => {
+    return [...filtered].sort((a, b) => {
       if (modSort === 'name') return a.name.localeCompare(b.name);
       if (modSort === 'rank') return a.playerRank - b.playerRank;
       return (b.totalPlayers || 0) - (a.totalPlayers || 0);
@@ -78,20 +83,20 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   if (loading) return <StatusState type="loading" />;
   if (error || !server) return (
     <div className="space-y-8">
-      <StatusState 
-        type="error" 
-        message={error || 'Server connection lost'} 
+      <StatusState
+        type="error"
+        message={error || 'Server connection lost'}
         onAction={() => loadServer(selectedDays)}
-        actionText="Re-establish Connection" 
+        actionText="Re-establish Connection"
       />
-      <Link to="/servers" className="block text-center text-tactical-orange font-black uppercase tracking-[0.4em] text-[10px] hover:underline">
+      <Link to={`${gp}/servers`} className="block text-center text-tactical-orange font-black uppercase tracking-[0.4em] text-[10px] hover:underline">
         ← Return to Network Map
       </Link>
     </div>
   );
 
-  const fillPercent = (server.players / server.maxPlayers) * 100;
-  
+  const fillPercent = server.maxPlayers > 0 ? (server.players / server.maxPlayers) * 100 : 0;
+
   const getStatus = () => {
     if (fillPercent >= 80) return { label: 'CRITICAL_LOAD', color: 'text-red-500' };
     if (fillPercent >= 50) return { label: 'HIGH_ACTIVITY', color: 'text-tactical-orange' };
@@ -104,7 +109,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   return (
     <div className="space-y-12 animate-in fade-in duration-700">
       <header className="space-y-6">
-        <Link to="/servers" className="inline-flex items-center gap-4 text-gray-500 hover:text-tactical-orange font-black uppercase tracking-[0.3em] text-[10px] transition-all hover:-translate-x-2">
+        <Link to={`${gp}/servers`} className="inline-flex items-center gap-4 text-gray-500 hover:text-tactical-orange font-black uppercase tracking-[0.3em] text-[10px] transition-all hover:-translate-x-2">
           ← [ Back to Network ]
         </Link>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/10 pb-12">
@@ -133,9 +138,9 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
       <StatsHero
         stats={[
           { label: 'Personnel Present', value: `${server.players || 0} / ${server.maxPlayers || 0}` },
-          { label: 'Module Count', value: server?.mods?.length || 0 },
+          { label: 'Module Count', value: server.mods?.length || 0 },
           { label: 'SQE Points', value: server.sqePoints || 0 },
-          { label: 'Encryption', value: 'AES-256' }
+          { label: 'Capacity Used', value: `${Math.round(fillPercent)}%` }
         ]}
         title="Field Intelligence Report"
         subtitle="Detailed analysis of deployed assets and personnel distribution"
@@ -144,21 +149,20 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
       <section className="space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
             <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter">
-              📈 Strategic Performance
+              Strategic Performance
             </h2>
             <div className="flex gap-2 p-1 bg-zinc-900 border border-white/10">
               {[
                 { label: '24H', value: 1 },
                 { label: '30D', value: 30 },
-                { label: '1M', value: 32 },
                 { label: '1Y', value: 366 }
               ].map(opt => (
                 <button
                   key={opt.label}
                   onClick={() => setSelectedDays(opt.value)}
                   className={`px-4 py-1 text-[10px] font-bold uppercase tracking-widest transition-all ${
-                    selectedDays === opt.value 
-                      ? 'bg-tactical-orange text-black' 
+                    selectedDays === opt.value
+                      ? 'bg-tactical-orange text-black'
                       : 'text-gray-500 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -177,9 +181,9 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={history} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                    <XAxis 
-                      dataKey="time" 
-                      stroke="#666" 
+                    <XAxis
+                      dataKey="time"
+                      stroke="#666"
                       tickFormatter={(tick) => {
                         const d = new Date(tick);
                         if (selectedDays === 1) {
@@ -191,23 +195,23 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
                       axisLine={false}
                       tickLine={false}
                     />
-                    <YAxis 
-                      stroke="#f97316" 
+                    <YAxis
+                      stroke="#f97316"
                       tick={{ fontSize: 10, fill: '#f97316', fontWeight: 'bold' }}
                       axisLine={false}
                       tickLine={false}
                       width={40}
                     />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '4px' }}
                       itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                       labelStyle={{ color: '#666', fontSize: '10px', fontWeight: 'bold', marginBottom: '8px' }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="points" 
+                    <Line
+                      type="monotone"
+                      dataKey="points"
                       name="SQE Points"
-                      stroke="#f97316" 
+                      stroke="#f97316"
                       strokeWidth={3}
                       dot={false}
                       activeDot={{ r: 6, fill: '#f97316', stroke: '#18181b', strokeWidth: 2 }}
@@ -219,21 +223,10 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
           </Card>
         </section>
 
-      <StatsHero
-        stats={[
-          { label: 'Personnel Present', value: `${server.players || 0} / ${server.maxPlayers || 0}` },
-          { label: 'Module Count', value: server?.mods?.length || 0 },
-          { label: 'Capacity Used', value: `${Math.round(fillPercent || 0)}%` },
-          { label: 'Encryption', value: 'AES-256' }
-        ]}
-        title="Field Intelligence Report"
-        subtitle="Detailed analysis of deployed assets and personnel distribution"
-      />
-
       <section className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-8">
           <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter whitespace-nowrap">
-            📦 Installed Mod Stack
+            Installed Mod Stack
           </h2>
 
           <div className="flex flex-col gap-3 w-full md:w-auto">
@@ -247,7 +240,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <select
                 value={personnelFilter}
-                onChange={(e) => setPersonnelFilter(e.target.value as any)}
+                onChange={(e) => setPersonnelFilter(e.target.value as typeof personnelFilter)}
                 className="px-2 py-3 bg-zinc-900 border border-white/10 text-[8px] sm:text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all"
               >
                 <option value="all" className="bg-zinc-900 text-white">Personnel: All</option>
@@ -257,7 +250,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
               </select>
               <select
                 value={rankFilter}
-                onChange={(e) => setRankFilter(e.target.value as any)}
+                onChange={(e) => setRankFilter(e.target.value as typeof rankFilter)}
                 className="px-2 py-3 bg-zinc-900 border border-white/10 text-[8px] sm:text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all"
               >
                 <option value="all" className="bg-zinc-900 text-white">Rank: All</option>
@@ -267,7 +260,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
               </select>
               <select
                 value={modSort}
-                onChange={(e) => setModSort(e.target.value as any)}
+                onChange={(e) => setModSort(e.target.value as typeof modSort)}
                 className="px-2 py-3 bg-zinc-900 border border-white/10 text-[8px] sm:text-[10px] font-black text-white uppercase tracking-widest cursor-pointer outline-none focus:border-tactical-orange transition-all col-span-2 sm:col-span-1"
               >
                 <option value="players" className="bg-zinc-900 text-white">Best Played</option>
@@ -290,8 +283,8 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {sortedAndFilteredMods.map((mod: any) => {
-              const marketshare = ((mod.serverCount || 0) / 7669) * 100;
+            {sortedAndFilteredMods.map(mod => {
+              const marketshare = totalServers > 0 ? ((mod.serverCount || 0) / totalServers) * 100 : 0;
               return (
               <Card key={mod.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all group overflow-hidden">
                 <CardContent className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 relative">
@@ -307,7 +300,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
                       </div>
                     </div>
 
-                    <Link to={`/mod/${mod.id}`}>
+                    <Link to={`${gp}/mod/${mod.id}`}>
                       <h3 className="text-base sm:text-lg font-black text-white uppercase leading-tight group-hover:text-tactical-orange transition-colors line-clamp-2">
                         {mod.name}
                       </h3>
@@ -341,7 +334,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
 
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 pt-2">
                     <Link
-                      to={`/mod/${mod.id}`}
+                      to={`${gp}/mod/${mod.id}`}
                       className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-white/5 border border-white/10 text-[8px] sm:text-[9px] font-black text-gray-400 text-center uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all"
                     >
                       Module Intel

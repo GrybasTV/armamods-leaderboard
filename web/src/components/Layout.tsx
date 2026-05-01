@@ -148,7 +148,7 @@ export function Layout({ children }: LayoutProps) {
               <p className="text-gray-500 text-xs sm:text-sm font-medium leading-[2] max-w-lg uppercase tracking-wider">
                 This platform provides strategic overview of the Arma Reforger ecosystem. We track
                 server telemetry and player deployment across various custom modules.
-                Data synchronized every 1 hour via external collector.
+                Data synchronized every 2 hours via external collector.
               </p>
               <Link
                 to="/support"

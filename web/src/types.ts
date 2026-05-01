@@ -11,6 +11,16 @@ export interface Mod {
   marketShare?: number;
 }
 
+export interface ServerMod {
+  id: string;
+  name: string;
+  playerRank: number;
+  serverRank: number;
+  overallRank: number;
+  serverCount: number;
+  totalPlayers: number;
+}
+
 export interface Server {
   id: string;
   name: string;
@@ -20,15 +30,7 @@ export interface Server {
   maxPlayers: number;
   sqePoints?: number;
   sqeRank?: number;
-  mods: Array<{
-    id: string;
-    name: string;
-    playerRank: number;
-    serverRank: number;
-    overallRank: number;
-    serverCount: number;
-    totalPlayers: number;
-  }>;
+  mods: ServerMod[];
 }
 
 export interface ApiResponse<T> {
@@ -48,8 +50,8 @@ export interface TrendingMod {
   playerRank: number;
   serverRank: number;
   overallRank: number;
-  changePlayers?: number;
-  changeServers?: number;
+  rankDelta?: number;
+  trendScore?: number;
   prevRank?: number;
   currentRank?: number;
 }

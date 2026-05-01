@@ -18,6 +18,7 @@ interface ModDetailProps {
 }
 
 export function ModDetail({ game = 'reforger' }: ModDetailProps) {
+  const gp = game === 'reforger' ? '' : `/${game}`;
   const { modId } = useParams<{ modId: string }>();
   const [mod, setMod] = useState<ModDetailData | null>(null);
   const [history, setHistory] = useState<ModHistory[]>([]);
@@ -58,7 +59,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
         onAction={() => loadMod(selectedDays)} 
         actionText="Re-scan" 
       />
-      <Link to="/" className="block text-center text-tactical-orange font-black uppercase tracking-[0.4em] text-[10px] hover:underline">
+      <Link to={`${gp}/`} className="block text-center text-tactical-orange font-black uppercase tracking-[0.4em] text-[10px] hover:underline">
         ← Return to Database
       </Link>
     </div>
@@ -67,7 +68,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
   return (
     <div className="space-y-12 animate-in fade-in duration-700">
       <header className="space-y-6">
-        <Link to="/" className="inline-flex items-center gap-4 text-gray-500 hover:text-tactical-orange font-black uppercase tracking-[0.3em] text-[10px] transition-all hover:-translate-x-2">
+        <Link to={`${gp}/`} className="inline-flex items-center gap-4 text-gray-500 hover:text-tactical-orange font-black uppercase tracking-[0.3em] text-[10px] transition-all hover:-translate-x-2">
           ← [ Back to Registry ]
         </Link>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/10 pb-12">
@@ -77,7 +78,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
               {mod.name}
             </h1>
             <p className="text-gray-500 font-bold uppercase tracking-[0.2em]">
-              Authorized by: <span className="text-gray-300">{mod.author || 'UNKNOWN_ORIGIN'}</span>
+              Module ID: <span className="text-gray-300 font-mono">{mod.id}</span>
             </p>
           </div>
           <div className="px-8 py-4 bg-zinc-900 border border-white/10 text-center">
@@ -225,7 +226,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {(mod.servers || []).map((server: any) => (
+            {(mod.servers || []).map((server) => (
               <Card key={server.id} className="border-l-4 border-l-zinc-800 hover:border-l-tactical-orange transition-all">
                 <CardContent className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
                   <div className="space-y-2 sm:space-y-3">
@@ -239,7 +240,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                        <p className="text-base sm:text-xl font-black text-white">{server.players} / {server.maxPlayers}</p>
                     </div>
                     <Link
-                      to={`/server/${server.id}`}
+                      to={`${gp}/server/${server.id}`}
                       className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-white/5 border border-white/10 text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest hover:bg-tactical-orange hover:text-black transition-all text-center"
                     >
                       Inspect →

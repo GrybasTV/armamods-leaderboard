@@ -4,9 +4,11 @@ import type { Server } from '../types';
 
 interface ServerCardProps {
   server: Server;
+  game?: string;
 }
 
-export function ServerCard({ server }: ServerCardProps) {
+export function ServerCard({ server, game = 'reforger' }: ServerCardProps) {
+  const gp = game === 'reforger' ? '' : `/${game}`;
   const fillPercent = (server.players / server.maxPlayers) * 100;
 
   const getStatus = () => {
@@ -79,7 +81,7 @@ export function ServerCard({ server }: ServerCardProps) {
         </div>
 
         <Link
-          to={`/server/${server.id}`}
+          to={`${gp}/server/${server.id}`}
           className="flex items-center justify-center w-full px-10 py-6 bg-white/5 border border-white/10 text-gray-300 text-[10px] font-black uppercase tracking-[0.4em] hover:bg-tactical-orange hover:text-black hover:border-tactical-orange transition-all shadow-lg active:scale-95"
         >
           // ACCESS SIGNAL_ID: {server.id.substring(0, 8)} →

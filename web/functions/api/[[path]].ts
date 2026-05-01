@@ -1,14 +1,15 @@
-import { Hono } from 'hono';
-import { handle } from 'hono/cloudflare-pages';
-import { cors } from 'hono/cors';
-
-type GameType = 'reforger' | 'arma3';
-
-interface Bindings {
-  TRENDING_KV: KVNamespace;
-  WEBHOOK_SECRET: string;
-}
-
+/**
+ * @file [[path]].ts
+ * @description API Gateway for Arma Mods Leaderboard.
+ * Built with Hono and deployed as Cloudflare Pages Functions.
+ * 
+ * PERFORMANCE STRATEGY:
+ * 1. Global Edge Caching: Leverages Cloudflare Cache API for sub-1ms response times.
+ * 2. CPU Efficiency: Utilizes string-based scanning within large JSON blobs to 
+ *    minimize V8 parsing overhead.
+ * 3. Sharded Data Retrieval: Orchestrates multi-key KV reads for datasets 
+ *    exceeding 25MB.
+ */
 const app = new Hono<{ Bindings: Bindings }>().basePath('/api');
 
 // Setup Middleware
@@ -53,6 +54,11 @@ function getKVKeys(game: GameType) {
   };
 }
 
+/**
+ * getChunkedData
+ * @description Efficiently reconstructs sharded JSON datasets from Cloudflare KV.
+ * Implements performance monitoring for slow I/O operations.
+ */
 async function getChunkedData(kv: KVNamespace, baseKey: string): Promise<any[]> {
   const start = Date.now();
   try {
@@ -163,7 +169,12 @@ app.get('/mods/:modId', async (c) => {
   const mod = mods.find(m => m.id === modId);
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
-  // Ultra-optimized server fetching (prevent 503)
+  /**
+   * ULTRA-OPTIMIZED SERVER LOOKUP:
+   * Instead of parsing 20MB+ of JSON, we first scan the raw string for the modId.
+   * This drastically reduces CPU time and prevents 503 Gateway Timeouts on 
+   * the free/bundled Worker plans.
+   */
   const modServers: any[] = [];
   const MAX_SERVERS_PER_MOD = 100; // Limit to 100 servers to save CPU
   
@@ -253,6 +264,11 @@ function scanHistoryPoints(historyText: string, modId: string): any[] {
 }
 
 // Helper to fill gaps (zeros) in history data with average values
+/**
+ * smoothHistoryData
+ * @description Data integrity helper. Implements linear interpolation to fill 
+ * temporal gaps in the history dataset (e.g., during collector downtime).
+ */
 function smoothHistoryData(data: any[]) {
   if (data.length < 3) return data;
   
@@ -505,7 +521,7 @@ app.get('/servers/ranking', async (c) => {
   const cacheResponse = await cache.match(c.req.raw);
   if (cacheResponse) return cacheResponse;
 
-  const ranking = await c.env.TRENDING_SNAPSHOTS.get(`cache:ranking:servers:${game}`, 'json');
+  const ranking = await c.env.TRENDING_KV.get(`cache:ranking:servers:${game}`, 'json');
   if (!ranking) return c.json({ data: [] });
 
   const response = c.json({ data: ranking });
@@ -522,7 +538,7 @@ app.get('/servers/:serverId/history', async (c) => {
   const cacheResponse = await cache.match(c.req.raw);
   if (cacheResponse) return cacheResponse;
 
-  const history = await c.env.TRENDING_SNAPSHOTS.get(`history:server_scores:${game}`, 'json') as any[];
+  const history = await c.env.TRENDING_KV.get(`history:server_scores:${game}`, 'json') as any[];
   if (!history) return c.json({ data: [] });
 
   // Extract points for ONLY this server to keep response small

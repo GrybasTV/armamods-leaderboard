@@ -89,6 +89,16 @@ export const serversApi = {
       return response.data;
     });
   },
+
+  getHistory: async (serverId: string, days = 30, game: GameType = 'reforger') => {
+    const key = `server-history:${game}:${serverId}:${days}`;
+    return getCached(key, async () => {
+      const response = await api.get<{ data: { time: string; points: number }[] }>(`servers/${serverId}/history`, {
+        params: { days, game }
+      });
+      return response.data;
+    }, 3600000);
+  },
 };
 
 export const trendingApi = {
