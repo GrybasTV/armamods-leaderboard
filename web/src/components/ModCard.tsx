@@ -85,7 +85,5 @@ export function ModCard({ mod, rank, game = 'reforger' }: ModCardProps) {
         </div>
       </CardContent>
     </Card>
-      </CardContent>
-    </Card>
   );
 }
