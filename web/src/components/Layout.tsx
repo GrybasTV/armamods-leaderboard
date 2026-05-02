@@ -47,6 +47,24 @@ export function Layout({ children }: LayoutProps) {
             </Link>
           </div>
 
+          {/* Game Switcher - Visible from SM */}
+          <div className="hidden sm:flex px-4 md:px-8 border-r border-white/5 items-center h-full self-stretch">
+            <div className="flex gap-2 p-1 bg-white/5 border border-white/10 rounded-sm">
+              <Link 
+                to={location.pathname.replace('/arma3', '') || '/'} 
+                className={`px-3 md:px-4 py-1.5 text-[8px] font-black uppercase tracking-widest transition-all ${!isArma3 ? 'bg-tactical-orange text-black shadow-[0_0_15px_rgba(255,107,0,0.3)]' : 'text-gray-500 hover:text-white'}`}
+              >
+                Reforger
+              </Link>
+              <Link 
+                to={`/arma3${location.pathname.replace('/arma3', '')}`} 
+                className={`px-3 md:px-4 py-1.5 text-[8px] font-black uppercase tracking-widest transition-all ${isArma3 ? 'bg-tactical-orange text-black shadow-[0_0_15px_rgba(255,107,0,0.3)]' : 'text-gray-500 hover:text-white'}`}
+              >
+                Arma 3
+              </Link>
+            </div>
+          </div>
+
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center">
             <Link to={gp || '/'} className={navItemClass(gp || '/')}>
@@ -76,22 +94,8 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </button>
 
-          <div className="hidden lg:flex px-8 border-l border-white/5 items-center gap-6">
-            <div className="flex gap-2 p-1 bg-white/5 border border-white/10 rounded-sm">
-              <Link 
-                to={location.pathname.replace('/arma3', '') || '/'} 
-                className={`px-4 py-1.5 text-[8px] font-black uppercase tracking-widest transition-all ${!isArma3 ? 'bg-tactical-orange text-black shadow-[0_0_10px_rgba(255,107,0,0.4)]' : 'text-gray-500 hover:text-white'}`}
-              >
-                Reforger
-              </Link>
-              <Link 
-                to={`/arma3${location.pathname.replace('/arma3', '')}`} 
-                className={`px-4 py-1.5 text-[8px] font-black uppercase tracking-widest transition-all ${isArma3 ? 'bg-tactical-orange text-black shadow-[0_0_10px_rgba(255,107,0,0.4)]' : 'text-gray-500 hover:text-white'}`}
-              >
-                Arma 3
-              </Link>
-            </div>
-            <div className="flex items-center gap-2 border-l border-white/5 pl-6">
+          <div className="hidden lg:flex px-8 border-l border-white/5 items-center gap-4">
+            <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-tactical-orange animate-pulse"></span>
               <span className="text-[10px] text-gray-400 font-bold tracking-[0.2em] uppercase">System Uplink: Encrypted</span>
             </div>
