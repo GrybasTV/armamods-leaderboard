@@ -482,7 +482,7 @@ app.get('/diagnostics', async (c) => {
     ]);
 
     // Check history integrity (get first and last point if sharded)
-    let historyRange = { start: null, end: null, count: 0 };
+    const historyRange = { start: null, end: null, count: 0 };
     if (historyMeta && historyMeta.chunks) {
         const firstChunk = await c.env.TRENDING_KV.get(`${keys.HISTORY_DAILY}:0`, 'json') as any[];
         const lastChunk = await c.env.TRENDING_KV.get(`${keys.HISTORY_DAILY}:${historyMeta.chunks - 1}`, 'json') as any[];
