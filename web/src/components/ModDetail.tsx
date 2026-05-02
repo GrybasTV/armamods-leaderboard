@@ -203,7 +203,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                     />
                     <Line 
                       yAxisId="rank"
-                      type="stepAfter" 
+                      type="monotone" 
                       dataKey="overallRank" 
                       name="Strategic Rank"
                       stroke="#3b82f6" 
