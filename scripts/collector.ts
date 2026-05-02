@@ -345,8 +345,37 @@ interface ServerMod {
         history = await kv.get(period.key, 'json') || [];
       }
 
-      // 2. Filter and append new point
-      const updated = [...history.filter((d: any) => d.time !== timeLabel), { time: timeLabel, mods: statsMap }].slice(-period.limit);
+      // 2. Aggregate or append new point
+      const existingIndex = history.findIndex((d: any) => d.time === timeLabel);
+      
+      if (existingIndex !== -1 && (period.name === 'daily' || period.name === 'monthly' || period.name === 'yearly')) {
+        // PEAK AGGREGATION LOGIC:
+        // Compare existing stats for the day with current stats and keep the best values
+        const existingPoint = history[existingIndex];
+        const mergedMods: Record<string, { p: number, s: number, r: number }> = { ...existingPoint.mods };
+        
+        for (const [id, current] of Object.entries(statsMap)) {
+          const existing = mergedMods[id];
+          if (existing) {
+            mergedMods[id] = {
+              p: Math.max(existing.p, current.p),
+              s: Math.max(existing.s, current.s),
+              r: Math.min(existing.r, current.r) // Lower is better for rank
+            };
+          } else {
+            mergedMods[id] = current;
+          }
+        }
+        history[existingIndex] = { time: timeLabel, mods: mergedMods };
+      } else if (existingIndex !== -1) {
+        // Hourly or just standard overwrite
+        history[existingIndex] = { time: timeLabel, mods: statsMap };
+      } else {
+        // New point
+        history.push({ time: timeLabel, mods: statsMap });
+      }
+
+      const updated = history.slice(-period.limit);
 
       // 3. Write sharded
       const chunks = buildChunks(updated);

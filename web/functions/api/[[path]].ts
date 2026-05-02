@@ -115,7 +115,7 @@ app.get('/stats', async (c) => {
   const data = stats || { totalMods: 0, totalPlayers: 0, totalServers: 0, game };
   
   const response = c.json(data);
-  response.headers.set('Cache-Control', 'public, max-age=300'); // 5 minutes cache
+  response.headers.set('Cache-Control', 'public, max-age=180'); // 3 minutes cache
   c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
   return response;
 });
@@ -153,8 +153,8 @@ app.get('/mods', async (c) => {
     meta: { total: filtered.length, limit, offset } 
   });
 
-  // Short lived cache for mods list to allow filtering while reducing KV hits
-  response.headers.set('Cache-Control', 'public, max-age=600'); // 10 minutes cache
+  // Short lived cache for mods list to ensure fresh data
+  response.headers.set('Cache-Control', 'public, max-age=300'); // 5 minutes cache
   c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
   return response;
 });
@@ -411,8 +411,8 @@ app.get('/servers', async (c) => {
     meta: { total: filtered.length, limit, offset } 
   });
 
-  // Cache fixed result for 1 hour to prevent CPU overload
-  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  // Cache for 5 minutes to ensure fresh SQE data after collector runs
+  finalResponse.headers.set('Cache-Control', 'public, max-age=300');
   c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
 
   const finished = Date.now() - start;
@@ -439,8 +439,8 @@ app.get('/servers/:serverId', async (c) => {
 
   const response = c.json({ data: server });
   
-  // Cache for 1 hour
-  response.headers.set('Cache-Control', 'public, max-age=3600');
+  // Cache for 5 minutes to ensure fresh SQE data
+  response.headers.set('Cache-Control', 'public, max-age=300');
   c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
   
   return response;
@@ -556,7 +556,7 @@ app.get('/servers/:serverId/history', async (c) => {
   })).filter(h => h.points !== 0 || h.time === history[history.length-1].time);
 
   const response = c.json({ data: serverHistory });
-  response.headers.set('Cache-Control', 'public, max-age=3600');
+  response.headers.set('Cache-Control', 'public, max-age=300');
   c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
   return response;
 });
