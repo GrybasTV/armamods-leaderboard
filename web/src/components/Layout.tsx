@@ -9,8 +9,13 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const isArma3 = location.pathname.startsWith('/arma3');
+  const gp = isArma3 ? '/arma3' : '';
+
   const isActive = (path: string) => {
-    return location.pathname === path;
+    // Exact match for home, or starts with for subpages
+    if (path === '/' || path === '/arma3') return location.pathname === path;
+    return location.pathname.startsWith(path);
   };
 
   const navItemClass = (path: string) => `
@@ -27,16 +32,16 @@ export function Layout({ children }: LayoutProps) {
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 backdrop-blur-xl bg-[#000000]/80">
         <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
           <div className="px-4 sm:px-8 py-4 sm:py-6 border-r border-white/5 flex items-center gap-4 sm:gap-6 group">
-            <Link to="/" className="flex items-center gap-3 sm:gap-4">
+            <Link to={gp || '/'} className="flex items-center gap-3 sm:gap-4">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-tactical-orange flex items-center justify-center text-black font-black text-lg sm:text-xl tracking-tighter shadow-[0_0_15px_rgba(255,107,0,0.3)] group-hover:scale-110 transition-transform">
-                AR
+                {isArma3 ? 'A3' : 'AR'}
               </div>
               <div className="space-y-0.5 sm:space-y-1">
                 <h1 className="text-base sm:text-xl font-black text-white tracking-[0.1em] uppercase leading-none">
-                  Arma <span className="text-tactical-orange">Mods</span>
+                  Arma <span className="text-tactical-orange">{isArma3 ? '3' : 'Mods'}</span>
                 </h1>
                 <p className="text-[7px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-[0.3em] hidden xs:block">
-                  Mission Intelligence Center
+                  {isArma3 ? 'Legacy Combat Intel' : 'Mission Intelligence Center'}
                 </p>
               </div>
             </Link>
@@ -44,16 +49,16 @@ export function Layout({ children }: LayoutProps) {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center">
-            <Link to="/" className={navItemClass('/')}>
+            <Link to={gp || '/'} className={navItemClass(gp || '/')}>
               [ 📦 Mods Database ]
             </Link>
-            <Link to="/servers" className={navItemClass('/servers')}>
+            <Link to={`${gp}/servers`} className={navItemClass(`${gp}/servers`)}>
               [ 🖥️ Active Servers ]
             </Link>
-            <Link to="/trending" className={navItemClass('/trending')}>
+            <Link to={`${gp}/trending`} className={navItemClass(`${gp}/trending`)}>
               [ 📈 Trending Intel ]
             </Link>
-            <Link to="/support" className="px-6 py-4 font-bold uppercase tracking-[0.2em] text-[10px] transition-all duration-300 border-l border-white/5 text-tactical-orange hover:text-white hover:bg-tactical-orange/10">
+            <Link to={`${gp}/support`} className="px-6 py-4 font-bold uppercase tracking-[0.2em] text-[10px] transition-all duration-300 border-l border-white/5 text-tactical-orange hover:text-white hover:bg-tactical-orange/10">
               [ ❤️ Support ]
             </Link>
           </nav>
@@ -71,8 +76,22 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </button>
 
-          <div className="hidden lg:flex px-8 border-l border-white/5 items-center gap-4">
-            <div className="flex items-center gap-2">
+          <div className="hidden lg:flex px-8 border-l border-white/5 items-center gap-6">
+            <div className="flex gap-2 p-1 bg-white/5 border border-white/10 rounded-sm">
+              <Link 
+                to={location.pathname.replace('/arma3', '') || '/'} 
+                className={`px-4 py-1.5 text-[8px] font-black uppercase tracking-widest transition-all ${!isArma3 ? 'bg-tactical-orange text-black shadow-[0_0_10px_rgba(255,107,0,0.4)]' : 'text-gray-500 hover:text-white'}`}
+              >
+                Reforger
+              </Link>
+              <Link 
+                to={`/arma3${location.pathname.replace('/arma3', '')}`} 
+                className={`px-4 py-1.5 text-[8px] font-black uppercase tracking-widest transition-all ${isArma3 ? 'bg-tactical-orange text-black shadow-[0_0_10px_rgba(255,107,0,0.4)]' : 'text-gray-500 hover:text-white'}`}
+              >
+                Arma 3
+              </Link>
+            </div>
+            <div className="flex items-center gap-2 border-l border-white/5 pl-6">
               <span className="w-2 h-2 bg-tactical-orange animate-pulse"></span>
               <span className="text-[10px] text-gray-400 font-bold tracking-[0.2em] uppercase">System Uplink: Encrypted</span>
             </div>
@@ -83,35 +102,49 @@ export function Layout({ children }: LayoutProps) {
         {mobileMenuOpen && (
           <nav className="lg:hidden border-t border-white/5 bg-[#000000]/95 backdrop-blur-xl">
             <div className="px-4 py-4 space-y-2">
+              <div className="flex gap-2 p-1 bg-white/5 border border-white/10 mb-4">
+                <Link 
+                  to={location.pathname.replace('/arma3', '') || '/'} 
+                  className={`flex-1 py-3 text-center text-[8px] font-black uppercase tracking-widest transition-all ${!isArma3 ? 'bg-tactical-orange text-black' : 'text-gray-500 hover:text-white'}`}
+                >
+                  Reforger
+                </Link>
+                <Link 
+                  to={`/arma3${location.pathname.replace('/arma3', '')}`} 
+                  className={`flex-1 py-3 text-center text-[8px] font-black uppercase tracking-widest transition-all ${isArma3 ? 'bg-tactical-orange text-black' : 'text-gray-500 hover:text-white'}`}
+                >
+                  Arma 3
+                </Link>
+              </div>
               <Link
-                to="/"
+                to={gp || '/'}
                 className={`block px-4 py-3 font-bold uppercase tracking-[0.2em] text-[10px] transition-all ${
-                  isActive('/') ? 'text-tactical-orange bg-white/5' : 'text-gray-500'
+                  isActive(gp || '/') ? 'text-tactical-orange bg-white/5' : 'text-gray-500'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 [ 📦 Mods Database ]
               </Link>
               <Link
-                to="/servers"
+                to={`${gp}/servers`}
                 className={`block px-4 py-3 font-bold uppercase tracking-[0.2em] text-[10px] transition-all ${
-                  isActive('/servers') ? 'text-tactical-orange bg-white/5' : 'text-gray-500'
+                  isActive(`${gp}/servers`) ? 'text-tactical-orange bg-white/5' : 'text-gray-500'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 [ 🖥️ Active Servers ]
               </Link>
               <Link
-                to="/trending"
+                to={`${gp}/trending`}
                 className={`block px-4 py-3 font-bold uppercase tracking-[0.2em] text-[10px] transition-all ${
-                  isActive('/trending') ? 'text-tactical-orange bg-white/5' : 'text-gray-500'
+                  isActive(`${gp}/trending`) ? 'text-tactical-orange bg-white/5' : 'text-gray-500'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 [ 📈 Trending Intel ]
               </Link>
               <Link
-                to="/support"
+                to={`${gp}/support`}
                 className="block px-4 py-3 font-bold uppercase tracking-[0.2em] text-[10px] text-tactical-orange transition-all"
                 onClick={() => setMobileMenuOpen(false)}
               >
