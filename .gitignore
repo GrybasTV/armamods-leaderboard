@@ -13,6 +13,19 @@ web/dist
 web/node_modules
 .DS_Store
 
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
 # Logs
 *.log
 error_tail.txt
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+

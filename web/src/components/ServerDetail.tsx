@@ -221,6 +221,19 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
               )}
             </CardContent>
           </Card>
+
+          {/* Analysis Glossary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+            <div className="flex gap-4 p-4 bg-zinc-900/30 border border-white/5 rounded-sm">
+              <div className="w-1 h-full bg-[#f97316]" />
+              <div>
+                <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1">Strategic Points (SQE)</h4>
+                <p className="text-[9px] text-gray-500 font-bold leading-relaxed uppercase">
+                  Performance score. <span className="text-tactical-orange">Higher is better</span> – based on player engagement, uptime, and growth metrics.
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
       <section className="space-y-8">

@@ -1,0 +1,39 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Install Root Dependencies
+      run: npm install
+
+    - name: Lint Backend/Scripts
+      run: npx tsc --noEmit
+
+    - name: Install Frontend Dependencies
+      run: |
+        cd web
+        npm install
+
+    - name: Build Frontend
+      run: |
+        cd web
+        npm run build
+
+    - name: Success Message
+      run: echo "🚀 CI Check Passed! Code is clean and buildable."

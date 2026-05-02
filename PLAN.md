@@ -1,65 +1,54 @@
-# Arma Reforger Mod Leaderboard (reforgermods.com)
+# 🗺️ Project Roadmap: Arma Mods Leaderboard
 
-## 🎯 Vizija
-
-**Problema**: Arma Reforger Workshop'as yra nepatogus, o modų reitingavimas pagal "likes/subscribes" neatspindi realaus naudojimo.
-
-**Sprendimas**: Sukurti modų leaderbordą, kuris reitinguoja modus pagal **realią statistiką**:
-- Kiek serverių šiuo metu naudoja modą
-- Kiek žaidėjų realiai žaidžia su šiuo modu
-- Trend'ai - kurie modai populiarėja
-
-**Vertė žaidėjui**:
-- Greitai rasti populiariausius ir patikimus modus
-- Matyti realų modų aktyvumą (ne fake likes)
-- Filtruoti pagal kategorijas (survival, roleplay, pvp)
+This document outlines the strategic vision, current implementation status, and future technical milestones for the platform.
 
 ---
 
-## 🛠 Technologijų Stackas
+## 🎯 Strategic Vision
 
-### Architektūra (Cloudflare Native)
-```
-Hosting:
-  - Cloudflare Pages (Frontend / React)
-  - Cloudflare Workers (API / Hono)
-  - Cloudflare KV (Pagrindinė duomenų saugykla - JSON)
-  - Cloudflare Cron Triggers (Data Collector)
-```
-
-### Duomenų struktūra (JSON / KV)
-Visa informacija saugoma Cloudflare KV kaip JSON objektai:
-- `cache:mods` - Pagrindinis modų sąrašas (suskirstytas į blokus dėl dydžio limitų)
-- `cache:servers` - Serverių sąrašas
-- `cache:stats` - Globali statistika
-- `history:hourly:[game]` - Valandinė populiarumo istorija (JSON masyvas)
-- `history:daily:[game]` - Dienos populiarumo istorija (JSON masyvas)
+**The Goal**: To provide the Arma community with a data-driven alternative to the official Steam/Reforger Workshop, ranking mods by **actual player engagement** rather than static subscription counts.
 
 ---
 
-## 📊 Dabartinė Būsena (Production Ready)
+## 🏗️ System Architecture (Current)
 
-### ✅ Atlikta
-- **Data Collector**: Skriptas, kuris kas valandą renka duomenis iš BattleMetrics ir saugo juos KV saugykloje kaip optimizuotus JSON blokus.
-- **API (Workers)**: Itin greitas API, naudojantis „Ultra-Optimization“ (tikslinę paiešką tekste) ir visapusišką **Cloudflare Cache API**, užtikrinant 0% CPU perkrovą net ir dideliems failams. Išspręsta „Daily request limit exceeded“ problema.
-- **Frontend (Pages)**: Modernus React puslapis su **In-memory caching** klientu, užtikrinančiu žaibišką navigaciją be papildomų API kreipinių.
-- **Edge Caching**: Įdiegtas globalus talpinimas (Cache-Control: public), leidžiantis pasiekti populiarių modų analitika per <10ms.
-
----
-
-## 🚧 Planuojami darbai
-
-□ Arma Workshop scraper (modų papildomi metaduomenys) - [IN PROGRESS]
-  - Thumbnail/image
-  - Autorius
-  - Aprašymas
-  - Kategorija
-  - Failo dydis
-- [x] Implement Rank-based Intelligence trending (Overall Rank Delta)
-- [x] Extend history tracking to 90 days with monthly hybrid lookup
+- [x] **Data Ingestion**: Multi-game (Reforger/Arma 3) collector with BattleMetrics API integration.
+- [x] **Storage Layer**: Sharded Cloudflare KV (JSON-based) to bypass 25MB limits.
+- [x] **API Layer**: High-performance Hono-based Edge API with global caching.
+- [x] **Frontend**: Reactive React 19 dashboard with client-side caching.
 
 ---
 
-## 📝 Techninės pastabos
-- Pasirinkta **KV (JSON)** architektūra užtikrina žaibišką veikimą ir paprastą duomenų valdymą be sudėtingų SQL migracijų.
-- Duomenų kiekis valdomas naudojant `CHUNK_SIZE` (500), kad būtų išvengta Cloudflare KV 25MB dydžio apribojimų.
+## 🚀 Phase 1: Performance & Stability [COMPLETED]
+
+- [x] **Edge Caching**: Implemented Cloudflare Cache API for <10ms TTFB.
+- [x] **Ultra-Optimization**: String-based JSON scanning to reduce Worker CPU usage by 80%.
+- [x] **Sharding Engine**: Automated sharding for large history datasets.
+- [x] **Dynamic Trending**: Implemented logarithmic trend scoring.
+
+---
+
+## 🚧 Phase 2: Metadata Enrichment [IN PROGRESS]
+
+- [ ] **Arma Workshop Scraper**:
+  - [ ] Automated thumbnail and image extraction.
+  - [ ] Metadata retrieval (Author, File Size, Last Update).
+  - [ ] Categorization (Survival, Roleplay, PvP, MilSim).
+- [ ] **Mod Comparison Tool**: Side-by-side performance analytics for multiple mods.
+- [ ] **User Alerts**: Discord/Webhook notifications for mod developers when their mods hit "Trending".
+
+---
+
+## 🔭 Phase 3: Advanced Analytics [PLANNED]
+
+- [ ] **Predictive Trending**: Using historical patterns to predict the next "big thing" in the modding scene.
+- [ ] **Market Share Analysis**: Visualizing mod ecosystem dominance across different game versions.
+- [ ] **API for Developers**: Publicly available SDK for other sites to pull mod rankings.
+
+---
+
+## 📝 Technical Notes
+
+- **Language**: TypeScript (End-to-End).
+- **Environment**: 100% Serverless (Cloudflare Pages + Workers).
+- **Compliance**: Adhering to BattleMetrics API rate limits via custom throttling logic.

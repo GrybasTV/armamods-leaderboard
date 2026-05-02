@@ -162,6 +162,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                       orientation="right"
                       reversed
                       stroke="#3b82f6" 
+                      tickFormatter={(val) => `#${val}`}
                       tick={{ fontSize: 10, fill: '#3b82f6', fontWeight: 'bold' }}
                       axisLine={false}
                       tickLine={false}
@@ -171,6 +172,10 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                       contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '4px' }}
                       itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                       labelStyle={{ color: '#666', fontSize: '10px', fontWeight: 'bold', marginBottom: '8px' }}
+                      formatter={(value, name) => {
+                        if (name === "Strategic Rank") return [`#${value}`, name];
+                        return [value, name];
+                      }}
                     />
                     <Line 
                       yAxisId="players"
@@ -208,6 +213,37 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
               )}
             </CardContent>
           </Card>
+
+          {/* Analysis Glossary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+            <div className="flex gap-4 p-4 bg-zinc-900/30 border border-white/5 rounded-sm">
+              <div className="w-1 h-full bg-[#f97316]" />
+              <div>
+                <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1">Deployed Personnel</h4>
+                <p className="text-[9px] text-gray-500 font-bold leading-relaxed uppercase">
+                  Total player count. <span className="text-tactical-orange">Higher is better</span> – indicates a larger active player base.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4 p-4 bg-zinc-900/30 border border-white/5 rounded-sm">
+              <div className="w-1 h-full bg-[#db2777]" />
+              <div>
+                <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1">Active Servers</h4>
+                <p className="text-[9px] text-gray-500 font-bold leading-relaxed uppercase">
+                  Network presence. <span className="text-pink-500">Higher is better</span> – indicates wider deployment across server nodes.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4 p-4 bg-zinc-900/30 border border-white/5 rounded-sm">
+              <div className="w-1 h-full bg-[#3b82f6]" />
+              <div>
+                <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1">Strategic Rank</h4>
+                <p className="text-[9px] text-gray-500 font-bold leading-relaxed uppercase">
+                  Global standing. <span className="text-blue-500">Higher visual position is better</span> – Rank #1 is at the top of the axis.
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
       <section className="space-y-6 sm:space-y-8">
