@@ -564,7 +564,7 @@ app.get('/servers/:serverId/history', async (c) => {
   }).filter(h => h.points !== 0 || h.time === history[history.length-1].time);
 
   const finalResponse = c.json({ data: serverHistory });
-  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  finalResponse.headers.set('Cache-Control', 'public, max-age=300');
   c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
   return finalResponse;
 });

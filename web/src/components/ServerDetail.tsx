@@ -128,7 +128,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
         stats={[
           { label: 'Personnel Present', value: `${server.players || 0} / ${server.maxPlayers || 0}` },
           { label: 'Module Count', value: server.mods?.length || 0 },
-          { label: 'SQE Points', value: server.sqePoints || 0 },
+          { label: 'Strategic Rank', value: `#${server.sqeRank || '-'}` },
           { label: 'Capacity Used', value: `${Math.round(fillPercent)}%` }
         ]}
         title="Field Intelligence Report"
@@ -144,7 +144,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
               {[
                 { label: '24H', value: 1 },
                 { label: '7D', value: 7 },
-                { label: '30D', value: 30 },
+                { label: '1M', value: 30 },
                 { label: '1Y', value: 366 }
               ].map(opt => (
                 <button
