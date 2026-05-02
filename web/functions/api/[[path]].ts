@@ -213,8 +213,8 @@ app.get('/mods/:modId', async (c) => {
   console.log(`[MODS_DETAIL] Response ready for ${modId} in ${finished}ms`);
   const finalResponse = c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
   
-  // Cache the response for 1 hour
-  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  // Cache the response for 5 minutes
+  finalResponse.headers.set('Cache-Control', 'public, max-age=300');
   c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
   
   return finalResponse;
@@ -373,8 +373,8 @@ app.get('/mods/:modId/history', async (c) => {
   
   const finalResponse = c.json({ data: finalHistory });
   
-  // Cache the response for 1 hour
-  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  // Cache the response for 5 minutes
+  finalResponse.headers.set('Cache-Control', 'public, max-age=300');
   c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
   
   return finalResponse;
