@@ -25,14 +25,14 @@ export function useServers(options: UseServersOptions = {}) {
     try {
       setLoading(true);
       const [serversData, statsData] = await Promise.all([
-        serversApi.getList(1000, 0, undefined, game),
+        serversApi.getList(1000, 0, searchQuery, game),
         modsApi.getGlobalStats(game)
       ]);
       const fetchedServers = serversData?.data || [];
       setServers(fetchedServers);
       setTotalServers(serversData?.meta?.total || 0);
 
-      // Calculate full servers from loaded sample (more accurate)
+      // Calculate full servers from loaded sample
       const fullCount = fetchedServers.length > 0
         ? fetchedServers.filter((s: Server) => s.maxPlayers > 0 && (s.players / s.maxPlayers) >= 0.8).length
         : 0;
@@ -50,10 +50,13 @@ export function useServers(options: UseServersOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [game]);
+  }, [game, searchQuery]);
 
   useEffect(() => {
-    loadServers();
+    const timer = setTimeout(() => {
+      loadServers();
+    }, 300); // Debounce search
+    return () => clearTimeout(timer);
   }, [loadServers]);
 
   const filteredServers = useMemo(() => {
