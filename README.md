@@ -14,7 +14,8 @@ A high-performance mod tracking and ranking platform for **Arma Reforger** and *
 - **Ultra-Low Latency API**: Built with **Hono** and deployed on **Cloudflare Workers**, leveraging **Edge Caching** to achieve sub-10ms response times globally.
 - **Scalable Data Architecture**: Designed a custom multi-layered storage system using **Cloudflare KV**, utilizing **chunking strategies** to bypass 25MB value limits while maintaining O(1) lookup performance.
 - **Intelligent Ranking Algorithm**: Developed a hybrid scoring system that weights player counts, server adoption, and historical trends to provide a more accurate popularity index than simple "likes".
-- **Production-Ready Frontend**: A modern, SEO-optimized **React 19** dashboard featuring **In-memory caching** to eliminate redundant API calls and provide a near-instant user experience.
+- **Unified Multi-Game Architecture**: Support for both **Arma Reforger** and **Arma 3** within a single, context-aware dashboard, featuring a tactical game switcher for seamless cross-platform intelligence.
+- **Production-Ready Frontend**: A modern, SEO-optimized **React 19** dashboard featuring a "tactical-industrial" aesthetic, custom design system, and in-memory caching for near-instant user experience.
 
 ---
 
