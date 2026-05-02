@@ -365,31 +365,25 @@ interface ServerMod {
   } catch (kvErr) {
     console.error("⚠️ KV History Error:", kvErr);
   }
-  // 4. Server Scoring & Ranking (3 times a day: 0, 8, 16 UTC)
-  const currentHour = new Date().getUTCHours();
-  const shouldScore = currentHour % 8 === 0;
 
-  if (shouldScore) {
-      console.log(`[SERVER_SCORING] Running for ${game} at ${currentHour}:00 UTC...`);
-      await runServerScoring(game, kv, serverList, modList);
+  // 4. Server Scoring & Ranking - runs every collection to prevent SQE data loss
+  console.log(`[SERVER_SCORING] Running for ${game}...`);
+  await runServerScoring(game, kv, serverList, modList);
 
-      // CRITICAL: Re-write server chunks WITH SQE data included
-      console.log(`[SERVER_SCORING] Re-writing server chunks with SQE data...`);
-      const serverChunks = buildChunks(serverList);
-      for (let i = 0; i < serverChunks.length; i++) {
-        try {
-          await kv.put(`${KV_KEYS.SERVERS}:${i}`, JSON.stringify(serverChunks[i]));
-          console.log(`    [OK] Server chunk ${i+1}/${serverChunks.length} with SQE`);
-        } catch (err) {
-          console.error(`    [FAIL] Server chunk ${i+1}:`, err);
-          throw err;
-        }
-      }
-      await kv.put(`${KV_KEYS.SERVERS}:meta`, JSON.stringify({ total: serverList.length, chunks: serverChunks.length }));
-      console.log(`✅ Server chunks updated with SQE data`);
-  } else {
-      console.log(`[SERVER_SCORING] Skipped (next run at ${8 - (currentHour % 8)}:00 UTC)`);
+  // Re-write server chunks WITH SQE data included
+  console.log(`[SERVER_SCORING] Re-writing server chunks with SQE data...`);
+  const serverChunks = buildChunks(serverList);
+  for (let i = 0; i < serverChunks.length; i++) {
+    try {
+      await kv.put(`${KV_KEYS.SERVERS}:${i}`, JSON.stringify(serverChunks[i]));
+      console.log(`    [OK] Server chunk ${i+1}/${serverChunks.length} with SQE`);
+    } catch (err) {
+      console.error(`    [FAIL] Server chunk ${i+1}:`, err);
+      throw err;
+    }
   }
+  await kv.put(`${KV_KEYS.SERVERS}:meta`, JSON.stringify({ total: serverList.length, chunks: serverChunks.length }));
+  console.log(`✅ Server chunks updated with SQE data`);
 
   console.log('✅ COLLECTOR: Complete!');
   return { servers: totalServers, mods: totalMods };
