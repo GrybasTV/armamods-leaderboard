@@ -2,20 +2,28 @@
  * @file [[path]].ts
  * @description API Gateway for Arma Mods Leaderboard.
  * Built with Hono and deployed as Cloudflare Pages Functions.
- * 
+ *
  * PERFORMANCE STRATEGY:
  * 1. Global Edge Caching: Leverages Cloudflare Cache API for sub-1ms response times.
- * 2. CPU Efficiency: Utilizes string-based scanning within large JSON blobs to 
+ * 2. CPU Efficiency: Utilizes string-based scanning within large JSON blobs to
  *    minimize V8 parsing overhead.
- * 3. Sharded Data Retrieval: Orchestrates multi-key KV reads for datasets 
+ * 3. Sharded Data Retrieval: Orchestrates multi-key KV reads for datasets
  *    exceeding 25MB.
  */
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { handle } from 'hono/cloudflare-pages';
+
+type Bindings = {
+  TRENDING_KV: KVNamespace;
+};
+
+type GameType = 'reforger' | 'arma3';
+
 const app = new Hono<{ Bindings: Bindings }>().basePath('/api');
 
 // Setup Middleware
 app.use('*', cors());
-
-// Debug logging for every request
 app.use('*', async (c, next) => {
   const start = Date.now();
   console.log(`[REQUEST] ${c.req.method} ${c.req.url} started`);
