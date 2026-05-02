@@ -47,22 +47,6 @@ export function Layout({ children }: LayoutProps) {
             </Link>
           </div>
 
-          {/* Game Switcher - Visible from SM */}
-          <div className="hidden sm:flex px-4 md:px-8 border-r border-white/5 items-center h-full self-stretch">
-            <div className="flex gap-2 p-1 bg-white/5 border border-white/10 rounded-sm">
-              <Link 
-                to={location.pathname.replace('/arma3', '') || '/'} 
-                className={`px-3 md:px-4 py-1.5 text-[8px] font-black uppercase tracking-widest transition-all ${!isArma3 ? 'bg-tactical-orange text-black shadow-[0_0_15px_rgba(255,107,0,0.3)]' : 'text-gray-500 hover:text-white'}`}
-              >
-                Reforger
-              </Link>
-              <Link 
-                to={`/arma3${location.pathname.replace('/arma3', '')}`} 
-                className={`px-3 md:px-4 py-1.5 text-[8px] font-black uppercase tracking-widest transition-all ${isArma3 ? 'bg-tactical-orange text-black shadow-[0_0_15px_rgba(255,107,0,0.3)]' : 'text-gray-500 hover:text-white'}`}
-              >
-                Arma 3
-              </Link>
-            </div>
           </div>
 
           {/* Desktop Navigation */}
@@ -94,10 +78,42 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </button>
 
-          <div className="hidden lg:flex px-8 border-l border-white/5 items-center gap-4">
-            <div className="flex items-center gap-2">
+          <div className="hidden lg:flex px-8 border-l border-white/5 items-center relative group/dropdown">
+            <button className="flex items-center gap-3 py-6 group">
               <span className="w-2 h-2 bg-tactical-orange animate-pulse"></span>
-              <span className="text-[10px] text-gray-400 font-bold tracking-[0.2em] uppercase">System Uplink: Encrypted</span>
+              <div className="text-left">
+                <span className="text-[7px] text-gray-500 font-bold tracking-[0.2em] uppercase block">Current Deployment</span>
+                <span className="text-[10px] text-white font-black tracking-[0.2em] uppercase flex items-center gap-2">
+                  {isArma3 ? 'Arma 3 Network' : 'Reforger Network'}
+                  <svg className="w-2 h-2 text-tactical-orange group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              </div>
+            </button>
+
+            {/* Tactical Dropdown Menu */}
+            <div className="absolute top-full right-0 w-64 bg-[#0a0a0a] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] opacity-0 invisible group-hover/dropdown:opacity-100 group-hover/dropdown:visible transition-all duration-200 py-2">
+              <div className="px-4 py-2 border-b border-white/5 mb-2">
+                <span className="text-[8px] text-gray-600 font-black uppercase tracking-[0.3em]">Switch Theater</span>
+              </div>
+              <Link 
+                to={location.pathname.replace('/arma3', '') || '/'} 
+                className={`flex items-center gap-4 px-4 py-3 hover:bg-white/5 transition-colors ${!isArma3 ? 'text-tactical-orange' : 'text-gray-400'}`}
+              >
+                <div className={`w-1 h-4 ${!isArma3 ? 'bg-tactical-orange' : 'bg-transparent'}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Arma Reforger</span>
+              </Link>
+              <Link 
+                to={`/arma3${location.pathname.replace('/arma3', '')}`} 
+                className={`flex items-center gap-4 px-4 py-3 hover:bg-white/5 transition-colors ${isArma3 ? 'text-tactical-orange' : 'text-gray-400'}`}
+              >
+                <div className={`w-1 h-4 ${isArma3 ? 'bg-tactical-orange' : 'bg-transparent'}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Arma 3 Legacy</span>
+              </Link>
+              <div className="mt-2 px-4 py-2 bg-tactical-orange/5 border-t border-white/5">
+                <span className="text-[7px] text-tactical-orange/60 font-bold uppercase tracking-[0.2em]">Status: Encryption Active</span>
+              </div>
             </div>
           </div>
         </div>
