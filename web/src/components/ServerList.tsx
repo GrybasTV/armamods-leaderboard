@@ -52,31 +52,16 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
       />
 
       <div className="bg-zinc-900/50 p-10 border border-white/5 backdrop-blur-sm shadow-2xl sticky top-28 z-40 transition-all hover:bg-zinc-900/80">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-end">
-          <div className="md:col-span-2 group">
-            <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4 group-hover:text-purple-600 transition-colors italic">// SCAN_REMOTE_SERVERS</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
+          <div className="group">
+            <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4 group-hover:text-tactical-orange transition-colors italic">// SCAN_REMOTE_SERVERS</label>
             <input
               type="text"
               placeholder="Broadcasting search pulse..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-purple-500 focus:bg-black transition-all font-black text-white placeholder-gray-700 uppercase tracking-widest text-[11px] rounded-none outline-none"
+              className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-tactical-orange focus:bg-black transition-all font-black text-white placeholder-gray-700 uppercase tracking-widest text-[11px] rounded-none outline-none"
             />
-          </div>
-
-          <div>
-            <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4 italic">// NETWORK_LOAD</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-purple-500 focus:bg-black transition-all font-black text-white appearance-none cursor-pointer uppercase tracking-widest text-[11px] rounded-none outline-none"
-            >
-              <option value="all">FULL NETWORK</option>
-              <option value="full">CRITICAL (80%+)</option>
-              <option value="active">HIGH LOAD (50-80%)</option>
-              <option value="available">STABLE (30-50%)</option>
-              <option value="low">IDLE (0-30%)</option>
-            </select>
           </div>
 
           <div>
@@ -84,7 +69,7 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-purple-500 focus:bg-black transition-all font-black text-white appearance-none cursor-pointer uppercase tracking-widest text-[11px] rounded-none outline-none"
+              className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-tactical-orange focus:bg-black transition-all font-black text-white appearance-none cursor-pointer uppercase tracking-widest text-[11px] rounded-none outline-none"
             >
               <option value="rank">SQE_LEADERBOARD</option>
               <option value="players">PERSONNEL_IDX</option>

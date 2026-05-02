@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { serversApi, modsApi, type GameType } from '../api/client';
 import type { Server } from '../types';
 
-export type StatusFilter = 'all' | 'full' | 'active' | 'available' | 'low';
 export type ServerSortBy = 'rank' | 'players' | 'name' | 'mods';
 
 interface UseServersOptions {
@@ -18,7 +17,6 @@ export function useServers(options: UseServersOptions = {}) {
   const [error, setError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortBy, setSortBy] = useState<ServerSortBy>('rank');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24;
@@ -62,20 +60,9 @@ export function useServers(options: UseServersOptions = {}) {
     if (!Array.isArray(servers)) return [];
 
     return servers.filter(server => {
-      // Search
       if (searchQuery && !server.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-
-      // Status filter
-      if (statusFilter !== 'all') {
-        const fillPercent = (server.players / server.maxPlayers) * 100;
-        if (statusFilter === 'full' && fillPercent < 80) return false;
-        if (statusFilter === 'active' && (fillPercent < 50 || fillPercent >= 80)) return false;
-        if (statusFilter === 'available' && (fillPercent < 30 || fillPercent >= 80)) return false;
-        if (statusFilter === 'low' && fillPercent >= 30) return false;
-      }
-
       return true;
     }).sort((a, b) => {
       if (sortBy === 'rank') {
@@ -88,7 +75,7 @@ export function useServers(options: UseServersOptions = {}) {
       if (sortBy === 'mods') return (b.mods?.length ?? 0) - (a.mods?.length ?? 0);
       return 0;
     });
-  }, [servers, searchQuery, statusFilter, sortBy]);
+  }, [servers, searchQuery, sortBy]);
 
   const paginatedServers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -106,7 +93,6 @@ export function useServers(options: UseServersOptions = {}) {
 
   const resetFilters = () => {
     setSearchQuery('');
-    setStatusFilter('all');
     setSortBy('players');
     setCurrentPage(1);
   };
@@ -119,8 +105,6 @@ export function useServers(options: UseServersOptions = {}) {
     error,
     searchQuery,
     setSearchQuery,
-    statusFilter,
-    setStatusFilter,
     sortBy,
     setSortBy,
     currentPage,
