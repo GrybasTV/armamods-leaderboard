@@ -161,6 +161,10 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                       yAxisId="rank"
                       orientation="right"
                       reversed
+                      domain={[
+                        (dataMin: number) => Math.max(1, dataMin - 5), 
+                        (dataMax: number) => dataMax + 5
+                      ]}
                       stroke="#3b82f6" 
                       tickFormatter={(val) => `#${val}`}
                       tick={{ fontSize: 10, fill: '#3b82f6', fontWeight: 'bold' }}
