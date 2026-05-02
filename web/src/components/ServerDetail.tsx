@@ -14,7 +14,7 @@ interface ServerDetailProps {
 export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   const { serverId } = useParams<{ serverId: string }>();
   const [server, setServer] = useState<Server | null>(null);
-  const [history, setHistory] = useState<{ time: string; points: number }[]>([]);
+  const [history, setHistory] = useState<{ time: string; points: number; rank: number | null }[]>([]);
   const [totalServers, setTotalServers] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +143,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
             <div className="flex gap-2 p-1 bg-zinc-900 border border-white/10">
               {[
                 { label: '24H', value: 1 },
+                { label: '7D', value: 7 },
                 { label: '30D', value: 30 },
                 { label: '1Y', value: 366 }
               ].map(opt => (
@@ -190,17 +191,20 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
                       axisLine={false}
                       tickLine={false}
                       width={50}
-                      label={{ value: 'SQE Points', position: 'insideTop', fill: '#f97316', fontSize: 10, fontWeight: 'bold' }}
+                      reversed={true}
+                      domain={['dataMin - 1', 'dataMax + 1']}
+                      tickFormatter={(val) => `#${val}`}
                     />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '4px' }}
                       itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                       labelStyle={{ color: '#666', fontSize: '10px', fontWeight: 'bold', marginBottom: '8px' }}
+                      formatter={(value: any) => [`#${value}`, 'SQE Rank']}
                     />
                     <Line
                       type="monotone"
-                      dataKey="points"
-                      name="SQE Points"
+                      dataKey="rank"
+                      name="SQE Rank"
                       stroke="#f97316"
                       strokeWidth={3}
                       dot={false}
@@ -217,9 +221,9 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
             <div className="flex gap-4 p-4 bg-zinc-900/30 border border-white/5 rounded-sm">
               <div className="w-1 h-full bg-[#f97316]" />
               <div>
-                <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1">Strategic Points (SQE)</h4>
+                <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-1">SQE Ranking Position</h4>
                 <p className="text-[9px] text-gray-500 font-bold leading-relaxed uppercase">
-                  Performance score. <span className="text-tactical-orange">Higher is better</span> – based on player engagement, uptime, and growth metrics.
+                  Network hierarchy. <span className="text-tactical-orange">Lower # is better</span> – determined by SQE points calculated from personnel activity, module uniqueness, and server uptime.
                 </p>
               </div>
             </div>

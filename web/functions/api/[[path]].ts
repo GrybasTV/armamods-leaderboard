@@ -549,16 +549,24 @@ app.get('/servers/:serverId/history', async (c) => {
   const history = await c.env.TRENDING_KV.get(`history:server_scores:${game}`, 'json') as any[];
   if (!history) return c.json({ data: [] });
 
-  // Extract points for ONLY this server to keep response small
-  const serverHistory = history.map(entry => ({
-    time: entry.time,
-    points: entry.scores[serverId] || 0
-  })).filter(h => h.points !== 0 || h.time === history[history.length-1].time);
+  // Extract points for ONLY this server 
+  const serverHistory = history.map(entry => {
+    const scores = entry.scores || {};
+    // Calculate rank for this server at this point in time
+    const rankedIds = Object.keys(scores).sort((a, b) => (scores[b] as number) - (scores[a] as number));
+    const rank = rankedIds.indexOf(serverId) + 1;
+    
+    return {
+      time: entry.time,
+      points: scores[serverId] || 0,
+      rank: rank > 0 ? rank : null
+    };
+  }).filter(h => h.points !== 0 || h.time === history[history.length-1].time);
 
-  const response = c.json({ data: serverHistory });
-  response.headers.set('Cache-Control', 'public, max-age=300');
-  c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
-  return response;
+  const finalResponse = c.json({ data: serverHistory });
+  finalResponse.headers.set('Cache-Control', 'public, max-age=3600');
+  c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
+  return finalResponse;
 });
 
 export const onRequest = handle(app);
