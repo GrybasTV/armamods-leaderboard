@@ -47,8 +47,6 @@ export function Layout({ children }: LayoutProps) {
             </Link>
           </div>
 
-          </div>
-
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center">
             <Link to={gp || '/'} className={navItemClass(gp || '/')}>
