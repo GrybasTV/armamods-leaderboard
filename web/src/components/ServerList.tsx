@@ -17,8 +17,6 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
     error,
     searchQuery,
     setSearchQuery,
-    statusFilter,
-    setStatusFilter,
     sortBy,
     setSortBy,
     currentPage,
