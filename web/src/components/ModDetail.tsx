@@ -158,6 +158,16 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                       width={40}
                     />
                     <YAxis 
+                      yAxisId="servers"
+                      orientation="left"
+                      stroke="#db2777" 
+                      domain={[(min: number) => Math.max(0, min - 1), (max: number) => max + 1]}
+                      tick={{ fontSize: 10, fill: '#db2777', fontWeight: 'bold' }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={30}
+                    />
+                    <YAxis 
                       yAxisId="rank"
                       orientation="right"
                       reversed
@@ -192,7 +202,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                       activeDot={{ r: 6, fill: '#f97316', stroke: '#18181b', strokeWidth: 2 }}
                     />
                     <Line 
-                      yAxisId="players"
+                      yAxisId="servers"
                       type="monotone" 
                       dataKey="serverCount" 
                       name="Active Servers"
