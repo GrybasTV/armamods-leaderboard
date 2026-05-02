@@ -93,7 +93,7 @@ export const serversApi = {
   getHistory: async (serverId: string, days = 30, game: GameType = 'reforger') => {
     const key = `server-history:${game}:${serverId}:${days}`;
     return getCached(key, async () => {
-      const response = await api.get<{ data: { time: string; points: number }[] }>(`servers/${serverId}/history`, {
+      const response = await api.get<{ data: { time: string; points: number; rank: number | null }[] }>(`servers/${serverId}/history`, {
         params: { days, game }
       });
       return response.data;
