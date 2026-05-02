@@ -41,9 +41,11 @@ export function ServerCard({ server, game = 'reforger' }: ServerCardProps) {
           </div>
           
           <div className="space-y-4">
-            <h3 className="text-2xl font-black text-white leading-tight uppercase tracking-tight group-hover:translate-x-1 transition-transform truncate" title={server.name}>
-              {server.name}
-            </h3>
+            <Link to={`${gp}/server/${server.id}`} className="block">
+              <h3 className="text-2xl font-black text-white leading-tight uppercase tracking-tight group-hover:translate-x-1 transition-transform truncate" title={server.name}>
+                {server.name}
+              </h3>
+            </Link>
             {server.ip && (
               <p className="inline-block text-[9px] text-gray-400 font-black uppercase tracking-[0.3em] font-mono bg-black/60 px-4 py-1.5 border border-white/5">
                 {server.ip}:{server.port}

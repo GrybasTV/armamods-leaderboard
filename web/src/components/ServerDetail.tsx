@@ -97,15 +97,8 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
 
   const fillPercent = server.maxPlayers > 0 ? (server.players / server.maxPlayers) * 100 : 0;
 
-  const getStatus = () => {
-    if (fillPercent >= 80) return { label: 'CRITICAL_LOAD', color: 'text-red-500' };
-    if (fillPercent >= 50) return { label: 'HIGH_ACTIVITY', color: 'text-tactical-orange' };
-    if (fillPercent >= 1) return { label: 'OPERATIONAL', color: 'text-green-500' };
-    return { label: 'STANDBY', color: 'text-gray-600' };
-  };
 
-  const status = getStatus();
-
+  
   return (
     <div className="space-y-12 animate-in fade-in duration-700">
       <header className="space-y-6">
@@ -127,10 +120,6 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
               <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Overall Rank</p>
               <p className="text-3xl font-black text-tactical-orange tracking-tighter italic">#{server.sqeRank || '-'}</p>
             </div>
-            <div className="px-10 py-6 bg-zinc-900 border border-white/10 text-center hidden md:block">
-              <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1 italic">Engagement</p>
-              <p className={`text-3xl font-black uppercase tracking-tighter ${status.color}`}>{status.label}</p>
-            </div>
           </div>
         </div>
       </header>
@@ -149,7 +138,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
       <section className="space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
             <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tighter">
-              Strategic Performance
+              SQE Ranking History
             </h2>
             <div className="flex gap-2 p-1 bg-zinc-900 border border-white/10">
               {[
@@ -200,7 +189,8 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
                       tick={{ fontSize: 10, fill: '#f97316', fontWeight: 'bold' }}
                       axisLine={false}
                       tickLine={false}
-                      width={40}
+                      width={50}
+                      label={{ value: 'SQE Points', position: 'insideTop', fill: '#f97316', fontSize: 10, fontWeight: 'bold' }}
                     />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '4px' }}
