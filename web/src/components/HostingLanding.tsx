@@ -43,7 +43,7 @@ export function HostingLanding({ game }: HostingLandingProps) {
               <span className="text-tactical-orange">Server Hosting</span>
             </h1>
             <p className="text-gray-500 text-lg sm:text-xl font-bold uppercase tracking-widest max-w-3xl mx-auto leading-relaxed">
-              We partnered with Empower Servers to bring you the best hardware at the lowest price. No per-slot fees.
+              We partnered with a top-tier provider to bring you the best hardware at the lowest price. No per-slot fees.
             </p>
           </div>
 
@@ -68,7 +68,7 @@ export function HostingLanding({ game }: HostingLandingProps) {
       <section className="max-w-5xl mx-auto space-y-8 px-4">
         <div className="text-center space-y-2">
           <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Why this is an unbeatable deal</h2>
-          <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Standard Arma hosting charges per slot. We don't.</p>
+          <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Standard Arma hosting charges per slot. Our partner doesn't.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
@@ -94,13 +94,13 @@ export function HostingLanding({ game }: HostingLandingProps) {
             </CardContent>
           </Card>
 
-          {/* Empower Servers */}
+          {/* Official Partner */}
           <Card className="bg-zinc-900 border-tactical-orange shadow-[0_0_30px_rgba(249,115,22,0.1)] relative transform md:scale-105 z-10">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-tactical-orange text-black font-black uppercase tracking-widest text-[10px] px-4 py-1">
               Official Partner Deal
             </div>
             <CardContent className="p-8 space-y-6">
-              <h3 className="text-tactical-orange font-black uppercase tracking-widest text-sm text-center">Empower Servers Infrastructure</h3>
+              <h3 className="text-tactical-orange font-black uppercase tracking-widest text-sm text-center">Premium Infrastructure</h3>
               <div className="text-center">
                 <span className="text-6xl font-black text-white italic shadow-black drop-shadow-md">$9.99</span>
                 <span className="text-sm text-gray-400 uppercase tracking-widest ml-2">/mo</span>
