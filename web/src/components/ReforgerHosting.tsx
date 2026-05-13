@@ -1,0 +1,271 @@
+import { useState } from 'react';
+import { SEO } from './ui/SEO';
+import { Card, CardContent } from './ui/Card';
+import { Shield, Zap, Globe, ExternalLink, Database, Activity, Cpu, Users, HardDrive } from 'lucide-react';
+
+export function ReforgerHosting() {
+  const [modCount, setModCount] = useState(40);
+  const [playerCount, setPlayerCount] = useState(32);
+  
+  const gameName = 'Arma Reforger';
+  const maxStableSlots = '64';
+
+  // Arma Reforger Telemetry: 3GB Base + 0.25GB per Player
+  const getRecs = (mods: number, players: number) => {
+    const ramNeeded = 3 + (players * 0.25);
+    const recRAM = ramNeeded <= 8 ? 8 : (ramNeeded <= 16 ? 16 : (ramNeeded <= 32 ? 32 : 64));
+    
+    // Reforger mods average 0.5GB per asset
+    const storageNeeded = 25 + (mods * 0.5); 
+    const recStorage = storageNeeded <= 50 ? '50GB' : (storageNeeded <= 100 ? '100GB' : '200GB+');
+
+    return { recRAM, recStorage };
+  };
+
+  const { recRAM, recStorage } = getRecs(modCount, playerCount);
+
+  const providers = [
+    {
+      name: "EmpowerServers",
+      basePrice: 9.99,
+      ramPricePer8GB: 5.00,
+      baseRAM: 8,
+      pricePerSlot: 0,
+      cpu: "Ryzen 9 / i9 High-Clock",
+      ddos: "Advanced L7 Filtering",
+      isWinner: true,
+      url: "https://empowerservers.com/games/arma-reforger/?aff=294"
+    },
+    {
+      name: "GTXGaming",
+      basePrice: 12.00,
+      ramPricePer8GB: 12.00,
+      baseRAM: 4,
+      pricePerSlot: 0.35,
+      cpu: "Ryzen 9 7950X Option",
+      ddos: "Standard Protection",
+      isWinner: false,
+      url: "https://www.gtxgaming.co.uk/server-hosting/arma-reforger-server-hosting/"
+    },
+    {
+      name: "PingPerfect",
+      basePrice: 10.00,
+      ramPricePer8GB: 10.00,
+      baseRAM: 4,
+      pricePerSlot: 0.30,
+      cpu: "Enterprise Xeon",
+      ddos: "Standard Protection",
+      isWinner: false,
+      url: "https://pingperfect.com/gameservers/arma-reforger-server-hosting.php"
+    },
+    {
+      name: "Nitrado",
+      basePrice: 15.00,
+      ramPricePer8GB: 15.00,
+      baseRAM: 4,
+      pricePerSlot: 0.50,
+      cpu: "Standard Infrastructure",
+      ddos: "Basic Protection",
+      isWinner: false,
+      url: "https://server.nitrado.net/en-GB/offers/arma-reforger"
+    }
+  ];
+
+  const calculateTotalPrice = (p: any) => {
+    const slotCost = playerCount * p.pricePerSlot;
+    const extraRAMNeeded = Math.max(0, recRAM - p.baseRAM);
+    const ramUnits = Math.ceil(extraRAMNeeded / 8);
+    return (p.basePrice + slotCost + (ramUnits * p.ramPricePer8GB)).toFixed(2);
+  };
+
+  return (
+    <div className="space-y-16 animate-in fade-in duration-700 pb-20">
+      <SEO 
+        title={`Best ${gameName} Server Hosting Comparison 2026`}
+        description={`Expert analysis of ${gameName} hosting providers based on real telemetry. 3GB base usage + 0.25GB per player calculation for Conflict and MILSIM.`}
+        keywords="best arma reforger hosting, reforger server rental, enfusion engine hosting, arma crossplay server"
+      />
+
+      <section className="text-center space-y-4 pt-12">
+        <h1 className="text-4xl sm:text-7xl font-black text-white uppercase tracking-tighter leading-tight px-4">
+          <span className="text-tactical-orange italic">Reforger</span> Capacity Analysis
+        </h1>
+        <p className="text-gray-500 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto text-sm sm:text-base px-4">
+          Interactive Enfusion Engine infrastructure planning ({maxStableSlots} Slots Baseline).
+        </p>
+      </section>
+
+      <section className="max-w-4xl mx-auto px-4">
+        <Card className="bg-zinc-950 border border-white/10 p-8 space-y-10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-tactical-orange/5 blur-3xl" />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
+                    <Users className="w-3 h-3 text-tactical-orange" />
+                    Target Player Count
+                  </div>
+                  <span className="text-tactical-orange font-black italic">{playerCount} Slots</span>
+                </div>
+                <input 
+                  type="range" min="4" max="128" value={playerCount} 
+                  onChange={(e) => setPlayerCount(parseInt(e.target.value))}
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
+                    <Database className="w-3 h-3 text-tactical-orange" />
+                    Modpack Complexity
+                  </div>
+                  <span className="text-tactical-orange font-black italic">{modCount} Mods</span>
+                </div>
+                <input 
+                  type="range" min="0" max="250" value={modCount} 
+                  onChange={(e) => setModCount(parseInt(e.target.value))}
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-zinc-900 border border-white/5 p-5 rounded-sm text-center space-y-2">
+                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Recommended RAM</div>
+                <div className="text-2xl font-black text-tactical-orange italic">{recRAM}GB</div>
+                <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-white uppercase tracking-tighter">
+                  <Cpu className="w-2.5 h-2.5 text-tactical-orange" />
+                  3GB Base + 0.25GB/p
+                </div>
+              </div>
+              <div className="bg-zinc-900 border border-white/5 p-5 rounded-sm text-center space-y-2">
+                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">NVMe Storage</div>
+                <div className="text-2xl font-black text-tactical-orange italic">{recStorage}</div>
+                <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-white uppercase tracking-tighter">
+                  <HardDrive className="w-2.5 h-2.5 text-tactical-orange" />
+                  Mod Asset Buffer
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {(modCount > 120 || playerCount > 40) && (
+            <div className="flex items-center gap-3 bg-tactical-orange/10 border border-tactical-orange/20 p-3">
+              <Activity className="w-4 h-4 text-tactical-orange animate-pulse" />
+              <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-relaxed">
+                Expert Analysis: A standard 'Conflict' scenario (40p) requires ~12GB-16GB RAM for stability. For large-scale MILSIM (64p+) with {modCount} mods, 32GB+ is mandated to prevent entity drift on the Enfusion engine.
+              </p>
+            </div>
+          )}
+        </Card>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 overflow-x-auto">
+        <table className="w-full border-collapse bg-zinc-950 border border-white/5 min-w-[900px]">
+          <thead>
+            <tr className="border-b border-white/10 bg-white/[0.02]">
+              <th className="p-6 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Provider</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Monthly Cost</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Pricing Model</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Hardware Node</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">DDoS Security</th>
+              <th className="p-6 text-right text-[10px] font-black text-gray-500 uppercase tracking-widest">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {providers.map((p, i) => (
+              <tr key={i} className={`border-b border-white/5 transition-colors hover:bg-white/[0.02] ${p.isWinner ? 'bg-tactical-orange/[0.04]' : ''}`}>
+                <td className="p-6">
+                  <div className="flex items-center gap-4">
+                    {p.isWinner ? (
+                      <div className="bg-tactical-orange p-1.5 rounded-sm">
+                        <Zap className="w-4 h-4 text-black" />
+                      </div>
+                    ) : (
+                      <div className="bg-white/5 p-1.5 rounded-sm">
+                        <Globe className="w-4 h-4 text-gray-600" />
+                      </div>
+                    )}
+                    <div className="text-white font-black uppercase tracking-widest text-sm">{p.name}</div>
+                  </div>
+                </td>
+                <td className="p-6 text-center">
+                  <div className={`text-xl font-black italic ${p.isWinner ? 'text-tactical-orange' : 'text-white'}`}>
+                    ${calculateTotalPrice(p)}
+                    <span className="text-[10px] not-italic text-gray-500">/mo</span>
+                  </div>
+                  <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Configured for {playerCount}p / {modCount}m</div>
+                </td>
+                <td className="p-6 text-center">
+                  <div className="text-white font-black uppercase tracking-widest text-[9px] leading-tight">
+                    {p.pricePerSlot === 0 ? (
+                      <span className="text-emerald-500">Resource Based (No Slot Tax)</span>
+                    ) : (
+                      `$${p.pricePerSlot.toFixed(2)} Per Slot Fee`
+                    )}
+                  </div>
+                  <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic leading-none mt-1">
+                    Configured for {playerCount} Slots
+                  </div>
+                </td>
+                <td className="p-6 text-center">
+                  <div className="text-white font-black uppercase tracking-widest text-xs">{p.cpu}</div>
+                  <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest leading-none mt-1">NVMe Storage</div>
+                </td>
+                <td className="p-6 text-center">
+                  <div className="flex items-center justify-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
+                    <Shield className={`w-3 h-3 ${p.isWinner ? 'text-tactical-orange' : 'text-gray-500'}`} />
+                    Advanced L7 Filtering
+                  </div>
+                </td>
+                <td className="p-6 text-right">
+                  <a 
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-2 px-5 py-2.5 font-black uppercase tracking-widest text-[10px] transition-all ${
+                      p.isWinner 
+                      ? 'bg-tactical-orange text-black hover:bg-white shadow-[0_0_20px_rgba(249,115,22,0.2)]' 
+                      : 'border border-white/20 text-white hover:border-white'
+                    }`}
+                  >
+                    {p.isWinner ? 'Deploy Now' : 'Visit Host'}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="max-w-4xl mx-auto px-4 pt-10">
+        <Card className="bg-zinc-900 border-tactical-orange/20 overflow-hidden relative shadow-2xl">
+          <div className="absolute top-0 left-0 w-full h-1 bg-tactical-orange" />
+          <CardContent className="p-12 text-center space-y-8">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Arma Reforger Verdict</h2>
+              <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20 italic">For Modern Enfusion Communities</p>
+            </div>
+            <p className="text-gray-400 text-sm font-bold uppercase tracking-widest leading-relaxed max-w-2xl mx-auto">
+              Reforger's dynamic entity system requires fast I/O and stable RAM overhead. While others tax your player count, <span className="text-white">EmpowerServers</span> lets your community grow without financial penalties.
+            </p>
+            <div className="pt-4 flex flex-col items-center gap-4">
+              <a 
+                href="https://empowerservers.com/games/arma-reforger/?aff=294"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto px-16 py-6 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-sm hover:bg-white transition-all shadow-[0_0_40px_rgba(249,115,22,0.3)] transform hover:scale-105"
+              >
+                Launch Your Reforger Server →
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    </div>
+  );
+}

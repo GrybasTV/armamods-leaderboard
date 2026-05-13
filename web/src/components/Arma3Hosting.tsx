@@ -3,29 +3,20 @@ import { SEO } from './ui/SEO';
 import { Card, CardContent } from './ui/Card';
 import { Shield, Zap, Globe, ExternalLink, Database, Activity, Cpu, Users, HardDrive } from 'lucide-react';
 
-interface HostingComparisonProps {
-  game: 'arma3' | 'reforger';
-}
-
-export function HostingComparison({ game }: HostingComparisonProps) {
-  const [modCount, setModCount] = useState(40);
-  const [playerCount, setPlayerCount] = useState(32);
+export function Arma3Hosting() {
+  const [modCount, setModCount] = useState(60);
+  const [playerCount, setPlayerCount] = useState(40);
   
-  const isReforger = game === 'reforger';
-  const gameName = isReforger ? 'Arma Reforger' : 'Arma 3';
-  const maxStableSlots = isReforger ? '64' : '100+';
+  const gameName = 'Arma 3';
+  const maxStableSlots = '100+';
 
-  // Realistic Resource Logic based on 2026 Telemetry
+  // Arma 3 Telemetry: 2GB Base + 0.2GB per Player (Real Virtuality Engine)
   const getRecs = (mods: number, players: number) => {
-    // Base engine usage: Reforger ~3GB, Arma 3 ~2GB
-    // Player scaling: ~0.25GB per player (40p = 10GB)
-    const ramNeeded = (isReforger ? 3 : 2) + (players * 0.25);
-    
-    // Discrete hosting plan buckets
+    const ramNeeded = 2 + (players * 0.2);
     const recRAM = ramNeeded <= 8 ? 8 : (ramNeeded <= 16 ? 16 : (ramNeeded <= 32 ? 32 : 64));
-
-    // Storage depends on mods (Average 0.5GB per mod asset)
-    const storageNeeded = 20 + (mods * 0.5); 
+    
+    // Arma 3 base is larger (~40GB), mods average 0.4GB
+    const storageNeeded = 45 + (mods * 0.4); 
     const recStorage = storageNeeded <= 50 ? '50GB' : (storageNeeded <= 100 ? '100GB' : '200GB+');
 
     return { recRAM, recStorage };
@@ -40,49 +31,43 @@ export function HostingComparison({ game }: HostingComparisonProps) {
       ramPricePer8GB: 5.00,
       baseRAM: 8,
       pricePerSlot: 0,
-      cpu: "Ryzen 9 / i9 High-Clock",
+      cpu: "i9-14900K / Ryzen 7950X",
       ddos: "Advanced L7 Filtering",
       isWinner: true,
-      url: isReforger ? "https://empowerservers.com/games/arma-reforger/?aff=294" : "https://empowerservers.com/games/arma3/?aff=294"
+      url: "https://empowerservers.com/games/arma3/?aff=294"
     },
     {
       name: "GTXGaming",
-      basePrice: isReforger ? 12.00 : 15.00,
+      basePrice: 15.00,
       ramPricePer8GB: 12.00,
       baseRAM: 4,
-      pricePerSlot: isReforger ? 0.35 : 0.45,
-      cpu: "Ryzen 9 Option",
+      pricePerSlot: 0.45,
+      cpu: "Extreme CPU Priority",
       ddos: "Standard Protection",
       isWinner: false,
-      url: isReforger 
-        ? "https://www.gtxgaming.co.uk/server-hosting/arma-reforger-server-hosting/" 
-        : "https://www.gtxgaming.co.uk/server-hosting/arma-3-server-hosting/"
+      url: "https://www.gtxgaming.co.uk/server-hosting/arma-3-server-hosting/"
     },
     {
       name: "PingPerfect",
-      basePrice: isReforger ? 10.00 : 12.00,
+      basePrice: 12.00,
       ramPricePer8GB: 10.00,
       baseRAM: 4,
-      pricePerSlot: isReforger ? 0.30 : 0.40,
-      cpu: "Enterprise Xeon",
+      pricePerSlot: 0.40,
+      cpu: "Enterprise Hardware",
       ddos: "Standard Protection",
       isWinner: false,
-      url: isReforger 
-        ? "https://pingperfect.com/gameservers/arma-reforger-server-hosting.php" 
-        : "https://pingperfect.com/gameservers/arma-3-server-hosting.php"
+      url: "https://pingperfect.com/gameservers/arma-3-server-hosting.php"
     },
     {
       name: "Nitrado",
-      basePrice: isReforger ? 15.00 : 18.00,
+      basePrice: 18.00,
       ramPricePer8GB: 15.00,
       baseRAM: 4,
-      pricePerSlot: isReforger ? 0.50 : 0.60,
+      pricePerSlot: 0.60,
       cpu: "Standard Infrastructure",
       ddos: "Basic Protection",
       isWinner: false,
-      url: isReforger 
-        ? "https://server.nitrado.net/en-GB/offers/arma-reforger" 
-        : "https://server.nitrado.net/en-GB/offers/arma-3"
+      url: "https://server.nitrado.net/en-GB/offers/arma-3"
     }
   ];
 
@@ -97,60 +82,53 @@ export function HostingComparison({ game }: HostingComparisonProps) {
     <div className="space-y-16 animate-in fade-in duration-700 pb-20">
       <SEO 
         title={`Best ${gameName} Server Hosting Comparison 2026`}
-        description={`Expert analysis of ${gameName} hosting providers. We evaluate EmpowerServers, GTXGaming, and PingPerfect based on TPS stability, -maxFPS configuration, and DDoS protection.`}
-        keywords={`best ${gameName.toLowerCase()} hosting, ${gameName.toLowerCase()} server rental, arma crossplay hosting, stable ${gameName.toLowerCase()} mods server`}
+        description={`Objective comparison of ${gameName} hosting. We analyze clock speeds, NVMe I/O, and RAM scaling for high-pop Milsim operations.`}
+        keywords="best arma 3 hosting, arma 3 server rental, milsim server hosting, stable arma 3 mods"
       />
 
-      {/* Header */}
       <section className="text-center space-y-4 pt-12">
         <h1 className="text-4xl sm:text-7xl font-black text-white uppercase tracking-tighter leading-tight px-4">
-          The <span className="text-tactical-orange italic">Tactical Report</span>:<br/>
-          {gameName} Analysis
+          <span className="text-tactical-orange italic">Arma 3</span> Infrastructure
         </h1>
         <p className="text-gray-500 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto text-sm sm:text-base px-4">
-          Interactive capacity planning for {gameName} ({maxStableSlots} Slots).
+          Expert hardware analysis for the Real Virtuality Engine ({maxStableSlots} Slots Capacity).
         </p>
       </section>
 
-      {/* Interactive Infrastructure Calculator */}
       <section className="max-w-4xl mx-auto px-4">
         <Card className="bg-zinc-950 border border-white/10 p-8 space-y-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-tactical-orange/5 blur-3xl" />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              {/* Players Slider -> RAM/CPU Focus */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
                     <Users className="w-3 h-3 text-tactical-orange" />
-                    Target Player Count
+                    Community Size
                   </div>
                   <span className="text-tactical-orange font-black italic">{playerCount} Slots</span>
                 </div>
                 <input 
-                  type="range" min="4" max="128" value={playerCount} 
+                  type="range" min="10" max="128" value={playerCount} 
                   onChange={(e) => setPlayerCount(parseInt(e.target.value))}
                   className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
                 />
-                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest leading-none">Main driver for CPU load & RAM base.</p>
               </div>
 
-              {/* Mods Slider -> Storage Focus */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
                     <Database className="w-3 h-3 text-tactical-orange" />
-                    Modpack Size (Approx)
+                    Modpack Size
                   </div>
                   <span className="text-tactical-orange font-black italic">{modCount} Mods</span>
                 </div>
                 <input 
-                  type="range" min="0" max="250" value={modCount} 
+                  type="range" min="0" max="300" value={modCount} 
                   onChange={(e) => setModCount(parseInt(e.target.value))}
                   className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
                 />
-                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest leading-none">Main driver for NVMe storage & startup time.</p>
               </div>
             </div>
 
@@ -160,39 +138,38 @@ export function HostingComparison({ game }: HostingComparisonProps) {
                 <div className="text-2xl font-black text-tactical-orange italic">{recRAM}GB</div>
                 <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-white uppercase tracking-tighter">
                   <Cpu className="w-2.5 h-2.5 text-tactical-orange" />
-                  {recRAM > 16 ? 'High-Clock i9/R9' : 'Standard Node'}
+                  Clock Speed Priority
                 </div>
               </div>
               <div className="bg-zinc-900 border border-white/5 p-5 rounded-sm text-center space-y-2">
-                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">NVMe Requirement</div>
+                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">NVMe Storage</div>
                 <div className="text-2xl font-black text-tactical-orange italic">{recStorage}</div>
                 <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-white uppercase tracking-tighter">
                   <HardDrive className="w-2.5 h-2.5 text-tactical-orange" />
-                  Gen4 Speed Mandated
+                  Persistence Support
                 </div>
               </div>
             </div>
           </div>
 
-          {(modCount > 120 || playerCount > 40) && (
+          {(modCount > 150 || playerCount > 60) && (
             <div className="flex items-center gap-3 bg-tactical-orange/10 border border-tactical-orange/20 p-3">
               <Activity className="w-4 h-4 text-tactical-orange animate-pulse" />
               <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-relaxed">
-                Expert Analysis: A standard 'Conflict' scenario (40p) requires ~12GB-16GB RAM for stability. For large-scale MILSIM (64p+) with {modCount} mods, 32GB+ is mandated to prevent entity drift and maintaining high server TPS.
+                Expert Analysis: Large-scale Milsim operations (60p+) with heavy modpacks require extreme single-core performance. Ensure your host utilizes i9 or Ryzen 9 nodes to prevent FPS drops during complex script executions.
               </p>
             </div>
           )}
         </Card>
       </section>
 
-      {/* Main Comparison Table */}
       <section className="max-w-7xl mx-auto px-4 overflow-x-auto">
         <table className="w-full border-collapse bg-zinc-950 border border-white/5 min-w-[900px]">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.02]">
               <th className="p-6 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Provider</th>
-              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Estimated Cost ({recRAM}GB)</th>
-              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Slot Pricing</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Monthly Cost</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Pricing Model</th>
               <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Hardware Node</th>
               <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">DDoS Security</th>
               <th className="p-6 text-right text-[10px] font-black text-gray-500 uppercase tracking-widest">Action</th>
@@ -220,12 +197,12 @@ export function HostingComparison({ game }: HostingComparisonProps) {
                     ${calculateTotalPrice(p)}
                     <span className="text-[10px] not-italic text-gray-500">/mo</span>
                   </div>
-                  <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Total Estimated Bill</div>
+                  <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Configured for {playerCount}p / {modCount}m</div>
                 </td>
                 <td className="p-6 text-center">
                   <div className="text-white font-black uppercase tracking-widest text-[9px] leading-tight">
                     {p.pricePerSlot === 0 ? (
-                      <span className="text-emerald-500">Resource Based (No Slot Tax)</span>
+                      <span className="text-emerald-500">Resource Based (Best for Milsim)</span>
                     ) : (
                       `$${p.pricePerSlot.toFixed(2)} Per Slot Fee`
                     )}
@@ -241,7 +218,7 @@ export function HostingComparison({ game }: HostingComparisonProps) {
                 <td className="p-6 text-center">
                   <div className="flex items-center justify-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
                     <Shield className={`w-3 h-3 ${p.isWinner ? 'text-tactical-orange' : 'text-gray-500'}`} />
-                    {p.ddos}
+                    Global DDoS Shield
                   </div>
                 </td>
                 <td className="p-6 text-right">
@@ -265,58 +242,26 @@ export function HostingComparison({ game }: HostingComparisonProps) {
         </table>
       </section>
 
-      {/* Infrastructure Analysis */}
-      <section className="max-w-4xl mx-auto px-4 space-y-6">
-        <h2 className="text-center text-xl font-black text-white uppercase tracking-tighter">Why Hardware Matters More Than Slots</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 bg-zinc-900 border border-white/5 space-y-3">
-            <Cpu className="w-6 h-6 text-tactical-orange" />
-            <h3 className="text-xs font-black text-white uppercase tracking-widest">CPU Clock Speed</h3>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
-              Arma engines are single-core dependent. A 5.0GHz+ CPU will handle 100 players better than a 12-core server with lower clock speeds.
-            </p>
-          </div>
-          <div className="p-6 bg-zinc-900 border border-white/5 space-y-3">
-            <HardDrive className="w-6 h-6 text-tactical-orange" />
-            <h3 className="text-xs font-black text-white uppercase tracking-widest">NVMe Disk I/O</h3>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
-              When using {modCount} mods, disk read speed determines how fast players can join and if assets load without stuttering.
-            </p>
-          </div>
-          <div className="p-6 bg-zinc-900 border border-white/5 space-y-3">
-            <Shield className="w-6 h-6 text-tactical-orange" />
-            <h3 className="text-xs font-black text-white uppercase tracking-widest">DDoS Filtering</h3>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
-              Large communities are targets. L7 filtering is mandatory to keep the server online during active operations.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Final Verdict Card */}
       <section className="max-w-4xl mx-auto px-4 pt-10">
         <Card className="bg-zinc-900 border-tactical-orange/20 overflow-hidden relative shadow-2xl">
           <div className="absolute top-0 left-0 w-full h-1 bg-tactical-orange" />
           <CardContent className="p-12 text-center space-y-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Capacity Analysis Verdict</h2>
-              <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20 italic">For {playerCount} Players & {modCount} Mods</p>
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Arma 3 Expert Verdict</h2>
+              <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20 italic">For High-Performance Milsim</p>
             </div>
             <p className="text-gray-400 text-sm font-bold uppercase tracking-widest leading-relaxed max-w-2xl mx-auto">
-              Running a community of this scale requires elite hardware nodes. While others charge for every player, <span className="text-white">EmpowerServers</span> focuses on the infrastructure, making them <span className="text-white">${(parseFloat(calculateTotalPrice(providers[3])) - parseFloat(calculateTotalPrice(providers[0]))).toFixed(2)} cheaper</span> per month for your specific setup.
+              Arma 3's legacy engine is all about clock speeds. Don't be fooled by high core counts. <span className="text-white">EmpowerServers</span> provides the dedicated frequency needed to keep your FPS stable during intense ops.
             </p>
             <div className="pt-4 flex flex-col items-center gap-4">
               <a 
-                href={isReforger ? "https://empowerservers.com/games/arma-reforger/?aff=294" : "https://empowerservers.com/games/arma3/?aff=294"}
+                href="https://empowerservers.com/games/arma3/?aff=294"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto px-16 py-6 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-sm hover:bg-white transition-all shadow-[0_0_40px_rgba(249,115,22,0.3)] transform hover:scale-105"
               >
-                Launch Your {gameName} Server →
+                Launch Your Arma 3 Server →
               </a>
-              <div className="bg-white/5 border border-white/10 px-4 py-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                Exclusive Deal: Use Code <span className="text-tactical-orange">10OFF</span>
-              </div>
             </div>
           </CardContent>
         </Card>

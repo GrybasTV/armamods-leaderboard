@@ -7,7 +7,8 @@ import { ModDetail } from './components/ModDetail';
 import { TrendingPage } from './components/TrendingPage';
 import { SupportPage } from './components/SupportPage';
 import { HostingLanding } from './components/HostingLanding';
-import { HostingComparison } from './components/HostingComparison';
+import { ReforgerHosting } from './components/ReforgerHosting';
+import { Arma3Hosting } from './components/Arma3Hosting';
 import { Layout } from './components/Layout';
 
 interface Props {
@@ -80,8 +81,8 @@ function App() {
             <Route path="/arma3/mod/:modId" element={<ModDetail game="arma3" />} />
             <Route path="/arma3/trending" element={<TrendingPage game="arma3" />} />
             <Route path="/arma3/hosting" element={<HostingLanding game="arma3" />} />
-            <Route path="/best-arma-reforger-hosting" element={<HostingComparison game="reforger" />} />
-            <Route path="/best-arma-3-hosting" element={<HostingComparison game="arma3" />} />
+            <Route path="/best-arma-reforger-hosting" element={<ReforgerHosting />} />
+            <Route path="/best-arma-3-hosting" element={<Arma3Hosting />} />
           </Routes>
         </Layout>
       </Router>
