@@ -6,6 +6,11 @@
 - **Globalus SEO komponentas**: Sukurtas centralizuotas `SEO` komponentas, užtikrinantis vientisą Meta duomenų struktūrą visoje svetainėje.
 - **index.html bazinis SEO**: Atnaujintas pagrindinis HTML failas su raktiniais žodžiais ir baziniu aprašymu greitesniam indeksavimui.
 
+### 💰 Monetizacijos integracija
+- **Partnerystės programa**: Integruota „Empower Servers“ hostingo partnerystės programa.
+- **Strateginiai baneriai**: Modifikacijų ir serverių detaliuose puslapiuose pridėti stilingi, taktinio stiliaus „Deployment“ skydai, skatinantys vartotojus nuomotis serverius per partnerio nuorodą.
+- **Globali integracija**: Hostingo nuoroda pridėta į svetainės infrastruktūros skiltį poraštėje.
+
 ## [1.4.0] - 2026-05-13
 
 ### 🛡️ Duomenų vientisumo ir istorijos generavimo Overhaul

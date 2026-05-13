@@ -224,7 +224,7 @@ export function Layout({ children }: LayoutProps) {
               <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] leading-loose">
                 DataSource: <span className="text-gray-300">BattleMetrics</span><br/>
                 Compute: <span className="text-gray-300">Edge Workers</span><br/>
-                Storage: <span className="text-gray-300">Distributed D1</span>
+                Hosting: <a href="https://billing.empowerservers.com/aff.php?aff=294" target="_blank" rel="noopener noreferrer" className="text-tactical-orange hover:underline">Empower Servers</a>
               </p>
             </div>
           </div>
