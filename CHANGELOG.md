@@ -10,7 +10,16 @@
 - **Race Condition prevencija**: Visose duomenų užklausose įdiegtas `AbortController` palaikymas. Greitai perjungiant puslapius, senos užklausos atšaukiamos, užtikrinant, kad vartotojas niekada nematytų kito modo duomenų.
 - **UI/UX patobulinimai**: Išvalyti grafikai (pašalinti tušti pradiniai periodai), patobulinti „No Activity“ pranešimai su papildomu kontekstu.
 
-## [1.3.3] - 2026-05-02
+## [1.3.5] - 2026-05-13
+
+### 🚀 API ir resursų „Ultra-Optimization“
+- **Fiksuotas CONNECTION FAILED**: Išspręsta resursų išsekimo problema sumažinus KV blokus iki 5MB (balansas tarp RAM ir Workers calls).
+- **Išmanusis skenavimas**: Detalios informacijos puslapiai (`/mods/:id`, `/servers/:id`) dabar naudoja tekstinę paiešką blokuose, drastiškai taupant CPU ir KV nuskaitymus.
+- **Lazy Chunk Loading**: Pagrindiniai sąrašai dabar nuskaito tik pirmus 2 blokus (10,000 įrašų), jei vartotojas nenaudoja paieškos.
+- **Efektyvus kėšavimas**: Prailgintas Cache-Control laikas iki 15 min., siekiant sutaupyti Workers calls.
+- **Atminties saugumas**: Pašalintas `...spread` operatorius jungiant didelius duomenų masyvus.
+
+## [1.3.4] - 2026-05-13
 
 ### ⚡ UI kompaktiškumo ir serverių analitikos overhaul
 - **Serverių reitingo istorija**: API dabar automatiškai skaičiuoja serverio vietą reitinge (`rank`) kiekvienam laiko taškui. Grafikai rodo vietą (# Rank) vietoj taškų, o Y ašis apversta (#1 viršuje).

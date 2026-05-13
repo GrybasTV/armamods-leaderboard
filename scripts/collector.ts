@@ -86,9 +86,9 @@ class CloudflareKVClient {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Cloudflare KV has a 25MB value limit, but Workers have 128MB RAM and 50ms CPU limits.
-// Using 1MB chunks ensures we stay well within performance and memory boundaries.
-const MAX_CHUNK_BYTES = 1 * 1024 * 1024; 
+// Cloudflare KV has a 25MB value limit, but Workers have 128MB RAM.
+// 5MB is the "Golden Ratio": it saves KV read calls while staying safe from OOM (Out of Memory).
+const MAX_CHUNK_BYTES = 5 * 1024 * 1024; 
 
 // Parse game type from CLI
 function parseGameType(): GameType {
@@ -287,6 +287,10 @@ interface ServerMod {
 
     // Store metadata
     await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
+
+    // Sort servers by players (descending) before sharding
+    // This allows the API to load only the first few chunks for the initial page view
+    serverList.sort((a, b) => (b.players || 0) - (a.players || 0));
 
     // Split servers into size-safe chunks
     const serverChunks = buildChunks(serverList);

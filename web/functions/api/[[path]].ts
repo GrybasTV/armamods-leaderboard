@@ -67,7 +67,7 @@ function getKVKeys(game: GameType) {
  * @description Efficiently reconstructs sharded JSON datasets from Cloudflare KV.
  * Implements performance monitoring for slow I/O operations.
  */
-async function getChunkedData(kv: KVNamespace, baseKey: string): Promise<any[]> {
+async function getChunkedData(kv: KVNamespace, baseKey: string, maxChunks?: number): Promise<any[]> {
   const start = Date.now();
   try {
     const meta = await kv.get(`${baseKey}:meta`, 'json') as any;
@@ -76,9 +76,10 @@ async function getChunkedData(kv: KVNamespace, baseKey: string): Promise<any[]> 
         return [];
     }
 
-    console.log(`[KV] Fetching ${meta.chunks} chunks for ${baseKey} (total expected items: ${meta.total || 'unknown'})`);
+    const chunksToFetch = maxChunks ? Math.min(maxChunks, meta.chunks) : meta.chunks;
+    console.log(`[KV] Fetching ${chunksToFetch} of ${meta.chunks} chunks for ${baseKey}`);
     const chunks: any[] = [];
-    for (let i = 0; i < meta.chunks; i++) {
+    for (let i = 0; i < chunksToFetch; i++) {
       const chunkStart = Date.now();
       const chunk = await kv.get(`${baseKey}:${i}`, 'json') as any[];
       if (chunk && Array.isArray(chunk)) {
@@ -118,7 +119,7 @@ app.get('/stats', async (c) => {
   const data = stats || { totalMods: 0, totalPlayers: 0, totalServers: 0, game };
   
   const response = c.json(data);
-  response.headers.set('Cache-Control', 'public, max-age=180'); // 3 minutes cache
+  response.headers.set('Cache-Control', 'public, max-age=600'); // 10 minutes cache
   c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
   return response;
 });
@@ -135,7 +136,9 @@ app.get('/mods', async (c) => {
   const search = c.req.query('search') || '';
   const sortBy = c.req.query('sortBy') || 'overall';
 
-  const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
+  // OPTIMIZATION: If no search and default sort, only fetch the first few chunks
+  const isDefaultView = !search && (sortBy === 'overall' || !sortBy);
+  const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS, isDefaultView ? 2 : undefined);
   let filtered = [...mods];
 
   if (search) {
@@ -156,8 +159,8 @@ app.get('/mods', async (c) => {
     meta: { total: filtered.length, limit, offset } 
   });
 
-  // Short lived cache for mods list to ensure fresh data
-  response.headers.set('Cache-Control', 'public, max-age=300'); // 5 minutes cache
+  // Increased cache time to save Worker calls
+  response.headers.set('Cache-Control', 'public, max-age=900'); // 15 minutes cache
   c.executionCtx.waitUntil(cache.put(c.req.raw, response.clone()));
   return response;
 });
@@ -175,9 +178,27 @@ app.get('/mods/:modId', async (c) => {
   const modId = c.req.param('modId');
   const keys = getKVKeys(game);
 
-  console.log(`[MODS_DETAIL] Starting fetch for ${modId}...`);
-  const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
-  const mod = mods.find(m => m.id === modId);
+  console.log(`[MODS_DETAIL] Starting optimized fetch for ${modId}...`);
+  let mod = null;
+  let totalModsCount = 0;
+
+  try {
+    const meta = await c.env.TRENDING_KV.get(`${keys.MODS}:meta`, 'json') as any;
+    if (meta && meta.chunks) {
+        totalModsCount = meta.total;
+        for (let i = 0; i < meta.chunks; i++) {
+            const chunkText = await c.env.TRENDING_KV.get(`${keys.MODS}:${i}`, 'text');
+            if (chunkText && chunkText.includes(`"id":"${modId}"`)) {
+                const chunk = JSON.parse(chunkText);
+                mod = chunk.find((m: any) => m.id === modId);
+                if (mod) break;
+            }
+        }
+    }
+  } catch (err) {
+      console.error('[MODS_DETAIL] KV mod lookup error:', err);
+  }
+
   if (!mod) return c.json({ error: 'Not found' }, 404);
 
   /**
@@ -214,7 +235,7 @@ app.get('/mods/:modId', async (c) => {
 
   const finished = Date.now() - start;
   console.log(`[MODS_DETAIL] Response ready for ${modId} in ${finished}ms`);
-  const finalResponse = c.json({ data: { ...mod, stats: { ...mod, totalMods: mods.length }, servers: modServers } });
+  const finalResponse = c.json({ data: { ...mod, stats: { ...mod, totalMods: totalModsCount }, servers: modServers } });
   
   // Cache the response for 5 minutes
   finalResponse.headers.set('Cache-Control', 'public, max-age=300');
@@ -396,7 +417,8 @@ app.get('/servers', async (c) => {
   const search = c.req.query('search') || '';
 
   console.log(`[SERVERS] Fetching data for ${game}...`);
-  const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS);
+  // OPTIMIZATION: If no search, only fetch the first 2 chunks (enough for several pages)
+  const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS, !search ? 2 : undefined);
   
   if (!servers || servers.length === 0) {
     console.log(`[SERVERS] No data found in KV for ${game}`);
@@ -442,9 +464,24 @@ app.get('/servers/:serverId', async (c) => {
   const game = getGameFromQuery(c);
   const keys = getKVKeys(game);
 
-  console.log(`[SERVERS_DETAIL] Fetching server ${serverId}...`);
-  const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS);
-  const server = servers.find(s => s.id === serverId);
+  console.log(`[SERVERS_DETAIL] Starting optimized fetch for ${serverId}...`);
+  let server = null;
+
+  try {
+    const meta = await c.env.TRENDING_KV.get(`${keys.SERVERS}:meta`, 'json') as any;
+    if (meta && meta.chunks) {
+        for (let i = 0; i < meta.chunks; i++) {
+            const chunkText = await c.env.TRENDING_KV.get(`${keys.SERVERS}:${i}`, 'text');
+            if (chunkText && chunkText.includes(`"id":"${serverId}"`)) {
+                const chunk = JSON.parse(chunkText);
+                server = chunk.find((s: any) => s.id === serverId);
+                if (server) break;
+            }
+        }
+    }
+  } catch (err) {
+      console.error('[SERVERS_DETAIL] KV server lookup error:', err);
+  }
 
   if (!server) return c.json({ error: 'Server not found' }, 404);
 
