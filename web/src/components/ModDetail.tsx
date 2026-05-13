@@ -56,7 +56,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
         if (firstActiveIndex !== -1) {
           filteredHistory = filteredHistory.slice(firstActiveIndex);
         } else {
-          // If no activity at all in the whole period, keep it empty to show "No recent activity"
+          // If no activity at all, keep it empty to show "No recent activity"
           filteredHistory = [];
         }
       }

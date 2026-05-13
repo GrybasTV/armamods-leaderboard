@@ -303,24 +303,21 @@ function smoothHistoryData(data: any[]) {
       }
       
       if (prev && next) {
-        // Linear interpolation
+        // Linear interpolation only when we have a gap between two valid points
         const step = (i - prev.idx) / (next.idx - prev.idx);
         smoothed[i].totalPlayers = Math.round(prev.valP + (next.valP - prev.valP) * step);
         smoothed[i].serverCount = Math.round(prev.valS + (next.valS - prev.valS) * step);
-        // Also smooth rank if missing
+        
+        // Also smooth rank if missing (using linear logic)
         if (smoothed[i].overallRank >= 9999) {
-          smoothed[i].overallRank = Math.round(prev.valS + (next.valS - prev.valS) * step); // Use servers as proxy for rank logic
+          const prevRank = smoothed[prev.idx].overallRank || 9999;
+          const nextRank = smoothed[next.idx].overallRank || 9999;
+          smoothed[i].overallRank = Math.round(prevRank + (nextRank - prevRank) * step);
         }
-        smoothed[i].isInterpolated = true; // Mark for debugging
-      } else if (prev) {
-        // Fallback to previous
-        smoothed[i].totalPlayers = prev.valP;
-        smoothed[i].serverCount = prev.valS;
-      } else if (next) {
-        // Fallback to next
-        smoothed[i].totalPlayers = next.valP;
-        smoothed[i].serverCount = next.valS;
+        smoothed[i].isInterpolated = true;
       }
+      // If no prev exists, it's a leading zero - LEAVE IT AS ZERO
+      // If no next exists, it's a trailing zero - LEAVE IT AS ZERO
     }
   }
   return smoothed;

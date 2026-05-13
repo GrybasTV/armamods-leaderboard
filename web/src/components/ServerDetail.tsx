@@ -50,13 +50,11 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
 
       let filteredHistory = isStale ? [] : rawHistory;
 
-      // Filter leading empty data for servers: start only when points > 0
+      // Filter leading empty data for servers
       if (filteredHistory.length > 0) {
-        const firstActiveIndex = filteredHistory.findIndex(h => (h.points || 0) > 0);
+        const firstActiveIndex = filteredHistory.findIndex(h => (h.points || 0) > 0 || h.rank !== null);
         if (firstActiveIndex !== -1) {
           filteredHistory = filteredHistory.slice(firstActiveIndex);
-        } else {
-          filteredHistory = [];
         }
       }
 
