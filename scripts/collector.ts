@@ -86,8 +86,9 @@ class CloudflareKVClient {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Cloudflare KV has a 25MB value limit; use 24MB to leave buffer for JSON overhead
-const MAX_CHUNK_BYTES = 24 * 1024 * 1024;
+// Cloudflare KV has a 25MB value limit, but Workers have 128MB RAM and 50ms CPU limits.
+// Using 1MB chunks ensures we stay well within performance and memory boundaries.
+const MAX_CHUNK_BYTES = 1 * 1024 * 1024; 
 
 // Parse game type from CLI
 function parseGameType(): GameType {
@@ -339,7 +340,11 @@ interface ServerMod {
       if (meta && meta.chunks) {
         for (let i = 0; i < meta.chunks; i++) {
           const chunk = await kv.get(`${period.key}:${i}`, 'json');
-          if (chunk) history.push(...chunk);
+          if (chunk && Array.isArray(chunk)) {
+            for (const item of chunk) {
+              history.push(item);
+            }
+          }
         }
       } else {
         history = await kv.get(period.key, 'json') || [];
@@ -434,8 +439,12 @@ async function getChunkedData(kv: CloudflareKVClient, baseKey: string): Promise<
 
   const chunks = [];
   for (let i = 0; i < meta.chunks; i++) {
-    const chunk = await kv.get(`${baseKey}:${i}`, 'json');
-    if (chunk) chunks.push(...chunk);
+    const chunk = await kv.get(`${baseKey}:${i}`, 'json') as any[];
+    if (chunk && Array.isArray(chunk)) {
+      for (const item of chunk) {
+        chunks.push(item);
+      }
+    }
   }
   return chunks;
 }

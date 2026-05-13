@@ -16,6 +16,7 @@ A high-performance mod tracking and ranking platform for **Arma Reforger** and *
 - **Intelligent Ranking Algorithm**: Developed a hybrid scoring system that weights player counts, server adoption, and historical trends to provide a more accurate popularity index than simple "likes".
 - **Unified Multi-Game Architecture**: Support for both **Arma Reforger** and **Arma 3** within a single, context-aware dashboard, featuring a tactical game switcher for seamless cross-platform intelligence.
 - **Production-Ready Frontend**: A modern, SEO-optimized **React 19** dashboard featuring a "tactical-industrial" aesthetic, custom design system, and in-memory caching for near-instant user experience.
+- **Data Integrity & Consistency Layer**: Implemented a robust data sanitization engine that handles history de-duplication, rank anomaly detection, and linear interpolation for temporal gaps, ensuring high-fidelity analytics.
 
 ---
 

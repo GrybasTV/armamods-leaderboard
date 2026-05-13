@@ -77,14 +77,17 @@ async function getChunkedData(kv: KVNamespace, baseKey: string): Promise<any[]> 
     }
 
     console.log(`[KV] Fetching ${meta.chunks} chunks for ${baseKey} (total expected items: ${meta.total || 'unknown'})`);
-    const chunks = [];
+    const chunks: any[] = [];
     for (let i = 0; i < meta.chunks; i++) {
       const chunkStart = Date.now();
       const chunk = await kv.get(`${baseKey}:${i}`, 'json') as any[];
-      if (chunk) {
-        chunks.push(...chunk);
+      if (chunk && Array.isArray(chunk)) {
+        // Use loop instead of spread to save memory/stack
+        for (const item of chunk) {
+          chunks.push(item);
+        }
         const chunkTime = Date.now() - chunkStart;
-        if (chunkTime > 10) { // Log slow chunks
+        if (chunkTime > 20) { 
             console.log(`  [KV] Slow chunk ${i} for ${baseKey} took ${chunkTime}ms`);
         }
       }
@@ -394,6 +397,12 @@ app.get('/servers', async (c) => {
 
   console.log(`[SERVERS] Fetching data for ${game}...`);
   const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS);
+  
+  if (!servers || servers.length === 0) {
+    console.log(`[SERVERS] No data found in KV for ${game}`);
+    return c.json({ data: [], meta: { total: 0, limit, offset } });
+  }
+
   let filtered = [...servers];
 
   if (search) {
@@ -401,10 +410,15 @@ app.get('/servers', async (c) => {
     filtered = filtered.filter(s => s.name?.toLowerCase().includes(low));
   }
 
-  filtered.sort((a, b) => (b.players || 0) - (a.players || 0));
+  try {
+    filtered.sort((a, b) => (b.players || 0) - (a.players || 0));
+  } catch (sortErr) {
+    console.error(`[SERVERS] Sort error:`, sortErr);
+  }
 
-  const finalResponse = c.json({ 
-    data: filtered.slice(offset, offset + limit), 
+  const result = filtered.slice(offset, offset + limit);
+  const response = c.json({ 
+    data: result, 
     meta: { total: filtered.length, limit, offset } 
   });
 
