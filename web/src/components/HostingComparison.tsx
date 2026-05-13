@@ -7,6 +7,7 @@ export function HostingComparison() {
     {
       name: "Our Official Partner",
       price: "$9.99",
+      price100: "$9.99",
       slots: "Unlimited",
       ram: "8GB Baseline",
       cpu: "Ryzen / Intel i9",
@@ -18,35 +19,38 @@ export function HostingComparison() {
     {
       name: "Nitrado",
       price: "~$45.00",
+      price100: "~$95.00",
       slots: "64 (Limited)",
       ram: "4GB Baseline",
       cpu: "Shared Xeon",
       locations: "Global",
       bestFor: "Casual Console Play",
       isWinner: false,
-      affLink: "#" // USER will provide later
+      affLink: "#"
     },
     {
       name: "GTXGaming",
       price: "~$38.00",
+      price100: "~$82.00",
       slots: "64 (Limited)",
       ram: "5GB Baseline",
       cpu: "i9 / Ryzen",
       locations: "Global",
       bestFor: "Experienced Owners",
       isWinner: false,
-      affLink: "#" // USER will provide later
+      affLink: "#"
     },
     {
       name: "PingPerfect",
       price: "~$35.00",
+      price100: "~$78.00",
       slots: "64 (Limited)",
       ram: "6GB Baseline",
       cpu: "Standard Xeon",
       locations: "Global",
       bestFor: "Trial Users",
       isWinner: false,
-      affLink: "#" // USER will provide later
+      affLink: "#"
     }
   ];
 
@@ -67,6 +71,31 @@ export function HostingComparison() {
         <p className="text-gray-500 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto text-sm sm:text-base px-4">
           Independent technical comparison based on hardware specs, per-slot pricing, and network stability.
         </p>
+      </section>
+
+      {/* 100-Slot Reality Check Section */}
+      <section className="max-w-4xl mx-auto px-4 space-y-8">
+        <div className="bg-red-500/10 border border-red-500/20 p-8 text-center space-y-4">
+          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">The 100-Slot Reality Check</h2>
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest leading-relaxed">
+            Most hosts charge per player slot. As your community grows, your bill explodes. Here is what you would pay for a 100-slot Arma server:
+          </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-6">
+            {providers.map((p, i) => (
+              <div key={i} className={`p-4 border ${p.isWinner ? 'border-tactical-orange bg-tactical-orange/5' : 'border-white/5 bg-white/5'}`}>
+                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">{p.name}</div>
+                <div className={`text-2xl font-black italic ${p.isWinner ? 'text-tactical-orange' : 'text-gray-400'}`}>{p.price100}</div>
+                <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">100 Slots / Mo</div>
+              </div>
+            ))}
+          </div>
+          <div className="pt-4">
+            <p className="text-tactical-orange text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">
+              You save over $70 per month with our top pick
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* Main Comparison Table */}
