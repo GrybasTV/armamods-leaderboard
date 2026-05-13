@@ -36,11 +36,7 @@ export function ReforgerHosting() {
       name: "EmpowerServers",
       basePrice: 9.99,
       ramTiers: {
-        8: 0,
-        10: 2.50,
-        12: 6.00,
-        16: 10.50,
-        32: 30.00
+        8: 0, 10: 2.50, 12: 6.00, 16: 10.50, 32: 30.00
       },
       baseRAM: 8,
       pricePerSlot: 0,
@@ -88,14 +84,19 @@ export function ReforgerHosting() {
     },
     {
       name: "Nitrado",
-      basePrice: 15.00,
-      ramPricePer8GB: 15.00,
-      baseRAM: 4,
-      pricePerSlot: 0.50,
-      cpu: "Standard Infrastructure",
-      ddos: "Basic Protection",
+      basePrice: 0,
+      slotTiers: [
+        { s: 10, p: 14.70 },
+        { s: 20, p: 22.40 },
+        { s: 32, p: 36.00 },
+        { s: 64, p: 62.00 },
+        { s: 100, p: 85.00 }
+      ],
+      cpu: "Shared / Obscured Specs",
+      ddos: "Basic / Shared",
       isWinner: false,
-      url: "https://server.nitrado.net/en-GB/offers/arma-reforger"
+      url: "https://server.nitrado.net/en-GB/offers/arma-reforger",
+      warning: "Hardware limits hidden; prone to OOM crashes with heavy modpacks."
     }
   ];
 
@@ -103,42 +104,40 @@ export function ReforgerHosting() {
     let total = 0;
     let hiddenFees = 0;
 
-    if (p.name === "GTXGaming" || p.name === "PingPerfect") {
-      total = p.basePrice || 0;
-      const tier = p.slotTiers.find((t: any) => t.s >= playerCount) || p.slotTiers[p.slotTiers.length - 1];
-      total += tier.p;
-      
-      const ramKeys = Object.keys(p.ramTiers).map(Number).sort((a, b) => a - b);
-      const matchedRamKey = ramKeys.find(k => k >= recRAM) || ramKeys[ramKeys.length - 1];
-      total += p.ramTiers[matchedRamKey] || 0;
-
-      // Professional performance parity check
-      if (playerCount > 40 || modCount > 100) {
-        if (p.name === "GTXGaming") {
-          hiddenFees += 6.32 + 6.32; // CPU Priority + Extreme NVMe
-        } else {
-          hiddenFees += 20.27 + 6.76; // Extreme Hardware + 60 FPS
-        }
-      }
-      
-      total += hiddenFees;
-      return { total: total.toFixed(2), hiddenFees: hiddenFees.toFixed(2) };
-    }
-
     if (p.name === "EmpowerServers") {
       const ramCost = p.ramTiers[recRAM] || 0;
       total = p.basePrice + ramCost;
-      return { total: total.toFixed(2), hiddenFees: "0.00" };
+      return { total: total.toFixed(2), hiddenFees: "0.00", warning: null };
     }
 
-    // Linear estimation for others (Nitrado)
-    const slotCost = playerCount * (p.pricePerSlot || 0);
-    const extraRAMNeeded = Math.max(0, recRAM - p.baseRAM);
-    const ramUnits = Math.ceil(extraRAMNeeded / 8);
-    const ramCost = ramUnits * p.ramPricePer8GB;
+    if (p.name === "Nitrado") {
+      const tier = p.slotTiers.find((t: any) => t.s >= playerCount) || p.slotTiers[p.slotTiers.length - 1];
+      total = tier.p;
+      // Nitrado doesn't offer RAM upgrades, it just crashes if you go over.
+      const isOOMRisk = recRAM > 8 && playerCount <= 20; 
+      return { 
+        total: total.toFixed(2), 
+        hiddenFees: "0.00", 
+        warning: isOOMRisk ? "High OOM Crash Risk (Insufficient RAM for Mods)" : null 
+      };
+    }
+
+    // GTX and PingPerfect
+    total = p.basePrice || 0;
+    const tier = p.slotTiers.find((t: any) => t.s >= playerCount) || p.slotTiers[p.slotTiers.length - 1];
+    total += tier.p;
     
-    total = p.basePrice + slotCost + ramCost;
-    return { total: total.toFixed(2), hiddenFees: "0.00" };
+    const ramKeys = Object.keys(p.ramTiers).map(Number).sort((a, b) => a - b);
+    const matchedRamKey = ramKeys.find(k => k >= recRAM) || ramKeys[ramKeys.length - 1];
+    total += p.ramTiers[matchedRamKey] || 0;
+
+    if (playerCount > 40 || modCount > 100) {
+      if (p.name === "GTXGaming") hiddenFees += 6.32 + 6.32;
+      else if (p.name === "PingPerfect") hiddenFees += 20.27 + 6.76;
+    }
+    
+    total += hiddenFees;
+    return { total: total.toFixed(2), hiddenFees: hiddenFees.toFixed(2), warning: null };
   };
 
   return (
@@ -240,7 +239,7 @@ export function ReforgerHosting() {
           </thead>
           <tbody>
             {providers.map((p, i) => {
-              const { total, hiddenFees } = calculateTotalPrice(p);
+              const { total, hiddenFees, warning } = calculateTotalPrice(p);
               return (
                 <tr key={i} className={`border-b border-white/5 transition-colors hover:bg-white/[0.02] ${p.isWinner ? 'bg-tactical-orange/[0.04]' : ''}`}>
                   <td className="p-6">
@@ -268,13 +267,19 @@ export function ReforgerHosting() {
                         Includes ${hiddenFees} in Mandatory Upsells
                       </div>
                     )}
+                    {warning && (
+                      <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-red-500 uppercase tracking-widest mt-1 animate-pulse">
+                        <AlertCircle className="w-2.5 h-2.5" />
+                        {warning}
+                      </div>
+                    )}
                   </td>
                   <td className="p-6 text-center">
                     <div className="text-white font-black uppercase tracking-widest text-[9px] leading-tight">
-                      {p.pricePerSlot === 0 ? (
+                      {p.name === "EmpowerServers" ? (
                         <span className="text-emerald-500">Resource Based (No Slot Tax)</span>
                       ) : (
-                        `Tiered Slot Fee + RAM`
+                        `Slot-Locked Pricing`
                       )}
                     </div>
                     <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic leading-none mt-1">
@@ -288,7 +293,7 @@ export function ReforgerHosting() {
                   <td className="p-6 text-center">
                     <div className="flex items-center justify-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
                       <Shield className={`w-3 h-3 ${p.isWinner ? 'text-tactical-orange' : 'text-gray-500'}`} />
-                      Advanced L7 Filtering
+                      {p.ddos}
                     </div>
                   </td>
                   <td className="p-6 text-right">
@@ -322,7 +327,7 @@ export function ReforgerHosting() {
               <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20 italic">For Modern Enfusion Communities</p>
             </div>
             <p className="text-gray-400 text-sm font-bold uppercase tracking-widest leading-relaxed max-w-2xl mx-auto">
-              Reforger's dynamic entity system requires fast I/O and stable RAM overhead. While others tax your player count and charge extra for "Extreme Hardware" or "Server FPS", <span className="text-white">EmpowerServers</span> provides elite infrastructure as standard.
+              Reforger's dynamic entity system requires fast I/O and stable RAM overhead. While others tax your player count and hide their hardware limits, <span className="text-white">EmpowerServers</span> provides elite infrastructure and transparent resource allocation as standard.
             </p>
             <div className="pt-4 flex flex-col items-center gap-4">
               <a 
