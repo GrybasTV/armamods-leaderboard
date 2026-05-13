@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SEO } from './ui/SEO';
 import { Card, CardContent } from './ui/Card';
-import { Shield, Zap, Globe, Check, ExternalLink, Database, Activity, Cpu } from 'lucide-react';
+import { Shield, Zap, Globe, Check, ExternalLink, Database, Activity, Cpu, Users } from 'lucide-react';
 
 interface HostingComparisonProps {
   game: 'arma3' | 'reforger';
@@ -9,20 +9,26 @@ interface HostingComparisonProps {
 
 export function HostingComparison({ game }: HostingComparisonProps) {
   const [modCount, setModCount] = useState(40);
+  const [playerCount, setPlayerCount] = useState(32);
   
   const isReforger = game === 'reforger';
   const gameName = isReforger ? 'Arma Reforger' : 'Arma 3';
   const maxStableSlots = isReforger ? '64' : '100+';
 
-  // RAM logic based on mods
-  const getRecommendedRAM = (mods: number) => {
-    if (mods < 30) return 8;
-    if (mods < 80) return 16;
-    if (mods < 140) return 32;
+  // RAM logic based on players AND mods
+  const getRecommendedRAM = (mods: number, players: number) => {
+    const baseOverhead = isReforger ? 6 : 4;
+    const playerImpact = Math.ceil(players / 12); // ~1GB per 12 players
+    const modImpact = Math.ceil(mods / 15);     // ~1GB per 15 mods
+    const totalNeeded = baseOverhead + playerImpact + modImpact;
+    
+    if (totalNeeded <= 8) return 8;
+    if (totalNeeded <= 16) return 16;
+    if (totalNeeded <= 32) return 32;
     return 64;
   };
 
-  const recRAM = getRecommendedRAM(modCount);
+  const recRAM = getRecommendedRAM(modCount, playerCount);
 
   const providers = [
     {
@@ -30,7 +36,7 @@ export function HostingComparison({ game }: HostingComparisonProps) {
       basePrice: 9.99,
       ramPricePer8GB: 5.00,
       baseRAM: 8,
-      slots: "Unlimited",
+      pricePerSlot: 0,
       cpu: "Ryzen 9 / i9 High-Clock",
       ddos: "Advanced L7 Filtering",
       isWinner: true,
@@ -38,10 +44,10 @@ export function HostingComparison({ game }: HostingComparisonProps) {
     },
     {
       name: "GTXGaming",
-      basePrice: isReforger ? 26.00 : 30.00,
+      basePrice: isReforger ? 12.00 : 15.00, // Starting price
       ramPricePer8GB: 12.00,
       baseRAM: 4,
-      slots: isReforger ? "64 Slots" : "100 Slots",
+      pricePerSlot: isReforger ? 0.35 : 0.45,
       cpu: "Ryzen 9 Option",
       ddos: "Standard Protection",
       isWinner: false,
@@ -51,10 +57,10 @@ export function HostingComparison({ game }: HostingComparisonProps) {
     },
     {
       name: "PingPerfect",
-      basePrice: isReforger ? 22.00 : 25.00,
+      basePrice: isReforger ? 10.00 : 12.00,
       ramPricePer8GB: 10.00,
       baseRAM: 4,
-      slots: isReforger ? "64 Slots" : "100 Slots",
+      pricePerSlot: isReforger ? 0.30 : 0.40,
       cpu: "Enterprise Xeon",
       ddos: "Standard Protection",
       isWinner: false,
@@ -64,10 +70,10 @@ export function HostingComparison({ game }: HostingComparisonProps) {
     },
     {
       name: "Nitrado",
-      basePrice: isReforger ? 34.00 : 38.00,
+      basePrice: isReforger ? 15.00 : 18.00,
       ramPricePer8GB: 15.00,
       baseRAM: 4,
-      slots: isReforger ? "64 Slots" : "100 Slots",
+      pricePerSlot: isReforger ? 0.50 : 0.60,
       cpu: "Standard Infrastructure",
       ddos: "Basic Protection",
       isWinner: false,
@@ -78,9 +84,10 @@ export function HostingComparison({ game }: HostingComparisonProps) {
   ];
 
   const calculateTotalPrice = (p: any) => {
+    const slotCost = playerCount * p.pricePerSlot;
     const extraRAMNeeded = Math.max(0, recRAM - p.baseRAM);
     const ramUnits = Math.ceil(extraRAMNeeded / 8);
-    return (p.basePrice + (ramUnits * p.ramPricePer8GB)).toFixed(2);
+    return (p.basePrice + slotCost + (ramUnits * p.ramPricePer8GB)).toFixed(2);
   };
 
   return (
@@ -98,55 +105,74 @@ export function HostingComparison({ game }: HostingComparisonProps) {
           {gameName} Analysis
         </h1>
         <p className="text-gray-500 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto text-sm sm:text-base px-4">
-          Interactive performance and real-world cost analysis for modded {gameName} ({maxStableSlots} Slots).
+          Interactive capacity planning for {gameName} ({maxStableSlots} Slots).
         </p>
       </section>
 
-      {/* Interactive Mod Calculator */}
+      {/* Interactive Dual Calculator */}
       <section className="max-w-4xl mx-auto px-4">
-        <Card className="bg-zinc-950 border border-white/10 p-8 space-y-8 relative overflow-hidden">
+        <Card className="bg-zinc-950 border border-white/10 p-8 space-y-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-tactical-orange/5 blur-3xl" />
           
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="space-y-2 text-center md:text-left">
-              <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
-                <Database className="w-5 h-5 text-tactical-orange" />
-                Mod Load Calculator
-              </h2>
-              <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
-                Calculate real costs based on your community's mod requirements.
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-6">
+              {/* Players Slider */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
+                    <Users className="w-3 h-3 text-tactical-orange" />
+                    Max Players
+                  </div>
+                  <span className="text-tactical-orange font-black italic">{playerCount} Slots</span>
+                </div>
+                <input 
+                  type="range" min="4" max="128" value={playerCount} 
+                  onChange={(e) => setPlayerCount(parseInt(e.target.value))}
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
+                />
+              </div>
+
+              {/* Mods Slider */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
+                    <Database className="w-3 h-3 text-tactical-orange" />
+                    Mod Count
+                  </div>
+                  <span className="text-tactical-orange font-black italic">{modCount} Mods</span>
+                </div>
+                <input 
+                  type="range" min="0" max="200" value={modCount} 
+                  onChange={(e) => setModCount(parseInt(e.target.value))}
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
+                />
+              </div>
             </div>
-            
-            <div className="bg-zinc-900 border border-white/5 px-6 py-4 rounded-sm text-center min-w-[200px]">
-              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Recommended RAM</div>
-              <div className="text-3xl font-black text-tactical-orange italic">{recRAM}GB</div>
+
+            <div className="flex flex-col items-center justify-center bg-zinc-900 border border-white/5 p-6 rounded-sm space-y-4">
+              <div className="text-center">
+                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Infrastructure Recommendation</div>
+                <div className="text-4xl font-black text-tactical-orange italic">{recRAM}GB RAM</div>
+              </div>
+              <div className="flex gap-4">
+                <div className={`px-3 py-1 text-[8px] font-black uppercase tracking-widest border ${recRAM > 16 ? 'border-red-500 text-red-500' : 'border-emerald-500 text-emerald-500'}`}>
+                  {recRAM > 16 ? 'Extreme CPU Required' : 'Standard Node OK'}
+                </div>
+                <div className="px-3 py-1 text-[8px] font-black uppercase tracking-widest border border-white/20 text-white">
+                  NVMe Gen4 Required
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex justify-between text-[10px] font-black text-white uppercase tracking-widest">
-              <span>Lightweight (Vanilla)</span>
-              <span className="text-tactical-orange">{modCount} Active Mods</span>
-              <span>Extreme (150+ Mods)</span>
+          {(modCount > 100 || playerCount > 64) && (
+            <div className="flex items-center gap-3 bg-tactical-orange/10 border border-tactical-orange/20 p-3">
+              <Activity className="w-4 h-4 text-tactical-orange animate-pulse" />
+              <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-relaxed">
+                Critical Load Warning: At {playerCount} players and {modCount} mods, server TPS (Ticks Per Second) will drop significantly on shared hardware. Use High-Frequency CPU nodes only.
+              </p>
             </div>
-            <input 
-              type="range" 
-              min="0" 
-              max="200" 
-              value={modCount} 
-              onChange={(e) => setModCount(parseInt(e.target.value))}
-              className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
-            />
-            {modCount > 100 && (
-              <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 p-3">
-                <Activity className="w-4 h-4 text-red-500 animate-pulse" />
-                <p className="text-[9px] text-red-400 font-black uppercase tracking-widest">
-                  High Mod Alert: Requires High-Clock CPU and 32GB+ RAM to avoid engine desync.
-                </p>
-              </div>
-            )}
-          </div>
+          )}
         </Card>
       </section>
 
@@ -156,10 +182,10 @@ export function HostingComparison({ game }: HostingComparisonProps) {
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.02]">
               <th className="p-6 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Provider</th>
-              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Estimated Cost ({recRAM}GB)</th>
-              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Base RAM</th>
-              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">DDoS Security</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Monthly Cost</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Pricing Model</th>
               <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Hardware Node</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">DDoS Security</th>
               <th className="p-6 text-right text-[10px] font-black text-gray-500 uppercase tracking-widest">Action</th>
             </tr>
           </thead>
@@ -185,21 +211,29 @@ export function HostingComparison({ game }: HostingComparisonProps) {
                     ${calculateTotalPrice(p)}
                     <span className="text-[10px] not-italic text-gray-500">/mo</span>
                   </div>
-                  <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Total Estimated Bill</div>
+                  <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Configured for {playerCount}p / {modCount}m</div>
                 </td>
                 <td className="p-6 text-center">
-                  <div className="text-white font-black uppercase tracking-widest text-xs">{p.baseRAM}GB Included</div>
-                  <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic leading-none mt-1">Upgrade: ${p.ramPricePer8GB}/8GB</div>
+                  <div className="text-white font-black uppercase tracking-widest text-[9px] leading-tight">
+                    {p.pricePerSlot === 0 ? (
+                      <span className="text-emerald-500">Flat Rate / Resource Based</span>
+                    ) : (
+                      `$${p.pricePerSlot.toFixed(2)} Per Player Slot`
+                    )}
+                  </div>
+                  <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic leading-none mt-1">
+                    +{p.ramPricePer8GB}$ per 8GB RAM
+                  </div>
+                </td>
+                <td className="p-6 text-center">
+                  <div className="text-white font-black uppercase tracking-widest text-xs">{p.cpu}</div>
+                  <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest leading-none mt-1">NVMe Storage</div>
                 </td>
                 <td className="p-6 text-center">
                   <div className="flex items-center justify-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
                     <Shield className={`w-3 h-3 ${p.isWinner ? 'text-tactical-orange' : 'text-gray-500'}`} />
                     {p.ddos}
                   </div>
-                </td>
-                <td className="p-6 text-center">
-                  <div className="text-white font-black uppercase tracking-widest text-xs">{p.cpu}</div>
-                  <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest leading-none mt-1">NVMe Storage</div>
                 </td>
                 <td className="p-6 text-right">
                   <a 
@@ -224,13 +258,13 @@ export function HostingComparison({ game }: HostingComparisonProps) {
 
       {/* Hidden Costs Breakdown */}
       <section className="max-w-4xl mx-auto px-4 space-y-6">
-        <h2 className="text-center text-xl font-black text-white uppercase tracking-tighter">Where do the costs come from?</h2>
+        <h2 className="text-center text-xl font-black text-white uppercase tracking-tighter">The Industry "Slot Tax" Explained</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[
-            { label: 'Player Slots', impact: 'High', icon: <Check className="w-3 h-3 text-tactical-orange" />, desc: 'Competitors charge per player. Empower offers Unlimited, but we recommend capping Reforger at 64-100 for engine stability.' },
-            { label: 'RAM Upgrades', impact: 'Moderate', icon: <Cpu className="w-3 h-3 text-tactical-orange" />, desc: 'Essential for modding. Most hosts hide fees in extra RAM.' },
-            { label: 'CPU Priority', icon: <Zap className="w-3 h-3 text-tactical-orange" />, impact: 'High', desc: 'Hidden fee for "Extreme" CPU performance in many hosts.' },
-            { label: 'DDoS Fees', icon: <Shield className="w-3 h-3 text-tactical-orange" />, impact: 'Low', desc: 'Often free, but premium protection can be an addon.' }
+            { label: 'Player Slots', impact: 'Critical', icon: <Check className="w-3 h-3 text-tactical-orange" />, desc: 'Competitors charge per player. Empower offers Unlimited, but we recommend capping Reforger at 64-100 for engine stability.' },
+            { label: 'RAM Upgrades', impact: 'Moderate', icon: <Cpu className="w-3 h-3 text-tactical-orange" />, desc: 'Essential for modding. Most hosts hide fees in extra RAM packages.' },
+            { label: 'Single-Core CPU', icon: <Zap className="w-3 h-3 text-tactical-orange" />, impact: 'High', desc: 'Hidden fee for Ryzen 9/i9 priority in shared environments.' },
+            { label: 'DDoS Defense', icon: <Shield className="w-3 h-3 text-tactical-orange" />, impact: 'Low', desc: 'Standard protection is usually free, but L7 game-filtering is rare.' }
           ].map((item, i) => (
             <div key={i} className="p-4 bg-zinc-900 border border-white/5 space-y-2">
               <div className="flex items-center gap-2">
@@ -250,11 +284,11 @@ export function HostingComparison({ game }: HostingComparisonProps) {
           <div className="absolute top-0 left-0 w-full h-1 bg-tactical-orange" />
           <CardContent className="p-12 text-center space-y-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">The Heavy-Mod Verdict</h2>
-              <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20 italic">For 120+ Mod Communities</p>
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">2026 Capacity Verdict</h2>
+              <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20 italic">Cost Analysis for {playerCount}p / {modCount}m</p>
             </div>
             <p className="text-gray-400 text-sm font-bold uppercase tracking-widest leading-relaxed max-w-2xl mx-auto">
-              If your community runs a large modpack ({modCount} mods selected), the real-world cost difference is over <span className="text-white">$30-$50 per month</span>. <span className="text-white">EmpowerServers</span> provides the necessary 16GB-32GB RAM overhead for {maxStableSlots} players at the lowest market rate.
+              With your selected load, the price difference between flat-rate and per-slot hosting is <span className="text-white">${(parseFloat(calculateTotalPrice(providers[3])) - parseFloat(calculateTotalPrice(providers[0]))).toFixed(2)} per month</span>. For large modpacks and full communities, <span className="text-white">EmpowerServers</span> remains the only logical choice.
             </p>
             <div className="pt-4 flex flex-col items-center gap-4">
               <a 
