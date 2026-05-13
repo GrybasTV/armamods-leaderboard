@@ -51,10 +51,30 @@ export function Arma3Hosting() {
     },
     {
       name: "GTXGaming",
-      basePrice: 15.00,
-      ramPricePer8GB: 12.00,
-      baseRAM: 4,
-      pricePerSlot: 0.45,
+      basePrice: 0,
+      slotTiers: [
+        { s: 10, p: 12.66 },
+        { s: 20, p: 15.21 },
+        { s: 30, p: 17.87 },
+        { s: 40, p: 20.28 },
+        { s: 50, p: 25.35 },
+        { s: 60, p: 28.90 },
+        { s: 70, s2: 80, p: 34.60 },
+        { s: 80, p: 39.54 },
+        { s: 100, p: 48.16 },
+        { s: 128, p: 60.84 }
+      ],
+      ramTiers: {
+        10: 0,
+        12: 8.86,
+        14: 11.39,
+        16: 13.93,
+        20: 19.00,
+        24: 22.80,
+        32: 30.41,
+        64: 55.76
+      },
+      baseRAM: 10,
       cpu: "Extreme CPU Priority",
       ddos: "Standard Protection",
       isWinner: false,
@@ -85,18 +105,27 @@ export function Arma3Hosting() {
   ];
 
   const calculateTotalPrice = (p: any) => {
-    const slotCost = playerCount * (p.pricePerSlot || 0);
-    
-    let ramCost = 0;
-    if (p.name === "EmpowerServers") {
-      // Use precise tiers from user screenshot
-      ramCost = p.ramTiers[recRAM] || 0;
-    } else {
-      // Linear estimation for competitors
-      const extraRAMNeeded = Math.max(0, recRAM - p.baseRAM);
-      const ramUnits = Math.ceil(extraRAMNeeded / 8);
-      ramCost = ramUnits * p.ramPricePer8GB;
+    if (p.name === "GTXGaming") {
+      const tier = p.slotTiers.find((t: any) => t.s >= playerCount) || p.slotTiers[p.slotTiers.length - 1];
+      const slotPrice = tier.p;
+      
+      const ramKeys = Object.keys(p.ramTiers).map(Number).sort((a, b) => a - b);
+      const matchedRamKey = ramKeys.find(k => k >= recRAM) || ramKeys[ramKeys.length - 1];
+      const ramPrice = p.ramTiers[matchedRamKey] || 0;
+      
+      return (slotPrice + ramPrice).toFixed(2);
     }
+
+    if (p.name === "EmpowerServers") {
+      const ramCost = p.ramTiers[recRAM] || 0;
+      return (p.basePrice + ramCost).toFixed(2);
+    }
+
+    // Linear estimation for others
+    const slotCost = playerCount * (p.pricePerSlot || 0);
+    const extraRAMNeeded = Math.max(0, recRAM - p.baseRAM);
+    const ramUnits = Math.ceil(extraRAMNeeded / 8);
+    const ramCost = ramUnits * p.ramPricePer8GB;
     
     return (p.basePrice + slotCost + ramCost).toFixed(2);
   };
@@ -227,11 +256,11 @@ export function Arma3Hosting() {
                     {p.pricePerSlot === 0 ? (
                       <span className="text-emerald-500">Resource Based (Best for Milsim)</span>
                     ) : (
-                      `$${p.pricePerSlot.toFixed(2)} Per Slot Fee`
+                      `Tiered Slot Fee + RAM`
                     )}
                   </div>
                   <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic leading-none mt-1">
-                    Configured for {playerCount} Slots
+                    Target: {playerCount} Slots
                   </div>
                 </td>
                 <td className="p-6 text-center">
