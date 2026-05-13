@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { SEO } from './ui/SEO';
+import { AffiliateBanner } from './ui/AffiliateBanner';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -138,25 +139,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
       />
 
       {/* Affiliate Section */}
-      <section className="bg-zinc-950 border border-tactical-orange/20 p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-tactical-orange/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
-        <div className="space-y-2 relative z-10">
-          <p className="text-tactical-orange font-black text-[10px] uppercase tracking-[0.4em]">// DEPLOYMENT_READY</p>
-          <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Need a server for this mod?</h3>
-          <p className="text-gray-500 text-sm font-bold uppercase tracking-wide max-w-xl">
-            Get high-performance Arma Reforger or Arma 3 hosting from <span className="text-white">Empower Servers</span>. 
-            Optimized for large modpacks and high player counts.
-          </p>
-        </div>
-        <a 
-          href="https://billing.empowerservers.com/aff.php?aff=294"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full md:w-auto px-10 py-4 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-xs hover:bg-white transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] text-center"
-        >
-          Deploy Server Now →
-        </a>
-      </section>
+      <AffiliateBanner />
 
       <section className="space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">

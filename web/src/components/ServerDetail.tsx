@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { serversApi, modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
 import { SEO } from './ui/SEO';
+import { AffiliateBanner } from './ui/AffiliateBanner';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -169,25 +170,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
       />
 
       {/* Affiliate Section */}
-      <section className="bg-zinc-950 border border-tactical-orange/20 p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-tactical-orange/5 to-transparent pointer-events-none" />
-        <div className="space-y-2 relative z-10">
-          <p className="text-tactical-orange font-black text-[10px] uppercase tracking-[0.4em]">// SERVER_INITIATED</p>
-          <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Want your own server?</h3>
-          <p className="text-gray-500 text-sm font-bold uppercase tracking-wide max-w-xl">
-            Launch your own Arma community on professional hardware. <span className="text-white">Empower Servers</span> provides 
-            low-latency, mod-ready hosting starting at competitive prices.
-          </p>
-        </div>
-        <a 
-          href="https://billing.empowerservers.com/aff.php?aff=294"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full md:w-auto px-10 py-4 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-xs hover:bg-white transition-all shadow-[0_0_20px_rgba(249,115,22,0.2)] text-center"
-        >
-          Get Started →
-        </a>
-      </section>
+      <AffiliateBanner />
 
       <section className="space-y-6 sm:space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-white/5 pb-6">
