@@ -13,8 +13,15 @@ export function ReforgerHosting() {
   // Arma Reforger Telemetry: 3GB Base + 0.25GB per Player
   const getRecs = (mods: number, players: number) => {
     const ramNeeded = 3 + (players * 0.25);
-    const recRAM = ramNeeded <= 8 ? 8 : (ramNeeded <= 16 ? 16 : (ramNeeded <= 32 ? 32 : 64));
     
+    // Empower specific tiers: 8, 10, 12, 16, 32
+    let recRAM = 8;
+    if (ramNeeded > 16) recRAM = 32;
+    else if (ramNeeded > 12) recRAM = 16;
+    else if (ramNeeded > 10) recRAM = 12;
+    else if (ramNeeded > 8) recRAM = 10;
+    else recRAM = 8;
+
     // Reforger mods average 0.5GB per asset
     const storageNeeded = 25 + (mods * 0.5); 
     const recStorage = storageNeeded <= 50 ? '50GB' : (storageNeeded <= 100 ? '100GB' : '200GB+');
@@ -28,7 +35,13 @@ export function ReforgerHosting() {
     {
       name: "EmpowerServers",
       basePrice: 9.99,
-      ramPricePer8GB: 5.00,
+      ramTiers: {
+        8: 0,
+        10: 2.50,
+        12: 6.00,
+        16: 10.50,
+        32: 30.00
+      },
       baseRAM: 8,
       pricePerSlot: 0,
       cpu: "Ryzen 9 / i9 High-Clock",
@@ -72,10 +85,20 @@ export function ReforgerHosting() {
   ];
 
   const calculateTotalPrice = (p: any) => {
-    const slotCost = playerCount * p.pricePerSlot;
-    const extraRAMNeeded = Math.max(0, recRAM - p.baseRAM);
-    const ramUnits = Math.ceil(extraRAMNeeded / 8);
-    return (p.basePrice + slotCost + (ramUnits * p.ramPricePer8GB)).toFixed(2);
+    const slotCost = playerCount * (p.pricePerSlot || 0);
+    
+    let ramCost = 0;
+    if (p.name === "EmpowerServers") {
+      // Use precise tiers from user screenshot
+      ramCost = p.ramTiers[recRAM] || 0;
+    } else {
+      // Linear estimation for competitors
+      const extraRAMNeeded = Math.max(0, recRAM - p.baseRAM);
+      const ramUnits = Math.ceil(extraRAMNeeded / 8);
+      ramCost = ramUnits * p.ramPricePer8GB;
+    }
+    
+    return (p.basePrice + slotCost + ramCost).toFixed(2);
   };
 
   return (
@@ -138,7 +161,7 @@ export function ReforgerHosting() {
                 <div className="text-2xl font-black text-tactical-orange italic">{recRAM}GB</div>
                 <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-white uppercase tracking-tighter">
                   <Cpu className="w-2.5 h-2.5 text-tactical-orange" />
-                  3GB Base + 0.25GB/p
+                  Empower Tiers: 8, 10, 12, 16, 32
                 </div>
               </div>
               <div className="bg-zinc-900 border border-white/5 p-5 rounded-sm text-center space-y-2">
