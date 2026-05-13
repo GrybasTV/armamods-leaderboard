@@ -86,9 +86,9 @@ class CloudflareKVClient {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Cloudflare KV has a 25MB value limit, but Workers have 128MB RAM.
-// 5MB is the "Golden Ratio": it saves KV read calls while staying safe from OOM (Out of Memory).
-const MAX_CHUNK_BYTES = 5 * 1024 * 1024; 
+// Cloudflare Workers FREE plan has a strict 10ms CPU limit.
+// 512KB chunks ensure JSON.parse finishes in ~1-2ms, staying safely within limits.
+const MAX_CHUNK_BYTES = 512 * 1024; 
 
 // Parse game type from CLI
 function parseGameType(): GameType {

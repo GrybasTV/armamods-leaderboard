@@ -131,14 +131,15 @@ app.get('/mods', async (c) => {
 
   const game = getGameFromQuery(c);
   const keys = getKVKeys(game);
-  const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
+  const limit = Math.min(parseInt(c.req.query('limit') || '100'), 100);
   const offset = parseInt(c.req.query('offset') || '0');
   const search = c.req.query('search') || '';
   const sortBy = c.req.query('sortBy') || 'overall';
 
   // OPTIMIZATION: If no search and default sort, only fetch the first few chunks
+  // OPTIMIZATION: If no search and default sort, only fetch the first chunk (512KB)
   const isDefaultView = !search && (sortBy === 'overall' || !sortBy);
-  const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS, isDefaultView ? 2 : undefined);
+  const mods = await getChunkedData(c.env.TRENDING_KV, keys.MODS, isDefaultView ? 1 : undefined);
   let filtered = [...mods];
 
   if (search) {
@@ -412,13 +413,13 @@ app.get('/servers', async (c) => {
   const start = Date.now();
   const game = getGameFromQuery(c);
   const keys = getKVKeys(game);
-  const limit = Math.min(parseInt(c.req.query('limit') || '1000'), 1000);
+  const limit = Math.min(parseInt(c.req.query('limit') || '100'), 100);
   const offset = parseInt(c.req.query('offset') || '0');
   const search = c.req.query('search') || '';
 
   console.log(`[SERVERS] Fetching data for ${game}...`);
-  // OPTIMIZATION: If no search, only fetch the first 2 chunks (enough for several pages)
-  const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS, !search ? 2 : undefined);
+  // OPTIMIZATION: If no search, only fetch the first chunk (enough for the first page)
+  const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS, !search ? 1 : undefined);
   
   if (!servers || servers.length === 0) {
     console.log(`[SERVERS] No data found in KV for ${game}`);
