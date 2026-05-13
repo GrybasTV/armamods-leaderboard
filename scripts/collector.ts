@@ -86,9 +86,10 @@ class CloudflareKVClient {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Different data types require different chunk sizes to balance KV Ops and CPU limits
-const CHUNK_SIZE_LIST = 1 * 1024 * 1024;    // 1MB for Mods/Servers (CPU safety for parsing)
-const CHUNK_SIZE_HISTORY = 5 * 1024 * 1024; // 5MB for History (Saving KV write operations)
+// KV Free Tier: 1,000 writes/day. With 24 collector runs, budget is ~41 writes per run.
+// 5MB chunks minimize write count while staying parseable by Workers for list endpoints.
+const CHUNK_SIZE_LIST = 5 * 1024 * 1024;    // 5MB for Mods/Servers
+const CHUNK_SIZE_HISTORY = 5 * 1024 * 1024; // 5MB for History
 
 // Parse game type from CLI
 function parseGameType(): GameType {
@@ -288,8 +289,12 @@ interface ServerMod {
     // Store metadata
     await kv.put(`${KV_KEYS.MODS}:meta`, JSON.stringify({ total: modList.length, chunks: modChunks.length }));
 
+    // Calculate SQE scores BEFORE writing to KV (eliminates double-write)
+    // runServerScoring mutates serverList in-place, adding sqePoints and sqeRank
+    console.log(`[SERVER_SCORING] Running for ${game} (pre-write)...`);
+    await runServerScoring(game, kv, serverList, modList);
+
     // Sort servers by players (descending) before sharding
-    // This allows the API to load only the first few chunks for the initial page view
     serverList.sort((a, b) => (b.players || 0) - (a.players || 0));
 
     // Split servers into size-safe chunks
@@ -411,24 +416,8 @@ interface ServerMod {
     console.error("⚠️ KV History Error:", kvErr);
   }
 
-  // 4. Server Scoring & Ranking - runs every collection to prevent SQE data loss
-  console.log(`[SERVER_SCORING] Running for ${game}...`);
-  await runServerScoring(game, kv, serverList, modList);
-
-  // Re-write server chunks WITH SQE data included
-  console.log(`[SERVER_SCORING] Re-writing server chunks with SQE data...`);
-  const serverChunks = buildChunks(serverList, CHUNK_SIZE_LIST);
-  for (let i = 0; i < serverChunks.length; i++) {
-    try {
-      await kv.put(`${KV_KEYS.SERVERS}:${i}`, JSON.stringify(serverChunks[i]));
-      console.log(`    [OK] Server chunk ${i+1}/${serverChunks.length} with SQE`);
-    } catch (err) {
-      console.error(`    [FAIL] Server chunk ${i+1}:`, err);
-      throw err;
-    }
-  }
-  await kv.put(`${KV_KEYS.SERVERS}:meta`, JSON.stringify({ total: serverList.length, chunks: serverChunks.length }));
-  console.log(`✅ Server chunks updated with SQE data`);
+  // SQE scoring is now done BEFORE the initial server write (see above)
+  // This eliminates the need for a second KV write pass, saving ~17 writes per run.
 
   console.log('✅ COLLECTOR: Complete!');
   return { servers: totalServers, mods: totalMods };
@@ -481,9 +470,9 @@ async function runTrendingSnapshot() {
      * - activityMultiplier: Logarithmic player count to ensure active mods get priority.
      */
     const periods = [
-        { name: '24h', days: 1, baseKey: `history:daily:${game}` },
-        { name: '7d', days: 7, baseKey: `history:daily:${game}` },
-        { name: '30d', days: 30, baseKey: `history:daily:${game}` }
+        { name: 'daily', days: 1, baseKey: `history:daily:${game}` },
+        { name: 'weekly', days: 7, baseKey: `history:daily:${game}` },
+        { name: 'monthly', days: 30, baseKey: `history:daily:${game}` }
     ];
 
     for (const p of periods) {
