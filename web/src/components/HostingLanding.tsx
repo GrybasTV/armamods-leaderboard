@@ -119,24 +119,35 @@ export function HostingLanding({ game }: HostingLandingProps) {
                 </li>
               ))}
             </ul>
+            
+            <div className="pt-4 border-t border-white/10">
+              <p className="text-tactical-orange text-xs font-bold uppercase tracking-widest leading-loose">
+                🤝 Community Reciprocity: <span className="text-gray-400">By deploying through this page, you directly support the ArmaMods Leaderboard project, keeping our daily tracking systems online.</span>
+              </p>
+            </div>
           </div>
 
-          <div className="bg-black/60 border border-tactical-orange/20 p-10 space-y-8 text-center">
+          <div className="bg-black/60 border border-tactical-orange/40 p-10 space-y-8 text-center relative shadow-[0_0_50px_rgba(249,115,22,0.05)]">
+            <div className="absolute top-0 right-0 px-4 py-1 bg-tactical-orange text-black text-[10px] font-black uppercase tracking-widest transform translate-x-4 -translate-y-4 shadow-lg">
+              Official Partner Deal
+            </div>
             <div className="space-y-2">
               <p className="text-gray-500 font-black uppercase tracking-[0.3em] text-[10px]">Starter Deployment</p>
-              <div className="text-6xl font-black text-white tracking-tighter italic">
+              <div className="text-6xl font-black text-white tracking-tighter italic shadow-black drop-shadow-md">
                 $9.99<span className="text-xl text-gray-600 not-italic">/mo</span>
               </div>
             </div>
             <a 
               href={affiliateUrl}
-              className="block w-full py-5 bg-white text-black font-black uppercase tracking-[0.2em] text-sm hover:bg-tactical-orange transition-all"
+              className="block w-full py-5 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-sm hover:bg-white transition-all shadow-[0_0_20px_rgba(249,115,22,0.3)] transform hover:scale-105"
             >
-              Get Started Now →
+              Deploy My Server Now →
             </a>
-            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-              48-Hour Risk-Free Refund Period • No Commitment
-            </p>
+            <div className="flex justify-between text-[9px] text-gray-500 font-bold uppercase tracking-widest px-4">
+              <span>Step 1: Choose Node</span>
+              <span>Step 2: Initialize</span>
+              <span className="text-tactical-orange">Ready in 60s</span>
+            </div>
           </div>
         </div>
       </section>

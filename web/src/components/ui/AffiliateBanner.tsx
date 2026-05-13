@@ -32,32 +32,38 @@ export function AffiliateBanner() {
 
           {/* Hard Facts / Specs */}
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2">
-             <div className="flex items-center gap-2 bg-black/50 border border-white/10 px-3 py-1.5">
-               <div className="w-1.5 h-1.5 rounded-full bg-tactical-orange animate-pulse" />
-               <span className="text-xs font-black text-white uppercase tracking-widest">8GB+ RAM</span>
+             <div className="flex items-center gap-2 bg-black/50 border border-tactical-orange/50 px-3 py-1.5 shadow-[0_0_10px_rgba(249,115,22,0.1)]">
+               <div className="w-2 h-2 rounded-full bg-tactical-orange animate-pulse" />
+               <span className="text-xs font-black text-tactical-orange uppercase tracking-widest">8GB+ RAM Baseline</span>
              </div>
              <div className="flex items-center gap-2 bg-black/50 border border-white/10 px-3 py-1.5">
-               <div className="w-1.5 h-1.5 rounded-full bg-tactical-orange animate-pulse" />
-               <span className="text-xs font-black text-white uppercase tracking-widest">Unlimited NVMe</span>
+               <div className="w-1.5 h-1.5 rounded-full bg-white/50" />
+               <span className="text-xs font-black text-gray-300 uppercase tracking-widest">Unlimited NVMe</span>
              </div>
              <div className="flex items-center gap-2 bg-black/50 border border-white/10 px-3 py-1.5">
-               <div className="w-1.5 h-1.5 rounded-full bg-tactical-orange animate-pulse" />
-               <span className="text-xs font-black text-white uppercase tracking-widest">Ryzen/i9 CPU</span>
+               <div className="w-1.5 h-1.5 rounded-full bg-white/50" />
+               <span className="text-xs font-black text-gray-300 uppercase tracking-widest">Ryzen/i9 CPU</span>
              </div>
           </div>
         </div>
 
-        {/* Pricing & CTA */}
-        <div className="flex flex-col items-center md:items-end gap-3 min-w-[240px] w-full md:w-auto p-6 md:p-0 bg-black/40 md:bg-transparent border md:border-none border-white/5">
-          <div className="text-center md:text-right">
-            <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1 line-through opacity-50">Normally $15.00+</p>
-            <p className="text-4xl sm:text-5xl font-black text-white tracking-tighter italic">
+        {/* Pricing & CTA - Psychological Anchoring */}
+        <div className="flex flex-col items-center md:items-end gap-3 min-w-[240px] w-full md:w-auto p-6 md:p-0 bg-black/60 md:bg-transparent border md:border-none border-white/5 relative">
+          <div className="absolute -top-3 md:-top-6 right-1/2 md:right-0 translate-x-1/2 md:translate-x-0 bg-red-600 text-white text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 animate-bounce">
+            🔥 Limited Nodes Remaining
+          </div>
+          <div className="text-center md:text-right pt-2 md:pt-0">
+            <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-1 line-through decoration-red-500 decoration-2 opacity-70">Normally $15.00+</p>
+            <p className="text-4xl sm:text-5xl font-black text-white tracking-tighter italic shadow-black drop-shadow-md">
               $9.99<span className="text-base sm:text-xl text-gray-500 not-italic">/mo</span>
             </p>
           </div>
-          <div className="w-full md:w-auto px-10 py-4 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-xs transition-all group-hover:bg-white shadow-[0_0_20px_rgba(249,115,22,0.2)] text-center">
-            View Plans →
+          <div className="w-full md:w-auto px-10 py-4 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-xs transition-all group-hover:bg-white shadow-[0_0_25px_rgba(249,115,22,0.3)] group-hover:shadow-[0_0_35px_rgba(255,255,255,0.4)] text-center transform group-hover:-translate-y-1">
+            Claim This Deal →
           </div>
+          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest text-center">
+            Instant Setup • 48H Refund
+          </p>
         </div>
         
       </div>
