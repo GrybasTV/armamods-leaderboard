@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SEO } from './ui/SEO';
 import { Card, CardContent } from './ui/Card';
-import { Shield, Zap, Globe, Check, ExternalLink, Database, Activity, Cpu, Users } from 'lucide-react';
+import { Shield, Zap, Globe, ExternalLink, Database, Activity, Cpu, Users, HardDrive } from 'lucide-react';
 
 interface HostingComparisonProps {
   game: 'arma3' | 'reforger';
@@ -15,22 +15,20 @@ export function HostingComparison({ game }: HostingComparisonProps) {
   const gameName = isReforger ? 'Arma Reforger' : 'Arma 3';
   const maxStableSlots = isReforger ? '64' : '100+';
 
-  // Realistic RAM logic based on user telemetry
-  const getRecommendedRAM = (mods: number, players: number) => {
-    const baseOverhead = isReforger ? 3 : 2; // Base engine usage
-    const playerImpact = players / 32;       // ~1GB per 32 players
-    const modImpact = mods / 100;            // ~1GB per 100 mods (average optimization)
-    const safetyBuffer = 2;                  // OS and stability buffer
-    
-    const totalNeeded = baseOverhead + playerImpact + modImpact + safetyBuffer;
-    
-    if (totalNeeded <= 8) return 8;
-    if (totalNeeded <= 16) return 16;
-    if (totalNeeded <= 32) return 32;
-    return 64;
+  // Realistic Resource Logic
+  const getRecs = (mods: number, players: number) => {
+    // RAM depends mostly on players + engine base
+    const ramNeeded = (isReforger ? 4 : 3) + (players / 24);
+    const recRAM = ramNeeded <= 8 ? 8 : (ramNeeded <= 16 ? 16 : 32);
+
+    // Storage depends on mods
+    const storageNeeded = 20 + (mods * 0.5); // Base 20GB + ~0.5GB per mod
+    const recStorage = storageNeeded <= 50 ? '50GB' : (storageNeeded <= 100 ? '100GB' : '200GB+');
+
+    return { recRAM, recStorage };
   };
 
-  const recRAM = getRecommendedRAM(modCount, playerCount);
+  const { recRAM, recStorage } = getRecs(modCount, playerCount);
 
   const providers = [
     {
@@ -46,7 +44,7 @@ export function HostingComparison({ game }: HostingComparisonProps) {
     },
     {
       name: "GTXGaming",
-      basePrice: isReforger ? 12.00 : 15.00, // Starting price
+      basePrice: isReforger ? 12.00 : 15.00,
       ramPricePer8GB: 12.00,
       baseRAM: 4,
       pricePerSlot: isReforger ? 0.35 : 0.45,
@@ -111,19 +109,19 @@ export function HostingComparison({ game }: HostingComparisonProps) {
         </p>
       </section>
 
-      {/* Interactive Dual Calculator */}
+      {/* Interactive Infrastructure Calculator */}
       <section className="max-w-4xl mx-auto px-4">
         <Card className="bg-zinc-950 border border-white/10 p-8 space-y-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-tactical-orange/5 blur-3xl" />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-6">
-              {/* Players Slider */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              {/* Players Slider -> RAM/CPU Focus */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
                     <Users className="w-3 h-3 text-tactical-orange" />
-                    Max Players
+                    Target Player Count
                   </div>
                   <span className="text-tactical-orange font-black italic">{playerCount} Slots</span>
                 </div>
@@ -132,46 +130,52 @@ export function HostingComparison({ game }: HostingComparisonProps) {
                   onChange={(e) => setPlayerCount(parseInt(e.target.value))}
                   className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
                 />
+                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest leading-none">Main driver for CPU load & RAM base.</p>
               </div>
 
-              {/* Mods Slider */}
+              {/* Mods Slider -> Storage Focus */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2 text-white font-black uppercase tracking-widest text-[10px]">
                     <Database className="w-3 h-3 text-tactical-orange" />
-                    Mod Count
+                    Modpack Size (Approx)
                   </div>
                   <span className="text-tactical-orange font-black italic">{modCount} Mods</span>
                 </div>
                 <input 
-                  type="range" min="0" max="200" value={modCount} 
+                  type="range" min="0" max="250" value={modCount} 
                   onChange={(e) => setModCount(parseInt(e.target.value))}
                   className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-tactical-orange"
                 />
+                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest leading-none">Main driver for NVMe storage & startup time.</p>
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center bg-zinc-900 border border-white/5 p-6 rounded-sm space-y-4">
-              <div className="text-center">
-                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Infrastructure Recommendation</div>
-                <div className="text-4xl font-black text-tactical-orange italic">{recRAM}GB RAM</div>
-              </div>
-              <div className="flex gap-4">
-                <div className={`px-3 py-1 text-[8px] font-black uppercase tracking-widest border ${recRAM > 16 ? 'border-red-500 text-red-500' : 'border-emerald-500 text-emerald-500'}`}>
-                  {recRAM > 16 ? 'Extreme CPU Required' : 'Standard Node OK'}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-zinc-900 border border-white/5 p-5 rounded-sm text-center space-y-2">
+                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Recommended RAM</div>
+                <div className="text-2xl font-black text-tactical-orange italic">{recRAM}GB</div>
+                <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-white uppercase tracking-tighter">
+                  <Cpu className="w-2.5 h-2.5 text-tactical-orange" />
+                  {recRAM > 16 ? 'High-Clock i9/R9' : 'Standard Node'}
                 </div>
-                <div className="px-3 py-1 text-[8px] font-black uppercase tracking-widest border border-white/20 text-white">
-                  NVMe Gen4 Required
+              </div>
+              <div className="bg-zinc-900 border border-white/5 p-5 rounded-sm text-center space-y-2">
+                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">NVMe Requirement</div>
+                <div className="text-2xl font-black text-tactical-orange italic">{recStorage}</div>
+                <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-white uppercase tracking-tighter">
+                  <HardDrive className="w-2.5 h-2.5 text-tactical-orange" />
+                  Gen4 Speed Mandated
                 </div>
               </div>
             </div>
           </div>
 
-          {(modCount > 120 || playerCount > 80) && (
+          {(modCount > 150 || playerCount > 100) && (
             <div className="flex items-center gap-3 bg-tactical-orange/10 border border-tactical-orange/20 p-3">
               <Activity className="w-4 h-4 text-tactical-orange animate-pulse" />
               <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-relaxed">
-                Expert Note: While you have {modCount} mods, actual RAM usage depends on asset optimization. Well-tuned communities can run 200+ mods on 8GB-16GB. At {playerCount} players, focus moves from RAM to Single-Core CPU frequency to maintain stable TPS.
+                Enterprise Warning: Running {playerCount} players with massive modpacks requires elite-tier NVMe read speeds to prevent map loading timeouts and desync during entity initialization.
               </p>
             </div>
           )}
@@ -184,8 +188,8 @@ export function HostingComparison({ game }: HostingComparisonProps) {
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.02]">
               <th className="p-6 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Provider</th>
-              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Monthly Cost</th>
-              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Pricing Model</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Estimated Cost ({recRAM}GB)</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Slot Pricing</th>
               <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Hardware Node</th>
               <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">DDoS Security</th>
               <th className="p-6 text-right text-[10px] font-black text-gray-500 uppercase tracking-widest">Action</th>
@@ -213,18 +217,18 @@ export function HostingComparison({ game }: HostingComparisonProps) {
                     ${calculateTotalPrice(p)}
                     <span className="text-[10px] not-italic text-gray-500">/mo</span>
                   </div>
-                  <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Configured for {playerCount}p / {modCount}m</div>
+                  <div className="text-[9px] font-bold text-gray-600 uppercase tracking-widest mt-1">Total Estimated Bill</div>
                 </td>
                 <td className="p-6 text-center">
                   <div className="text-white font-black uppercase tracking-widest text-[9px] leading-tight">
                     {p.pricePerSlot === 0 ? (
-                      <span className="text-emerald-500">Flat Rate / Resource Based</span>
+                      <span className="text-emerald-500">Resource Based (No Slot Tax)</span>
                     ) : (
-                      `$${p.pricePerSlot.toFixed(2)} Per Player Slot`
+                      `$${p.pricePerSlot.toFixed(2)} Per Slot Fee`
                     )}
                   </div>
                   <div className="text-[10px] font-bold text-gray-600 uppercase tracking-widest italic leading-none mt-1">
-                    +{p.ramPricePer8GB}$ per 8GB RAM
+                    Configured for {playerCount} Slots
                   </div>
                 </td>
                 <td className="p-6 text-center">
@@ -258,25 +262,31 @@ export function HostingComparison({ game }: HostingComparisonProps) {
         </table>
       </section>
 
-      {/* Hidden Costs Breakdown */}
+      {/* Infrastructure Analysis */}
       <section className="max-w-4xl mx-auto px-4 space-y-6">
-        <h2 className="text-center text-xl font-black text-white uppercase tracking-tighter">The Industry "Slot Tax" Explained</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Player Slots', impact: 'Critical', icon: <Check className="w-3 h-3 text-tactical-orange" />, desc: 'Competitors charge per player. Empower offers Unlimited, but we recommend capping Reforger at 64-100 for engine stability.' },
-            { label: 'RAM Upgrades', impact: 'Moderate', icon: <Cpu className="w-3 h-3 text-tactical-orange" />, desc: 'Essential for modding. Most hosts hide fees in extra RAM packages.' },
-            { label: 'Single-Core CPU', icon: <Zap className="w-3 h-3 text-tactical-orange" />, impact: 'High', desc: 'Hidden fee for Ryzen 9/i9 priority in shared environments.' },
-            { label: 'DDoS Defense', icon: <Shield className="w-3 h-3 text-tactical-orange" />, impact: 'Low', desc: 'Standard protection is usually free, but L7 game-filtering is rare.' }
-          ].map((item, i) => (
-            <div key={i} className="p-4 bg-zinc-900 border border-white/5 space-y-2">
-              <div className="flex items-center gap-2">
-                {item.icon}
-                <div className="text-[10px] font-black text-tactical-orange uppercase tracking-widest">{item.label}</div>
-              </div>
-              <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">{item.desc}</div>
-              <div className="inline-block px-2 py-0.5 bg-white/5 text-[8px] font-black text-white uppercase tracking-tighter">Impact: {item.impact}</div>
-            </div>
-          ))}
+        <h2 className="text-center text-xl font-black text-white uppercase tracking-tighter">Why Hardware Matters More Than Slots</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-6 bg-zinc-900 border border-white/5 space-y-3">
+            <Cpu className="w-6 h-6 text-tactical-orange" />
+            <h3 className="text-xs font-black text-white uppercase tracking-widest">CPU Clock Speed</h3>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+              Arma engines are single-core dependent. A 5.0GHz+ CPU will handle 100 players better than a 12-core server with lower clock speeds.
+            </p>
+          </div>
+          <div className="p-6 bg-zinc-900 border border-white/5 space-y-3">
+            <HardDrive className="w-6 h-6 text-tactical-orange" />
+            <h3 className="text-xs font-black text-white uppercase tracking-widest">NVMe Disk I/O</h3>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+              When using {modCount} mods, disk read speed determines how fast players can join and if assets load without stuttering.
+            </p>
+          </div>
+          <div className="p-6 bg-zinc-900 border border-white/5 space-y-3">
+            <Shield className="w-6 h-6 text-tactical-orange" />
+            <h3 className="text-xs font-black text-white uppercase tracking-widest">DDoS Filtering</h3>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+              Large communities are targets. L7 filtering is mandatory to keep the server online during active operations.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -286,11 +296,11 @@ export function HostingComparison({ game }: HostingComparisonProps) {
           <div className="absolute top-0 left-0 w-full h-1 bg-tactical-orange" />
           <CardContent className="p-12 text-center space-y-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">2026 Capacity Verdict</h2>
-              <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20 italic">Cost Analysis for {playerCount}p / {modCount}m</p>
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Capacity Analysis Verdict</h2>
+              <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20 italic">For {playerCount} Players & {modCount} Mods</p>
             </div>
             <p className="text-gray-400 text-sm font-bold uppercase tracking-widest leading-relaxed max-w-2xl mx-auto">
-              With your selected load, the price difference between flat-rate and per-slot hosting is <span className="text-white">${(parseFloat(calculateTotalPrice(providers[3])) - parseFloat(calculateTotalPrice(providers[0]))).toFixed(2)} per month</span>. For large modpacks and full communities, <span className="text-white">EmpowerServers</span> remains the only logical choice.
+              Running a community of this scale requires elite hardware nodes. While others charge for every player, <span className="text-white">EmpowerServers</span> focuses on the infrastructure, making them <span className="text-white">${(parseFloat(calculateTotalPrice(providers[3])) - parseFloat(calculateTotalPrice(providers[0]))).toFixed(2)} cheaper</span> per month for your specific setup.
             </p>
             <div className="pt-4 flex flex-col items-center gap-4">
               <a 
