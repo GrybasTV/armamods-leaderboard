@@ -2,74 +2,93 @@ import { SEO } from './ui/SEO';
 import { Card, CardContent } from './ui/Card';
 import { Shield, Zap, Cpu, Globe, Check, ExternalLink } from 'lucide-react';
 
-export function HostingComparison() {
+import { SEO } from './ui/SEO';
+import { Card, CardContent } from './ui/Card';
+import { Shield, Zap, Cpu, Globe, Check, ExternalLink } from 'lucide-react';
+
+interface HostingComparisonProps {
+  game: 'arma3' | 'reforger';
+}
+
+export function HostingComparison({ game }: HostingComparisonProps) {
+  const isReforger = game === 'reforger';
+  const gameName = isReforger ? 'Arma Reforger' : 'Arma 3';
+  const engineName = isReforger ? 'Enfusion Engine' : 'Real Virtuality';
+  const maxStableSlots = isReforger ? '64' : '100+';
+
   const providers = [
     {
       name: "EmpowerServers",
       price: "$9.99",
-      slots: "64+ Stable",
+      slots: isReforger ? "64+ Stable" : "Unlimited",
       ram: "8GB Baseline",
       cpu: "Ryzen 9 / i9 High-Clock",
       ddos: "Advanced Game Protection",
       locations: "Global (EU/US/AS)",
-      bestFor: "Heavily Modded Communities",
+      bestFor: isReforger ? "Heavily Modded Communities" : "Large Modded Operations",
       isWinner: true,
-      url: "https://empowerservers.com/games/arma-reforger/?aff=294"
+      url: isReforger ? "https://empowerservers.com/games/arma-reforger/?aff=294" : "https://empowerservers.com/games/arma3/?aff=294"
     },
     {
       name: "GTXGaming",
-      price: "~$28.00",
-      slots: "64 Slots",
+      price: isReforger ? "~$28.00" : "~$32.00",
+      slots: isReforger ? "64 Slots" : "100 Slots",
       ram: "4GB Baseline",
       cpu: "Ryzen 9 7950X Option",
       ddos: "Standard Protection",
       locations: "Global",
       bestFor: "Experienced Power Users",
       isWinner: false,
-      url: "https://www.gtxgaming.co.uk/server-hosting/arma-reforger-server-hosting/"
+      url: isReforger 
+        ? "https://www.gtxgaming.co.uk/server-hosting/arma-reforger-server-hosting/" 
+        : "https://www.gtxgaming.co.uk/server-hosting/arma-3-server-hosting/"
     },
     {
       name: "PingPerfect",
-      price: "~$26.00",
-      slots: "64 Slots",
+      price: isReforger ? "~$26.00" : "~$29.00",
+      slots: isReforger ? "64 Slots" : "100 Slots",
       ram: "4GB Baseline",
       cpu: "Enterprise Xeon/Ryzen",
       ddos: "Standard Protection",
       locations: "Global",
       bestFor: "Budget Stability",
       isWinner: false,
-      url: "https://pingperfect.com/gameservers/arma-reforger-server-hosting.php"
+      url: isReforger 
+        ? "https://pingperfect.com/gameservers/arma-reforger-server-hosting.php" 
+        : "https://pingperfect.com/gameservers/arma-3-server-hosting.php"
     },
     {
       name: "Nitrado",
-      price: "~$38.00",
-      slots: "64 Slots",
+      price: isReforger ? "~$38.00" : "~$45.00",
+      slots: isReforger ? "64 Slots" : "100 Slots",
       ram: "4GB Baseline",
       cpu: "Standard Infrastructure",
       ddos: "Basic Protection",
       locations: "Global",
       bestFor: "Console Cross-play",
       isWinner: false,
-      url: "https://server.nitrado.net/en-GB/offers/arma-reforger"
+      url: isReforger 
+        ? "https://server.nitrado.net/en-GB/offers/arma-reforger" 
+        : "https://server.nitrado.net/en-GB/offers/arma-3"
     }
   ];
 
   return (
     <div className="space-y-16 animate-in fade-in duration-700 pb-20">
       <SEO 
-        title="Arma Reforger & Arma 3 Server Hosting Comparison 2026"
-        description="Technical comparison of the best Arma hosting providers. We evaluate EmpowerServers, GTXGaming, and PingPerfect based on mod stability, 64-slot performance, and DDoS protection."
-        keywords="best arma reforger hosting, arma 3 server rental, gtxgaming vs empower, stable arma mods server"
+        title={`Best ${gameName} Server Hosting Comparison 2026`}
+        description={`Technical comparison of the best ${gameName} hosting providers. We evaluate EmpowerServers, GTXGaming, and PingPerfect based on mod stability, ${maxStableSlots}-slot performance, and DDoS protection.`}
+        keywords={`best ${gameName.toLowerCase()} hosting, ${gameName.toLowerCase()} server rental, gtxgaming vs empower, stable ${gameName.toLowerCase()} mods server`}
       />
 
       {/* Header */}
       <section className="text-center space-y-4 pt-12">
         <h1 className="text-4xl sm:text-7xl font-black text-white uppercase tracking-tighter leading-tight px-4">
           The <span className="text-tactical-orange italic">Tactical Report</span>:<br/>
-          Hosting Analysis 2026
+          {gameName} Analysis
         </h1>
         <p className="text-gray-500 font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto text-sm sm:text-base px-4">
-          A deep dive into stability, performance, and real-world costs for 64-slot modded Arma environments.
+          A deep dive into stability, performance, and real-world costs for {maxStableSlots}-slot modded {gameName} environments.
         </p>
       </section>
 
@@ -79,10 +98,13 @@ export function HostingComparison() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-tactical-orange/5 blur-3xl" />
           <h2 className="text-2xl font-black text-white uppercase tracking-tighter flex items-center justify-center gap-3">
             <Shield className="w-6 h-6 text-tactical-orange" />
-            The Stability Benchmark
+            The {isReforger ? 'Stability' : 'Performance'} Benchmark
           </h2>
           <p className="text-gray-400 text-[11px] sm:text-xs font-bold uppercase tracking-widest leading-relaxed max-w-2xl mx-auto">
-            While many hosts advertise high player counts, Arma Reforger's <span className="text-white">Enfusion Engine</span> requires specific hardware optimization to maintain 64-slot stability under heavy mod loads. We focused on providers that deliver consistent TPS (Ticks Per Second).
+            {isReforger 
+              ? `While many hosts advertise high player counts, Arma Reforger's Enfusion Engine requires specific hardware optimization to maintain 64-slot stability under heavy mod loads. We focused on providers that deliver consistent TPS (Ticks Per Second).`
+              : `Arma 3's Real Virtuality engine is notoriously single-threaded. For large operations with 100+ players or complex AI, high-frequency CPU cores are mandatory to avoid 'desync' and maintain acceptable server FPS.`
+            }
           </p>
         </div>
       </section>
@@ -93,7 +115,7 @@ export function HostingComparison() {
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.02]">
               <th className="p-6 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Provider</th>
-              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">64-Slot Price</th>
+              <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">{maxStableSlots}-Slot Price</th>
               <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Memory (RAM)</th>
               <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">DDoS Security</th>
               <th className="p-6 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Hardware</th>
@@ -167,7 +189,7 @@ export function HostingComparison() {
             <h3 className="font-black uppercase tracking-widest text-sm italic">Engine Optimization</h3>
           </div>
           <p className="text-gray-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">
-            Arma Reforger's network synchronization is highly sensitive to single-core frequency. In 2026, shared infrastructure is the primary cause of server lag. We prioritize hosts using dedicated Ryzen 9 7900+ series nodes.
+            {gameName}'s network synchronization is highly sensitive to single-core frequency. In 2026, shared infrastructure is the primary cause of server lag. We prioritize hosts using dedicated Ryzen 9 7900+ series nodes.
           </p>
         </div>
         <div className="space-y-4 p-6 bg-zinc-900/50 border border-white/5">
@@ -176,16 +198,16 @@ export function HostingComparison() {
             <h3 className="font-black uppercase tracking-widest text-sm italic">Community Security</h3>
           </div>
           <p className="text-gray-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">
-            PvP communities are frequent targets for DDoS attacks. While basic Null-routing is standard, EmpowerServers offers specific L7 game-filtering to prevent server crashes during active operations.
+            {isReforger ? 'PvP' : 'Milsim'} communities are frequent targets for DDoS attacks. While basic Null-routing is standard, EmpowerServers offers specific L7 game-filtering to prevent server crashes during active operations.
           </p>
         </div>
         <div className="space-y-4 p-6 bg-zinc-900/50 border border-white/5">
           <div className="flex items-center gap-3 text-tactical-orange">
             <Check className="w-6 h-6" />
-            <h3 className="font-black uppercase tracking-widest text-sm italic">Modded 64-Slot Load</h3>
+            <h3 className="font-black uppercase tracking-widest text-sm italic">Modded {maxStableSlots}-Slot Load</h3>
           </div>
           <p className="text-gray-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">
-            Most hosts charge $1.00+ per slot. For a 64-player server, this can exceed $60. Empower's flat-rate model ($9.99) provides enough overhead for 80+ mods without additional costs.
+            Most hosts charge $1.00+ per slot. For a {maxStableSlots}-player server, this can exceed $60. Empower's flat-rate model ($9.99) provides enough overhead for heavy modpacks without additional costs.
           </p>
         </div>
       </section>
@@ -200,16 +222,16 @@ export function HostingComparison() {
               <p className="text-tactical-orange text-xs font-black uppercase tracking-widest underline decoration-2 underline-offset-4 decoration-white/20">Official Recommendation</p>
             </div>
             <p className="text-gray-400 text-sm font-bold uppercase tracking-widest leading-relaxed max-w-2xl mx-auto">
-              If you are running a modded Arma Reforger community, <span className="text-white">EmpowerServers</span> remains the most cost-effective choice for 64-slot environments. They offer double the RAM of most competitors for less than half the price.
+              If you are running a modded {gameName} community, <span className="text-white">EmpowerServers</span> remains the most cost-effective choice for {maxStableSlots}-slot environments. They offer double the RAM of most competitors for less than half the price.
             </p>
             <div className="pt-4 flex flex-col items-center gap-4">
               <a 
-                href="https://empowerservers.com/games/arma-reforger/?aff=294"
+                href={isReforger ? "https://empowerservers.com/games/arma-reforger/?aff=294" : "https://empowerservers.com/games/arma3/?aff=294"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto px-16 py-6 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-sm hover:bg-white transition-all shadow-[0_0_40px_rgba(249,115,22,0.3)] transform hover:scale-105"
               >
-                Launch Your Server Now →
+                Launch Your {gameName} Server →
               </a>
               <div className="bg-white/5 border border-white/10 px-4 py-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                 Exclusive Deal: Use Code <span className="text-tactical-orange">10OFF</span>

@@ -80,7 +80,8 @@ function App() {
             <Route path="/arma3/mod/:modId" element={<ModDetail game="arma3" />} />
             <Route path="/arma3/trending" element={<TrendingPage game="arma3" />} />
             <Route path="/arma3/hosting" element={<HostingLanding game="arma3" />} />
-            <Route path="/best-arma-server-hosting" element={<HostingComparison />} />
+            <Route path="/best-arma-reforger-hosting" element={<HostingComparison game="reforger" />} />
+            <Route path="/best-arma-3-hosting" element={<HostingComparison game="arma3" />} />
           </Routes>
         </Layout>
       </Router>

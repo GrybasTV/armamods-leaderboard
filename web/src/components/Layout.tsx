@@ -229,7 +229,7 @@ export function Layout({ children }: LayoutProps) {
                 <ul className="space-y-4">
                   <li><Link to={isArma3 ? "/arma3" : "/"} className="text-gray-500 hover:text-tactical-orange transition-colors font-bold uppercase tracking-widest text-[10px]">Mod Database</Link></li>
                   <li><Link to={isArma3 ? "/arma3/servers" : "/servers"} className="text-gray-500 hover:text-tactical-orange transition-colors font-bold uppercase tracking-widest text-[10px]">Active Servers</Link></li>
-                  <li><Link to="/best-arma-server-hosting" className="text-tactical-orange hover:underline transition-colors font-black uppercase tracking-widest text-[10px]">Best Hosting 2026</Link></li>
+                  <li><Link to={isArma3 ? "/best-arma-3-hosting" : "/best-arma-reforger-hosting"} className="text-tactical-orange hover:underline transition-colors font-black uppercase tracking-widest text-[10px]">Best Hosting 2026</Link></li>
                 </ul>
                 <Link to="/support" className="block text-gray-500 hover:text-tactical-orange font-bold text-xs uppercase tracking-widest transition-colors tracking-[0.2em]">// Support Project</Link>
               </div>
