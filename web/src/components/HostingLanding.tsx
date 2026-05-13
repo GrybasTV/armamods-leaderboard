@@ -1,6 +1,6 @@
 import { SEO } from './ui/SEO';
 import { Card, CardContent } from './ui/Card';
-import { Shield, Zap, Globe, Cpu, Clock, CreditCard, MessageSquare } from 'lucide-react';
+import { Shield, Zap, Globe, Cpu } from 'lucide-react';
 import type { GameType } from '../api/client';
 
 interface HostingLandingProps {
