@@ -87,7 +87,7 @@ export function Arma3Hosting() {
       cpu: "Enterprise (Upsell-Driven)",
       ddos: "Standard Protection",
       isWinner: false,
-      url: "https://pingperfect.com/gameservers/arma-3-server-hosting.php"
+      url: "https://pingperfect.com/aff.php?aff=2133"
     },
     {
       name: "Nitrado",

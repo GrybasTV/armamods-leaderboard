@@ -87,7 +87,7 @@ export function ReforgerHosting() {
       cpu: "Enterprise (Upsell-Driven)",
       ddos: "Standard Protection",
       isWinner: false,
-      url: "https://pingperfect.com/gameservers/arma-reforger-server-hosting.php"
+      url: "https://pingperfect.com/aff.php?aff=2133"
     },
     {
       name: "Nitrado",
