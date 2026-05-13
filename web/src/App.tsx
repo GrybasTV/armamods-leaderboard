@@ -71,7 +71,7 @@ function App() {
             <Route path="/server/:serverId" element={<ServerDetail game="reforger" />} />
             <Route path="/mod/:modId" element={<ModDetail game="reforger" />} />
             <Route path="/trending" element={<TrendingPage game="reforger" />} />
-            <Route path="/hosting" element={<HostingLanding game="reforger" />} />
+            <Route path="/hosting" element={<ReforgerHosting />} />
             <Route path="/support" element={<SupportPage />} />
 
             {/* Arma 3 routes */}
@@ -80,7 +80,7 @@ function App() {
             <Route path="/arma3/server/:serverId" element={<ServerDetail game="arma3" />} />
             <Route path="/arma3/mod/:modId" element={<ModDetail game="arma3" />} />
             <Route path="/arma3/trending" element={<TrendingPage game="arma3" />} />
-            <Route path="/arma3/hosting" element={<HostingLanding game="arma3" />} />
+            <Route path="/arma3/hosting" element={<Arma3Hosting />} />
             <Route path="/best-arma-reforger-hosting" element={<ReforgerHosting />} />
             <Route path="/best-arma-3-hosting" element={<Arma3Hosting />} />
           </Routes>
