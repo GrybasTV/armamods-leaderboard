@@ -58,6 +58,9 @@ export function Layout({ children }: LayoutProps) {
             <Link to={`${gp}/trending`} className={navItemClass(`${gp}/trending`)}>
               [ 📈 Trending Intel ]
             </Link>
+            <Link to={`${gp}/hosting`} className={navItemClass(`${gp}/hosting`)}>
+              [ 🚀 Get Hosting ]
+            </Link>
             <Link to={`${gp}/support`} className="px-6 py-4 font-bold uppercase tracking-[0.2em] text-[10px] transition-all duration-300 border-l border-white/5 text-tactical-orange hover:text-white hover:bg-tactical-orange/10">
               [ ❤️ Support ]
             </Link>
@@ -160,6 +163,15 @@ export function Layout({ children }: LayoutProps) {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 [ 📈 Trending Intel ]
+              </Link>
+              <Link
+                to={`${gp}/hosting`}
+                className={`block px-4 py-3 font-bold uppercase tracking-[0.2em] text-[10px] transition-all ${
+                  isActive(`${gp}/hosting`) ? 'text-tactical-orange bg-white/5' : 'text-gray-500'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                [ 🚀 Get Hosting ]
               </Link>
               <Link
                 to={`${gp}/support`}

@@ -6,6 +6,7 @@ import { ServerDetail } from './components/ServerDetail';
 import { ModDetail } from './components/ModDetail';
 import { TrendingPage } from './components/TrendingPage';
 import { SupportPage } from './components/SupportPage';
+import { HostingLanding } from './components/HostingLanding';
 import { Layout } from './components/Layout';
 
 interface Props {
@@ -68,6 +69,7 @@ function App() {
             <Route path="/server/:serverId" element={<ServerDetail game="reforger" />} />
             <Route path="/mod/:modId" element={<ModDetail game="reforger" />} />
             <Route path="/trending" element={<TrendingPage game="reforger" />} />
+            <Route path="/hosting" element={<HostingLanding game="reforger" />} />
             <Route path="/support" element={<SupportPage />} />
 
             {/* Arma 3 routes */}
@@ -76,6 +78,7 @@ function App() {
             <Route path="/arma3/server/:serverId" element={<ServerDetail game="arma3" />} />
             <Route path="/arma3/mod/:modId" element={<ModDetail game="arma3" />} />
             <Route path="/arma3/trending" element={<TrendingPage game="arma3" />} />
+            <Route path="/arma3/hosting" element={<HostingLanding game="arma3" />} />
           </Routes>
         </Layout>
       </Router>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 const SLIDES = [
   {
@@ -35,12 +36,13 @@ export function AffiliateBanner() {
   }, []);
 
   const slide = SLIDES[currentSlide];
+  const location = useLocation();
+  const isArma3 = location.pathname.startsWith('/arma3');
+  const hostingPath = isArma3 ? '/arma3/hosting' : '/hosting';
 
   return (
-    <a 
-      href="https://billing.empowerservers.com/aff.php?aff=294"
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link 
+      to={hostingPath}
       className="block group relative overflow-hidden bg-zinc-950 border border-tactical-orange/20 p-8 sm:p-10 transition-all hover:border-tactical-orange/50"
     >
       {/* Background Effect */}
@@ -95,6 +97,6 @@ export function AffiliateBanner() {
           to { width: 100%; }
         }
       `}} />
-    </a>
+    </Link>
   );
 }

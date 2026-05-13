@@ -8,8 +8,9 @@
 
 ### 💰 Monetizacijos integracija
 - **Partnerystės programa**: Integruota „Empower Servers“ hostingo partnerystės programa.
-- **Strateginiai baneriai**: Modifikacijų ir serverių detaliuose puslapiuose pridėti stilingi, taktinio stiliaus „Deployment“ skydai, skatinantys vartotojus nuomotis serverius per partnerio nuorodą.
-- **Globali integracija**: Hostingo nuoroda pridėta į svetainės infrastruktūros skiltį poraštėje.
+- **Strateginiai baneriai**: Modifikacijų ir serverių detaliuose puslapiuose pridėti stilingi, taktinio stiliaus „Deployment“ skydai, skatinantys vartotojus nuomotis serverius per vidinius nukreipimo puslapius.
+- **Hosting Landing Pages**: Sukurti specialūs SEO optimizuoti puslapiai (`/hosting`) su detalia informacija apie „Ryzen/i9“ procesorius, NVMe diskus ir „Flash Sale“ pasiūlymus.
+- **Navigacijos plėtra**: Į pagrindinį meniu įtraukta „Get Hosting“ skiltis greitesnei konversijai.
 
 ## [1.4.0] - 2026-05-13
 

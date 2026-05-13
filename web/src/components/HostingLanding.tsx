@@ -1,0 +1,178 @@
+import { SEO } from './ui/SEO';
+import { Card, CardContent } from './ui/Card';
+import { Shield, Zap, Globe, Cpu, Clock, CreditCard, MessageSquare } from 'lucide-react';
+import type { GameType } from '../api/client';
+
+interface HostingLandingProps {
+  game: GameType;
+}
+
+export function HostingLanding({ game }: HostingLandingProps) {
+  const isReforger = game === 'reforger';
+  const gameName = isReforger ? 'Arma Reforger' : 'Arma 3';
+  const affiliateUrl = "https://billing.empowerservers.com/aff.php?aff=294";
+
+  return (
+    <div className="space-y-20 animate-in fade-in duration-1000">
+      <SEO 
+        title={`Best ${gameName} Server Hosting - High Performance Nodes`}
+        description={`Deploy your ${gameName} dedicated server today. Ryzen & i9 processors, unmetered NVMe storage, and 24/7 expert support. Starting from $9.99/mo.`}
+        keywords={`${gameName} hosting, arma server rental, best arma hosting, ddos protected arma server`}
+      />
+
+      {/* Hero Section */}
+      <section className="relative py-12 sm:py-24 overflow-hidden border-b border-white/5">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-tactical-orange/10 via-transparent to-transparent blur-[120px] pointer-events-none" />
+        
+        <div className="text-center space-y-8 relative z-10">
+          <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-tactical-orange/10 border border-tactical-orange/30 rounded-full">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tactical-orange opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-tactical-orange"></span>
+            </span>
+            <span className="text-[10px] font-black text-tactical-orange uppercase tracking-[0.3em]">Flash Sale: Use Code 10OFF for $10 Off</span>
+          </div>
+
+          <div className="space-y-4">
+            <h1 className="text-5xl sm:text-8xl font-black text-white uppercase tracking-tighter leading-[0.9]">
+              {gameName}<br/>
+              <span className="text-tactical-orange">Server Hosting</span>
+            </h1>
+            <p className="text-gray-500 text-lg sm:text-xl font-bold uppercase tracking-widest max-w-3xl mx-auto leading-relaxed">
+              Premium hardware, tactical performance, honest pricing. Optimized for {isReforger ? 'Enfusion Engine' : 'Real Virtuality'}.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
+            <a 
+              href={affiliateUrl}
+              className="w-full sm:w-auto px-12 py-5 bg-tactical-orange text-black font-black uppercase tracking-[0.2em] text-sm hover:bg-white transition-all shadow-[0_0_40px_rgba(249,115,22,0.3)]"
+            >
+              View Plans & Pricing →
+            </a>
+            <div className="flex items-center gap-4 text-gray-500 font-bold uppercase tracking-widest text-xs">
+              <Shield className="w-5 h-5 text-tactical-orange" />
+              DDoS Protected Network
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <Card className="bg-zinc-900/50 border-white/5 hover:border-tactical-orange/30 transition-all">
+          <CardContent className="p-8 space-y-4">
+            <Cpu className="w-10 h-10 text-tactical-orange" />
+            <h3 className="text-xl font-black text-white uppercase">Extreme Hardware</h3>
+            <p className="text-gray-500 text-sm font-medium leading-relaxed uppercase">
+              High performance processors such as Ryzen and Intel i9 using NVMe SSD disks. Raw power for lag-free combat.
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-white/5 hover:border-tactical-orange/30 transition-all">
+          <CardContent className="p-8 space-y-4">
+            <Globe className="w-10 h-10 text-tactical-orange" />
+            <h3 className="text-xl font-black text-white uppercase">Global Network</h3>
+            <p className="text-gray-500 text-sm font-medium leading-relaxed uppercase">
+              Data center locations throughout the world hosted on 1Gbps and 10Gbps top-tier networks for low latency.
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-zinc-900/50 border-white/5 hover:border-tactical-orange/30 transition-all">
+          <CardContent className="p-8 space-y-4">
+            <Zap className="w-10 h-10 text-tactical-orange" />
+            <h3 className="text-xl font-black text-white uppercase">Instant Setup</h3>
+            <p className="text-gray-500 text-sm font-medium leading-relaxed uppercase">
+              No need to wait – with only a few clicks, start playing with friends in minutes. 100% automated deployment.
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Pricing / CTA Section */}
+      <section className="bg-zinc-950 border border-white/10 p-12 sm:p-20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-full h-full bg-[linear-gradient(45deg,transparent_25%,rgba(249,115,22,0.02)_50%,transparent_75%)] bg-[length:20px_20px]" />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Everything you need<br/>to run a community</h2>
+              <div className="w-20 h-1.5 bg-tactical-orange" />
+            </div>
+            
+            <ul className="space-y-4">
+              {[
+                'No Player Limit - Host as many as you need',
+                'Unmetered NVMe Storage for all your mods',
+                '8GB RAM Baseline (easily upgradeable)',
+                'Ryzen & Intel i9 Processors',
+                'Full FTP & File Manager Access',
+                'Automated Daily Backups'
+              ].map(item => (
+                <li key={item} className="flex items-center gap-4 text-gray-400 font-bold uppercase tracking-widest text-xs">
+                  <div className="w-1.5 h-1.5 bg-tactical-orange" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="bg-black/60 border border-tactical-orange/20 p-10 space-y-8 text-center">
+            <div className="space-y-2">
+              <p className="text-gray-500 font-black uppercase tracking-[0.3em] text-[10px]">Starter Deployment</p>
+              <div className="text-6xl font-black text-white tracking-tighter italic">
+                $9.99<span className="text-xl text-gray-600 not-italic">/mo</span>
+              </div>
+            </div>
+            <a 
+              href={affiliateUrl}
+              className="block w-full py-5 bg-white text-black font-black uppercase tracking-[0.2em] text-sm hover:bg-tactical-orange transition-all"
+            >
+              Get Started Now →
+            </a>
+            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+              48-Hour Risk-Free Refund Period • No Commitment
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="space-y-12">
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Trusted by thousands of gamers</h2>
+          <div className="flex items-center justify-center gap-1 text-tactical-orange">
+            {[1,2,3,4,5].map(i => <span key={i} className="text-xl">★</span>)}
+            <span className="ml-4 text-white font-black uppercase tracking-widest text-xs">4.7/5.0 on Trustpilot</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Card className="bg-zinc-900/30 border-white/5 italic text-gray-400 font-medium leading-relaxed p-8">
+            "Had some issues setting up my new server, used the live chat to talk to support team and had my issues sorted out in no time! Stoked with their customer service."
+          </Card>
+          <Card className="bg-zinc-900/30 border-white/5 italic text-gray-400 font-medium leading-relaxed p-8">
+            "I went through a couple other server providers and this has been one of the best. Support replies within seconds with real answers, not some AI."
+          </Card>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="space-y-12 border-t border-white/5 pt-20 pb-20">
+        <h2 className="text-4xl font-black text-white uppercase tracking-tighter text-center">Frequently Asked Questions</h2>
+        <div className="max-w-4xl mx-auto space-y-8">
+          {[
+            { q: `How do I set up an ${gameName} server?`, a: `Simply select your plan, complete the order, and your server will be deployed instantly. You can then access the control panel to install mods and configure settings.` },
+            { q: `Can I host custom mods?`, a: `Yes! You have full FTP access and a built-in file manager. You can install any mod from the Steam Workshop or Arma Reforger Workshop easily.` },
+            { q: `Is the network DDoS protected?`, a: `Absolutely. Every server is hosted on our enterprise-grade network with 100% uptime SLA and advanced DDoS mitigation.` }
+          ].map(faq => (
+            <div key={faq.q} className="space-y-3">
+              <h4 className="text-tactical-orange font-black uppercase tracking-widest text-sm">{faq.q}</h4>
+              <p className="text-gray-500 font-medium uppercase tracking-wide text-xs leading-loose">{faq.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
