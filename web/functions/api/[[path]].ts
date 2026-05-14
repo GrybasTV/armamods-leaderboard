@@ -254,6 +254,21 @@ app.get('/mods/:modId', async (c) => {
 });
 
 
+// Find matching closing brace for a JSON object with nested structures
+function findMatchingBrace(text: string, openPos: number): number {
+  let depth = 0;
+  let inStr = false;
+  for (let i = openPos; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '\\' && inStr) { i++; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '{') depth++;
+    if (ch === '}') { depth--; if (depth === 0) return i; }
+  }
+  return -1;
+}
+
 // Helper to scan history text for a specific modId (Used in shards)
 function scanHistoryPoints(historyText: string, modId: string): any[] {
   const modHistory = [];
@@ -486,7 +501,7 @@ app.get('/servers/:serverId', async (c) => {
                 const searchStr = `"id":"${serverId}"`;
                 const idPos = chunkText.indexOf(searchStr);
                 const startPos = chunkText.lastIndexOf('{', idPos);
-                const endPos = chunkText.indexOf('}', idPos);
+                const endPos = findMatchingBrace(chunkText, startPos);
                 if (startPos !== -1 && endPos !== -1) {
                     try {
                         server = JSON.parse(chunkText.slice(startPos, endPos + 1));
@@ -613,7 +628,7 @@ app.get('/servers/ranking', async (c) => {
   return response;
 });
 
-// Get Points History for a specific server (For Charts)
+// Get Points History for a specific server (For Charts) — text scanning to avoid CPU limits
 app.get('/servers/:serverId/history', async (c) => {
   const serverId = c.req.param('serverId');
   const game = c.req.query('game') || 'reforger';
@@ -621,22 +636,42 @@ app.get('/servers/:serverId/history', async (c) => {
   const cacheResponse = await cache.match(c.req.raw);
   if (cacheResponse) return cacheResponse;
 
-  const history = await c.env.TRENDING_KV.get(`history:server_scores:${game}`, 'json') as any[];
-  if (!history) return c.json({ data: [] });
+  const historyText = await c.env.TRENDING_KV.get(`history:server_scores:${game}`, 'text');
+  if (!historyText) return c.json({ data: [] });
 
-  // Extract points for ONLY this server 
-  const serverHistory = history.map(entry => {
-    const scores = entry.scores || {};
-    // Calculate rank for this server at this point in time
-    const rankedIds = Object.keys(scores).sort((a, b) => (scores[b] as number) - (scores[a] as number));
-    const rank = rankedIds.indexOf(serverId) + 1;
-    
-    return {
-      time: entry.time,
-      points: scores[serverId] || 0,
-      rank: rank > 0 ? rank : null
-    };
-  }).filter(h => h.points !== 0 || h.time === history[history.length-1].time);
+  const serverHistory: any[] = [];
+  const scoreKey = `"${serverId}":`;
+  const timeKey = '"time":"';
+
+  let searchPos = 0;
+  while (searchPos < historyText.length) {
+    const timeIdx = historyText.indexOf(timeKey, searchPos);
+    if (timeIdx === -1) break;
+
+    const timeStart = timeIdx + timeKey.length;
+    const timeEnd = historyText.indexOf('"', timeStart);
+    if (timeEnd === -1) break;
+    const time = historyText.slice(timeStart, timeEnd);
+
+    const scoresIdx = historyText.indexOf('"scores":{', timeEnd);
+    if (scoresIdx === -1) break;
+
+    const nextTimeIdx = historyText.indexOf(timeKey, scoresIdx + 10);
+    const blockEnd = nextTimeIdx === -1 ? historyText.length : nextTimeIdx;
+    const block = historyText.slice(scoresIdx, blockEnd);
+
+    let points = 0;
+    const scorePos = block.indexOf(scoreKey);
+    if (scorePos !== -1) {
+      const numStart = scorePos + scoreKey.length;
+      let numEnd = numStart;
+      while (numEnd < block.length && block[numEnd] !== ',' && block[numEnd] !== '}') numEnd++;
+      points = parseInt(block.slice(numStart, numEnd)) || 0;
+    }
+
+    serverHistory.push({ time, points, rank: null });
+    searchPos = blockEnd;
+  }
 
   const finalResponse = c.json({ data: serverHistory });
   finalResponse.headers.set('Cache-Control', 'public, max-age=300');
