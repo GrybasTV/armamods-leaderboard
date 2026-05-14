@@ -123,7 +123,7 @@ export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
             </p>
           </div>
           <div className="flex gap-1">
-            {(['24h', '7d', '30d'] as TrendPeriod[]).map((period) => (
+            {(['7d', '30d'] as TrendPeriod[]).map((period) => (
               <button
                 key={period}
                 onClick={() => setActivePeriod(period)}
@@ -133,7 +133,7 @@ export function TrendingPage({ game = 'reforger' }: TrendingPageProps) {
                     : 'bg-zinc-800 text-gray-400 hover:text-white'
                 }`}
               >
-                {period === '24h' ? '24h' : period === '7d' ? '7d' : '30d'}
+                {period === '7d' ? '7d' : '30d'}
               </button>
             ))}
           </div>

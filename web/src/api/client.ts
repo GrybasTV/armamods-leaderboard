@@ -102,7 +102,7 @@ export const serversApi = {
 };
 
 export const trendingApi = {
-  getTrending: async (period: import('../types').TrendPeriod = '24h', game: GameType = 'reforger') => {
+  getTrending: async (period: import('../types').TrendPeriod = '7d', game: GameType = 'reforger') => {
     const key = `trending:${game}:${period}`;
     return getCached(key, async () => {
       const response = await api.get<TrendingResponse>('trending', {

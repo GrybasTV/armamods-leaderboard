@@ -80,4 +80,4 @@ export interface ModHistory {
   overallRank: number;
 }
 
-export type TrendPeriod = '24h' | '7d' | '30d';
+export type TrendPeriod = '7d' | '30d';
