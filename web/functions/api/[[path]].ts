@@ -642,6 +642,7 @@ app.get('/servers/:serverId/history', async (c) => {
   const serverHistory: any[] = [];
   const scoreKey = `"${serverId}":`;
   const timeKey = '"time":"';
+  const ranksKey = '"ranks":{';
 
   let searchPos = 0;
   while (searchPos < historyText.length) {
@@ -653,23 +654,40 @@ app.get('/servers/:serverId/history', async (c) => {
     if (timeEnd === -1) break;
     const time = historyText.slice(timeStart, timeEnd);
 
-    const scoresIdx = historyText.indexOf('"scores":{', timeEnd);
-    if (scoresIdx === -1) break;
-
-    const nextTimeIdx = historyText.indexOf(timeKey, scoresIdx + 10);
+    // Find the block boundary (next time entry or end)
+    const nextTimeIdx = historyText.indexOf(timeKey, timeEnd + 1);
     const blockEnd = nextTimeIdx === -1 ? historyText.length : nextTimeIdx;
-    const block = historyText.slice(scoresIdx, blockEnd);
+    const block = historyText.slice(timeEnd, blockEnd);
 
+    // Extract points from "scores":{...}
     let points = 0;
-    const scorePos = block.indexOf(scoreKey);
-    if (scorePos !== -1) {
-      const numStart = scorePos + scoreKey.length;
-      let numEnd = numStart;
-      while (numEnd < block.length && block[numEnd] !== ',' && block[numEnd] !== '}') numEnd++;
-      points = parseInt(block.slice(numStart, numEnd)) || 0;
+    const scoresIdx = block.indexOf('"scores":{');
+    if (scoresIdx !== -1) {
+      const scoresBlock = block.slice(scoresIdx);
+      const scorePos = scoresBlock.indexOf(scoreKey);
+      if (scorePos !== -1) {
+        const numStart = scorePos + scoreKey.length;
+        let numEnd = numStart;
+        while (numEnd < scoresBlock.length && scoresBlock[numEnd] !== ',' && scoresBlock[numEnd] !== '}') numEnd++;
+        points = parseInt(scoresBlock.slice(numStart, numEnd)) || 0;
+      }
     }
 
-    serverHistory.push({ time, points, rank: null });
+    // Extract rank from "ranks":{...} (pre-calculated by collector)
+    let rank: number | null = null;
+    const ranksIdx = block.indexOf(ranksKey);
+    if (ranksIdx !== -1) {
+      const ranksBlock = block.slice(ranksIdx);
+      const rankPos = ranksBlock.indexOf(scoreKey);
+      if (rankPos !== -1) {
+        const numStart = rankPos + scoreKey.length;
+        let numEnd = numStart;
+        while (numEnd < ranksBlock.length && ranksBlock[numEnd] !== ',' && ranksBlock[numEnd] !== '}') numEnd++;
+        rank = parseInt(ranksBlock.slice(numStart, numEnd)) || null;
+      }
+    }
+
+    serverHistory.push({ time, points, rank });
     searchPos = blockEnd;
   }
 

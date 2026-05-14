@@ -647,9 +647,16 @@ async function runServerScoring(game: string, kv: CloudflareKVClient, serverList
 
       // 3. Update History (Trailing 30 Days = 90 snapshots)
       let history = await kv.get(historyKey, 'json') || [];
+
+      // Pre-calculate ranks for this snapshot
+      const sortedIds = Object.keys(currentScores).sort((a, b) => currentScores[b] - currentScores[a]);
+      const currentRanks: Record<string, number> = {};
+      sortedIds.forEach((id, idx) => { currentRanks[id] = idx + 1; });
+
       history.push({
           time: new Date().toISOString(),
-          scores: currentScores
+          scores: currentScores,
+          ranks: currentRanks
       });
       
       // Keep last 30 days (90 snapshots)
