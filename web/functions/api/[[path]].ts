@@ -628,7 +628,7 @@ app.get('/servers/ranking', async (c) => {
   return response;
 });
 
-// Get Points History for a specific server (For Charts) — text scanning to avoid CPU limits
+// Get Points History for a specific server — reads from shared history shards
 app.get('/servers/:serverId/history', async (c) => {
   const serverId = c.req.param('serverId');
   const game = c.req.query('game') || 'reforger';
@@ -636,59 +636,56 @@ app.get('/servers/:serverId/history', async (c) => {
   const cacheResponse = await cache.match(c.req.raw);
   if (cacheResponse) return cacheResponse;
 
-  const historyText = await c.env.TRENDING_KV.get(`history:server_scores:${game}`, 'text');
-  if (!historyText) return c.json({ data: [] });
-
   const serverHistory: any[] = [];
-  const scoreKey = `"${serverId}":`;
+  const serverSearchKey = `"${serverId}":`;
+  const serversKey = '"servers":{';
   const timeKey = '"time":"';
-  const ranksKey = '"ranks":{';
 
-  let searchPos = 0;
-  while (searchPos < historyText.length) {
-    const timeIdx = historyText.indexOf(timeKey, searchPos);
-    if (timeIdx === -1) break;
+  // Scan shared history shards (same source as mod history)
+  const baseKey = `history:daily:${game}`;
+  const meta = await c.env.TRENDING_KV.get(`${baseKey}:meta`, 'json') as any;
+  if (!meta || !meta.chunks) {
+    const finalResponse = c.json({ data: [] });
+    c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
+    return finalResponse;
+  }
 
-    const timeStart = timeIdx + timeKey.length;
-    const timeEnd = historyText.indexOf('"', timeStart);
-    if (timeEnd === -1) break;
-    const time = historyText.slice(timeStart, timeEnd);
+  for (let i = 0; i < meta.chunks; i++) {
+    const shardText = await c.env.TRENDING_KV.get(`${baseKey}:${i}`, 'text');
+    if (!shardText || !shardText.includes(serversKey)) continue;
 
-    // Find the block boundary (next time entry or end)
-    const nextTimeIdx = historyText.indexOf(timeKey, timeEnd + 1);
-    const blockEnd = nextTimeIdx === -1 ? historyText.length : nextTimeIdx;
-    const block = historyText.slice(timeEnd, blockEnd);
+    let searchPos = 0;
+    while (searchPos < shardText.length) {
+      const timeIdx = shardText.indexOf(timeKey, searchPos);
+      if (timeIdx === -1) break;
 
-    // Extract points from "scores":{...}
-    let points = 0;
-    const scoresIdx = block.indexOf('"scores":{');
-    if (scoresIdx !== -1) {
-      const scoresBlock = block.slice(scoresIdx);
-      const scorePos = scoresBlock.indexOf(scoreKey);
-      if (scorePos !== -1) {
-        const numStart = scorePos + scoreKey.length;
+      const timeStart = timeIdx + timeKey.length;
+      const timeEnd = shardText.indexOf('"', timeStart);
+      if (timeEnd === -1) break;
+      const time = shardText.slice(timeStart, timeEnd);
+
+      // Find servers block within this time point
+      const serversIdx = shardText.indexOf(serversKey, timeEnd);
+      if (serversIdx === -1) break;
+
+      // Block boundary: next time entry or end
+      const nextTimeIdx = shardText.indexOf(timeKey, serversIdx + 10);
+      const blockEnd = nextTimeIdx === -1 ? shardText.length : nextTimeIdx;
+      const block = shardText.slice(serversIdx, blockEnd);
+
+      let rank: number | null = null;
+      const serverPos = block.indexOf(serverSearchKey);
+      if (serverPos !== -1) {
+        const numStart = serverPos + serverSearchKey.length;
         let numEnd = numStart;
-        while (numEnd < scoresBlock.length && scoresBlock[numEnd] !== ',' && scoresBlock[numEnd] !== '}') numEnd++;
-        points = parseInt(scoresBlock.slice(numStart, numEnd)) || 0;
+        while (numEnd < block.length && block[numEnd] !== ',' && block[numEnd] !== '}') numEnd++;
+        const parsed = parseInt(block.slice(numStart, numEnd));
+        if (parsed > 0) rank = parsed;
       }
-    }
 
-    // Extract rank from "ranks":{...} (pre-calculated by collector)
-    let rank: number | null = null;
-    const ranksIdx = block.indexOf(ranksKey);
-    if (ranksIdx !== -1) {
-      const ranksBlock = block.slice(ranksIdx);
-      const rankPos = ranksBlock.indexOf(scoreKey);
-      if (rankPos !== -1) {
-        const numStart = rankPos + scoreKey.length;
-        let numEnd = numStart;
-        while (numEnd < ranksBlock.length && ranksBlock[numEnd] !== ',' && ranksBlock[numEnd] !== '}') numEnd++;
-        rank = parseInt(ranksBlock.slice(numStart, numEnd)) || null;
-      }
+      serverHistory.push({ time, points: 0, rank });
+      searchPos = blockEnd;
     }
-
-    serverHistory.push({ time, points, rank });
-    searchPos = blockEnd;
   }
 
   const finalResponse = c.json({ data: serverHistory });

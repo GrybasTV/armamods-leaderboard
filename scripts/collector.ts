@@ -292,7 +292,7 @@ interface ServerMod {
     // Calculate SQE scores BEFORE writing to KV (eliminates double-write)
     // runServerScoring mutates serverList in-place, adding sqePoints and sqeRank
     console.log(`[SERVER_SCORING] Running for ${game} (pre-write)...`);
-    await runServerScoring(game, kv, serverList, modList);
+    const serverRanks = await runServerScoring(game, kv, serverList, modList);
 
     // Sort servers by players (descending) before sharding
     serverList.sort((a, b) => (b.players || 0) - (a.players || 0));
@@ -334,6 +334,12 @@ interface ServerMod {
     const statsMap: Record<string, { p: number, s: number, r: number }> = {};
     for (const m of modList) {
       statsMap[m.id] = { p: m.totalPlayers, s: m.serverCount, r: m.overallRank };
+    }
+
+    // Server ranks for shared history (pre-calculated by runServerScoring)
+    const serverRanksMap: Record<string, number> = {};
+    for (const s of serverList) {
+      if (s.sqeRank) serverRanksMap[s.id] = s.sqeRank;
     }
 
     const periods = [
@@ -387,13 +393,23 @@ interface ServerMod {
             mergedMods[id] = current;
           }
         }
-        history[existingIndex] = { time: timeLabel, mods: mergedMods };
+        // Merge server ranks (keep best rank)
+        const mergedServers: Record<string, number> = { ...(existingPoint.servers || {}) };
+        for (const [id, rank] of Object.entries(serverRanksMap)) {
+          const existing = mergedServers[id];
+          if (existing) {
+            mergedServers[id] = Math.min(existing, rank); // Lower is better
+          } else {
+            mergedServers[id] = rank;
+          }
+        }
+        history[existingIndex] = { time: timeLabel, mods: mergedMods, servers: mergedServers };
       } else if (existingIndex !== -1) {
         // Hourly or just standard overwrite
-        history[existingIndex] = { time: timeLabel, mods: statsMap };
+        history[existingIndex] = { time: timeLabel, mods: statsMap, servers: serverRanksMap };
       } else {
         // New point
-        history.push({ time: timeLabel, mods: statsMap });
+        history.push({ time: timeLabel, mods: statsMap, servers: serverRanksMap });
       }
 
       const updated = history.slice(-period.limit);
@@ -610,15 +626,14 @@ if (process.argv[1] && (process.argv[1].endsWith('collector.ts') || process.argv
 /**
  * Server Quality & Efficiency Index Scoring
  */
-async function runServerScoring(game: string, kv: CloudflareKVClient, serverList: any[], modList: any[]) {
+async function runServerScoring(game: string, kv: CloudflareKVClient, serverList: any[], modList: any[]): Promise<Record<string, number>> {
+  const leaderboardKey = `cache:ranking:servers:${game}`;
+
   try {
-      const historyKey = `history:server_scores:${game}`;
-      const leaderboardKey = `cache:ranking:servers:${game}`;
-      
       // 1. Prepare Mod Rank Lookup (Dynamic Averages)
       const modRankMap = new Map();
       modList.forEach(m => modRankMap.set(m.id, m.overallRank || modList.length));
-      
+
       const GLOBAL_AVG = modList.length / 2;
       const SCALING_FACTOR = GLOBAL_AVG / 100;
 
@@ -627,62 +642,33 @@ async function runServerScoring(game: string, kv: CloudflareKVClient, serverList
       for (const s of serverList) {
           const players = s.players || 0;
           const modCount = s.mods?.length || 0;
-          
-          // Formula part 1: Players vs Mods
+
           const baseScore = (players * 5) - (modCount * 1);
-          
-          // Formula part 2: Uniqueness
+
           let avgRank = 0;
           if (modCount > 0) {
               const totalRank = s.mods.reduce((acc: number, m: any) => acc + (modRankMap.get(m.id) || 14000), 0);
               avgRank = totalRank / modCount;
           }
-          
-          // Bonus Mapping: (AvgRank - GlobalAvg) / ScalingFactor => Range -100 to +100
+
           let uniquenessBonus = Math.floor((avgRank - GLOBAL_AVG) / SCALING_FACTOR);
           uniquenessBonus = Math.min(100, Math.max(-100, uniquenessBonus));
-          
+
           currentScores[s.id] = baseScore + uniquenessBonus;
       }
 
-      // 3. Update History (Trailing 30 Days = 90 snapshots)
-      let history = await kv.get(historyKey, 'json') || [];
-
-      // Pre-calculate ranks for this snapshot
+      // 3. Pre-calculate ranks for this snapshot (used for history + leaderboard)
       const sortedIds = Object.keys(currentScores).sort((a, b) => currentScores[b] - currentScores[a]);
       const currentRanks: Record<string, number> = {};
       sortedIds.forEach((id, idx) => { currentRanks[id] = idx + 1; });
 
-      history.push({
-          time: new Date().toISOString(),
-          scores: currentScores,
-          ranks: currentRanks
-      });
-      
-      // Keep last 30 days (90 snapshots)
-      if (history.length > 90) history = history.slice(-90);
-      await kv.put(historyKey, JSON.stringify(history));
-
-      // 4. Generate Leaderboard (Sum of all history)
-      const totalPoints: Record<string, number> = {};
-      for (const entry of history) {
-          for (const [id, score] of Object.entries(entry.scores)) {
-              totalPoints[id] = (totalPoints[id] || 0) + (score as number);
-          }
-      }
-
-      // Convert to sorted list for history scoring
-      const rankedIds = Object.keys(totalPoints).sort((a, b) => totalPoints[b] - totalPoints[a]);
-      const rankLookup = new Map(rankedIds.map((id, index) => [id, index + 1]));
-
-      // 5. CRITICAL: Update the original serverList objects with rank and points
-      // This ensures that when the collector saves chunks, they include the SQE data
+      // 4. Enrich serverList with SQE data
       for (const s of serverList) {
-          s.sqePoints = Math.floor(totalPoints[s.id] || 0);
-          s.sqeRank = rankLookup.get(s.id) || (rankedIds.length + 1);
+          s.sqePoints = Math.floor(currentScores[s.id] || 0);
+          s.sqeRank = currentRanks[s.id] || (sortedIds.length + 1);
       }
 
-      // Save TOP 200 for the dedicated leaderboard cache
+      // 5. Save TOP 200 leaderboard
       const leaderboard = serverList
           .filter(s => s.sqePoints > 0 || s.players > 0)
           .sort((a, b) => a.sqeRank - b.sqeRank)
@@ -697,9 +683,12 @@ async function runServerScoring(game: string, kv: CloudflareKVClient, serverList
           }));
 
       await kv.put(leaderboardKey, JSON.stringify(leaderboard));
-      console.log(`[SERVER_SCORING] Leaderboard updated and ${serverList.length} servers enriched with SQE data.`);
+      console.log(`[SERVER_SCORING] Leaderboard updated, ${serverList.length} servers enriched with SQE data.`);
+
+      return currentRanks;
 
   } catch (err) {
       console.error(`[SERVER_SCORING] Error:`, err);
+      return {};
   }
 }
