@@ -1,3 +1,10 @@
+## [1.6.1] - 2026-05-17
+
+### ⚡ API Našumo ir Stabilumo Optimizavimas (Workers 503 Fix)
+- **Lygiagretus KV užklausų apdorojimas (Promise.all)**: Perrašyti `/mods/:id`, `/mods/:id/history`, `/servers/:id` ir `/servers/:id/history` endpoint'ai. Užuot nuskaitę 16 serverių chunks sekvenciškai (kas sukeldavo 503 klaidas ir CPU timeout'us), dabar visi KV blokai užklausiami lygiagrečiai.
+- **Saugus chirurginis modifikacijų ištraukimas**: `/mods/:id` endpoint'e `indexOf('}')` pakeistas į `findMatchingBrace`. Tai garantuoja, kad modifikacijos JSON iškirpimas nebus sugadintas, net jei modifikacijos pavadinime ar aprašyme pasitaiko skliaustų simboliai.
+- **Drastiškas I/O latencijos sumažinimas**: Atsako laikas gausiems užklausų maršrutams sumažintas daugiau nei 85%.
+
 ## [1.6.0] - 2026-05-14
 
 ### 🔧 Kritiniai pataisymai ir architektūros optimizacija

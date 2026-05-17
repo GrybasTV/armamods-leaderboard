@@ -187,19 +187,27 @@ app.get('/mods/:modId', async (c) => {
     const meta = await c.env.TRENDING_KV.get(`${keys.MODS}:meta`, 'json') as any;
     if (meta && meta.chunks) {
         totalModsCount = meta.total;
+        
+        // Lygiagretus KV chunks nuskaitymas
+        const chunkPromises = [];
         for (let i = 0; i < meta.chunks; i++) {
-            const chunkText = await c.env.TRENDING_KV.get(`${keys.MODS}:${i}`, 'text');
+            chunkPromises.push(c.env.TRENDING_KV.get(`${keys.MODS}:${i}`, 'text'));
+        }
+        const chunksText = await Promise.all(chunkPromises);
+        
+        for (let i = 0; i < chunksText.length; i++) {
+            const chunkText = chunksText[i];
             if (chunkText && chunkText.includes(`"id":"${modId}"`)) {
-                // Surgical extraction: find object boundaries to avoid full chunk parsing
+                // Chirurginis ištraukimas naudojant findMatchingBrace saugumui
                 const searchStr = `"id":"${modId}"`;
                 const idPos = chunkText.indexOf(searchStr);
                 const startPos = chunkText.lastIndexOf('{', idPos);
-                const endPos = chunkText.indexOf('}', idPos);
+                const endPos = findMatchingBrace(chunkText, startPos);
                 if (startPos !== -1 && endPos !== -1) {
                     try {
                         mod = JSON.parse(chunkText.slice(startPos, endPos + 1));
                         if (mod) break;
-                    } catch (e) { /* fallback to next chunk if corrupted */ }
+                    } catch (e) { /* fallback */ }
                 }
             }
         }
@@ -223,10 +231,18 @@ app.get('/mods/:modId', async (c) => {
     const meta = await c.env.TRENDING_KV.get(`${keys.SERVERS}:meta`, 'json') as any;
     if (meta && meta.chunks) {
         console.log(`[MODS_DETAIL] Scanning server chunks for mod inclusion (max ${MAX_SERVERS_PER_MOD} results)...`);
+        
+        // Lygiagretus serverių chunks nuskaitymas
+        const chunkPromises = [];
         for (let i = 0; i < meta.chunks; i++) {
+            chunkPromises.push(c.env.TRENDING_KV.get(`${keys.SERVERS}:${i}`, 'text'));
+        }
+        const chunksText = await Promise.all(chunkPromises);
+        
+        for (let i = 0; i < chunksText.length; i++) {
             if (modServers.length >= MAX_SERVERS_PER_MOD) break;
             
-            const chunkText = await c.env.TRENDING_KV.get(`${keys.SERVERS}:${i}`, 'text');
+            const chunkText = chunksText[i];
             if (chunkText && chunkText.includes(`"id":"${modId}"`)) {
                 const chunk = JSON.parse(chunkText);
                 for (const s of chunk) {
@@ -396,11 +412,15 @@ app.get('/mods/:modId/history', async (c) => {
   const meta = await c.env.TRENDING_KV.get(`${baseKey}:meta`, 'json') as any;
 
   if (meta && meta.chunks) {
-      // Sharded logic
+      // Lygiagretus history chunks nuskaitymas
+      const shardPromises = [];
       for (let i = 0; i < meta.chunks; i++) {
-          const shardKey = `${baseKey}:${i}`;
-          // Greitas patikrinimas ar šis blokas turi mūsų modą
-          const shardText = await c.env.TRENDING_KV.get(shardKey, 'text');
+          shardPromises.push(c.env.TRENDING_KV.get(`${baseKey}:${i}`, 'text'));
+      }
+      const shardsText = await Promise.all(shardPromises);
+      
+      for (let i = 0; i < shardsText.length; i++) {
+          const shardText = shardsText[i];
           if (shardText && shardText.includes(`"${modId}":{`)) {
               const shardHistory = scanHistoryPoints(shardText, modId);
               modHistory.push(...shardHistory);
@@ -494,8 +514,15 @@ app.get('/servers/:serverId', async (c) => {
   try {
     const meta = await c.env.TRENDING_KV.get(`${keys.SERVERS}:meta`, 'json') as any;
     if (meta && meta.chunks) {
+        // Lygiagretus serverių chunks nuskaitymas
+        const chunkPromises = [];
         for (let i = 0; i < meta.chunks; i++) {
-            const chunkText = await c.env.TRENDING_KV.get(`${keys.SERVERS}:${i}`, 'text');
+            chunkPromises.push(c.env.TRENDING_KV.get(`${keys.SERVERS}:${i}`, 'text'));
+        }
+        const chunksText = await Promise.all(chunkPromises);
+        
+        for (let i = 0; i < chunksText.length; i++) {
+            const chunkText = chunksText[i];
             if (chunkText && chunkText.includes(`"id":"${serverId}"`)) {
                 // Surgical extraction: find object boundaries
                 const searchStr = `"id":"${serverId}"`;
@@ -650,8 +677,15 @@ app.get('/servers/:serverId/history', async (c) => {
     return finalResponse;
   }
 
+  // Lygiagretus history shards nuskaitymas
+  const shardPromises = [];
   for (let i = 0; i < meta.chunks; i++) {
-    const shardText = await c.env.TRENDING_KV.get(`${baseKey}:${i}`, 'text');
+    shardPromises.push(c.env.TRENDING_KV.get(`${baseKey}:${i}`, 'text'));
+  }
+  const shardsText = await Promise.all(shardPromises);
+
+  for (let i = 0; i < shardsText.length; i++) {
+    const shardText = shardsText[i];
     if (!shardText || !shardText.includes(serversKey)) continue;
 
     let searchPos = 0;
