@@ -182,6 +182,11 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                       dataKey="date" 
                       stroke="#666" 
                       tickFormatter={(tick) => {
+                        if (!tick) return '';
+                        if (tick.length === 10 && tick.includes('-')) {
+                          const parts = tick.split('-');
+                          return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
+                        }
                         const d = new Date(tick);
                         if (selectedDays === 1) {
                           return `${d.getHours().toString().padStart(2, '0')}:00`;
