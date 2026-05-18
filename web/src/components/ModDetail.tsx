@@ -26,7 +26,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
   const [history, setHistory] = useState<ModHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDays, setSelectedDays] = useState(30);
+  const [selectedDays, setSelectedDays] = useState(7);
 
   const loadMod = useCallback(async (days: number, signal?: AbortSignal) => {
     if (!modId) return;
@@ -149,8 +149,8 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
             <div className="flex gap-2 p-1 bg-zinc-900 border border-white/10">
               {[
                 { label: '24H', value: 1 },
-                { label: '30D', value: 30 },
-                { label: '1M', value: 32 },
+                { label: '7D', value: 7 },
+                { label: '1M', value: 30 },
                 { label: '1Y', value: 366 }
               ].map(opt => (
                 <button
