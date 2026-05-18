@@ -27,6 +27,8 @@ This document outlines the strategic vision, current implementation status, and 
 - [x] **Dynamic Trending**: Implemented logarithmic trend scoring.
 - [x] **Ultra-Optimization Overhaul**: Implemented lazy chunk loading and text-based KV scanning to save Workers calls and prevent OOM errors.
 - [x] **Data Integrity Overhaul**: Implemented history sanitization, de-duplication, and backfilling bug fixes.
+- [x] **Automated Quality Controls**: Integrated Node-native Unit Tests suite and GitHub Actions CI pipeline.
+- [x] **Observability & Diagnostics Page**: Created the public System Status page displaying KV sharding health, edge latency, and ingestion telemetry.
 
 ---
 

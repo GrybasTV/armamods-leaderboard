@@ -1,88 +1,61 @@
 # Trending Algorithm
 
-## Bayesian Average Formula
+## Overall Rank-Based Weighted Velocity Model
 
-The trending system uses **Bayesian Average** to calculate mod popularity trends. This mathematical approach prevents noise from small sample sizes while genuinely highlighting trending mods.
+The trending system uses a weighted rank delta model to calculate mod popularity trends. This approach evaluates the position change (`rankDelta`) in the overall mod leaderboard rather than absolute server counts, heavily weighting movements at the top of the rankings where competition is fiercer.
 
-### Formula
+### Mathematical Model
+
+The trend score for each mod is calculated as:
 
 ```
-score = ((v / (v + m)) × R) + ((m / (v + m)) × C)
+trendScore = rankDelta × positionWeight × activityMultiplier
 ```
 
 **Where:**
-| Variable | Description | Value |
-|----------|-------------|-------|
-| `v` | Actual server count (sample size) | Current mod server count |
-| `m` | Minimum server threshold (prior weight) | `5` |
-| `R` | Actual growth rate | `currentServers - previousServers` |
-| `C` | Mean growth rate (prior) | Average growth across all mods |
 
-### Why Bayesian Average?
+1. **Rank Delta (`rankDelta`)**:
+   ```
+   rankDelta = prevRank - currentRank
+   ```
+   * The number of positions a mod has climbed (positive score) or fallen (negative score) in the overall rank.
+   * Mod positions are sequentially indexed starting from `1` (higher rank is better).
 
-- **Prevents noise**: Small sample sizes (1-2 servers) are pulled toward the mean
-- **Industry standard**: Used by IMDb Top 250, BoardGameGeek
-- **Mathematically sound**: Based on Bayesian probability theory
-- **Self-correcting**: Automatically adjusts as data volume increases
+2. **Position Weight (`positionWeight`)**:
+   ```
+   positionWeight = 100 / sqrt(min(currentRank, prevRank))
+   ```
+   * This adjusts the difficulty of ranking shifts. Climbing 5 spots in the **Top 10** is mathematically harder and more valuable than climbing 5 spots in the **Top 5000**.
+   * By taking the square root of the highest rank achieved in the period, the system applies a heavy curve favoring high-tier rank changes.
 
-### Example Calculation
+3. **Activity Multiplier (`activityMultiplier`)**:
+   ```
+   activityMultiplier = log10(max(currentPlayers, prevPlayers) + 1.1)
+   ```
+   * A logarithmic multiplier based on the maximum player count (either current or in the previous snapshot).
+   * This ensures that mods with higher active player engagement receive priority over inactive ("dead") mods that might climb ranks purely due to background shifts.
 
-For a mod that grew from **5 → 15 servers** (Δ = +10):
+---
 
-```
-meanServerGrowth = 2.5 (average across all mods)
-v = 15
-m = 5
-R = 10
-C = 2.5
+### Dynamic Quality Thresholds
 
-score = ((15 / (15 + 5)) × 10) + ((5 / (15 + 5)) × 2.5)
-score = (0.75 × 10) + (0.25 × 2.5)
-score = 7.5 + 0.625
-score = 8.125
-```
+Instead of static minimums, the collector utilizes dynamic activity thresholds representing **0.5%** of the entire network's statistics to filter out background noise:
 
-For a mod that grew from **1 → 2 servers** (Δ = +1):
+| Metric | Calculation | Hard Minimum |
+|--------|-------------|--------------|
+| **Personnel (Players)** | `floor(totalPlayers * 0.005)` | `5` |
+| **Deployments (Servers)** | `floor(totalServers * 0.005)` | `2` |
 
-```
-v = 2
-m = 5
-R = 1
-C = 2.5
+A mod's activity is considered **significant** if:
+`max(currentPlayers, prevPlayers) >= MIN_TREND_PLAYERS` AND `max(currentServers, prevServers) >= MIN_TREND_SERVERS`.
 
-score = ((2 / (2 + 5)) × 1) + ((5 / (2 + 5)) × 2.5)
-score = (0.286 × 1) + (0.714 × 2.5)
-score = 0.286 + 1.785
-score = 2.071
-```
-
-**Result**: The mod with genuine community adoption (15 servers) scores **8.1**, while the noisy mod (2 servers) scores only **2.1**.
-
-### Combined Score
-
-The final trending score combines:
-
-```
-combinedScore = (bayesianScore × 3) + (playerVelocity × 1)
-```
-
-- **70% Bayesian score** (server adoption)
-- **30% Player velocity** (activity signal)
-
-### Quality Thresholds
-
-Only mods meeting **both** criteria appear in trending:
-
-| Metric | Minimum |
-|--------|---------|
-| Servers | `5` |
-| Players | `10` |
+---
 
 ### Categories
 
-- **Rising**: `combinedScore > 0` (positive growth)
-- **Falling**: `combinedScore < 0` (negative growth)
-- **New**: Mods not in previous snapshot (meeting quality thresholds)
+* **Rising**: Mods with positive growth (`rankDelta > 0`) that meet the significance thresholds. Sorted by `trendScore` descending.
+* **Falling**: Mods with negative growth (`rankDelta < 0`) that meet the significance thresholds. Sorted by `trendScore` ascending.
+* **New**: Mods not present in the previous snapshot that meet the significance thresholds and have a `currentRank < 10000`. Sorted by `overallRank` ascending.
 
 ---
 

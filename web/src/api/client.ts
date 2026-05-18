@@ -112,3 +112,15 @@ export const trendingApi = {
     }, 600000); // 10 mins cache
   },
 };
+
+export const diagnosticsApi = {
+  getDiagnostics: async (game: GameType = 'reforger') => {
+    const key = `diagnostics:${game}`;
+    return getCached(key, async () => {
+      const response = await api.get<any>('diagnostics', {
+        params: { game }
+      });
+      return response.data;
+    }, 60000); // 1 min cache
+  }
+};

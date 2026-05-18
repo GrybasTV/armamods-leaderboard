@@ -1,3 +1,18 @@
+## [1.8.0] - 2026-05-18
+
+### 🛰️ Sistemos statuso ir telemetrijos diagnostikos puslapio diegimas
+- **Viešas būsenos puslapis (Status Page)**: Sukurtas interaktyvus `/status` ir `/arma3/status` puslapis, kuris atvaizduoja realaus laiko tinklo statistiką (mods, players, servers), Cloudflare KV sharding būseną, istorijos snaphost ribas bei apskaičiuoja gyvą klientas-Edge latency (RTT).
+- **Diagnostics API integracija**: Integruotas `diagnosticsApi` metodas Hono ir Vite kliento pusėje, leidžiantis efektyviai ir saugiai užklausti ir gauti Edge statuso duomenis.
+- **Navigacija**: Pridėtos gražios navigacijos nuorodos `[ 🛰️ System Status ]` darbalaukio bei mobiliesiems meniu.
+
+## [1.7.0] - 2026-05-18
+
+### 🛡️ Kokybės kontrolės ir CI/CD automatizavimo įgyvendinimas
+- **Automatizuoti testai (Unit Tests)**: Sukurtas išsamus testų rinkinys `test/utils.test.ts` naudojant modernų Node.js testavimo variklį. Testuojamas chirurginis JSON iškirpimas (`findMatchingBrace`), dynamic weighted trending matematinis modelis bei SQE unikalumo bonusų/nuobaudų clamping logika.
+- **CI/CD integracija (GitHub Actions)**: Sukurtas `.github/workflows/ci.yml` automatizuotas vamzdynas, kuris atlieka TypeScript tipų validaciją ir paleidžia testus prieš kiekvieną kodo suliejimą.
+- **Sistemos architektūros dokumentas (System Design)**: Sukurtas išsamus inžinerinis dokumentas `docs/ENGINEERING_CASE_STUDY.md` anglų kalba, aprašantis techninius limitus, pritaikytas našumo optimizacijas bei sistemos architektūrinius kompromisus.
+- **Skriptų patogumas**: Pridėta `npm test` komanda į šakninį `package.json` greitam testavimui lokaliai.
+
 ## [1.6.1] - 2026-05-17
 
 ### ⚡ API Našumo ir Stabilumo Optimizavimas (Workers 503 Fix)

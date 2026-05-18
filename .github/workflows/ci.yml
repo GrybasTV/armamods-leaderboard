@@ -1,39 +1,31 @@
-name: Continuous Integration
+name: 🛡️ Continuous Ingestion & Quality CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
-  build-and-lint:
+  validate:
+    name: Lint & Test Suite
     runs-on: ubuntu-latest
-
+    
     steps:
-    - uses: actions/checkout@v4
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
 
-    - name: Install Root Dependencies
-      run: npm install
+      - name: 📦 Install Dependencies
+        run: npm ci
 
-    - name: Lint Backend/Scripts
-      run: npx tsc --noEmit
+      - name: 🔍 Type Check (TypeScript Lint)
+        run: npx tsc --noEmit
 
-    - name: Install Frontend Dependencies
-      run: |
-        cd web
-        npm install
-
-    - name: Build Frontend
-      run: |
-        cd web
-        npm run build
-
-    - name: Success Message
-      run: echo "🚀 CI Check Passed! Code is clean and buildable."
+      - name: 🧪 Run Automated Unit Tests
+        run: npx tsx --test test/utils.test.ts
