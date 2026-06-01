@@ -702,19 +702,23 @@ const STATUS_SORT_WORST_FIRST: Record<AuditStatus, number> = {
 };
 
 /**
- * Worst mods first: status severity → 0 on BM now → patch drop % → popularity before 1.7.
+ * Worst mods first: 0 on BM now → highest −% drop → status → empty last 7d → was popular before 1.7.
  */
 export function compareAuditRowsWorstFirst(a: ModAuditRow, b: ModAuditRow): number {
-  const byStatus =
-    (STATUS_SORT_WORST_FIRST[a.status] ?? 9) - (STATUS_SORT_WORST_FIRST[b.status] ?? 9);
-  if (byStatus !== 0) return byStatus;
-
   const zeroNowA = a.currentPlayers === 0 ? 0 : 1;
   const zeroNowB = b.currentPlayers === 0 ? 0 : 1;
   if (zeroNowA !== zeroNowB) return zeroNowA - zeroNowB;
 
-  const byDrop = (b.dropPct ?? 0) - (a.dropPct ?? 0);
+  const byDrop = (b.dropPct ?? -1) - (a.dropPct ?? -1);
   if (byDrop !== 0) return byDrop;
+
+  const byStatus =
+    (STATUS_SORT_WORST_FIRST[a.status] ?? 9) - (STATUS_SORT_WORST_FIRST[b.status] ?? 9);
+  if (byStatus !== 0) return byStatus;
+
+  const recentA = a.recentAvg ?? Number.MAX_SAFE_INTEGER;
+  const recentB = b.recentAvg ?? Number.MAX_SAFE_INTEGER;
+  if (recentA !== recentB) return recentA - recentB;
 
   return (b.beforeAvg ?? 0) - (a.beforeAvg ?? 0);
 }

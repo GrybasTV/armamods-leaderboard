@@ -657,6 +657,10 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
           >
             Show all ({result.meta.modCount}) · {result.meta.durationMs}ms
           </button>
+          <p className="text-[10px] text-gray-600">
+            Order: <strong className="text-gray-400">0 on BM now</strong> → highest{' '}
+            <strong className="text-gray-400">−%</strong> drop → severity (dead / warning / …)
+          </p>
 
           <div className="text-[11px] text-gray-500 border border-white/5 p-4 rounded bg-white/2 space-y-2">
             {result.meta.mode === 'client-fallback' && (
@@ -714,13 +718,16 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                     )}
                   </div>
                   <div className="text-right text-xs font-mono shrink-0 space-y-0.5 max-w-[20rem]">
-                    <div>
-                      Before 1.7: <strong>{row.beforeAvg ?? '—'}</strong>/day
+                    <div className="text-sm">
                       {row.dropPct != null && (
-                        <span className="ml-2 text-red-400" title="Drop from before 1.7 to first days after update">
+                        <span
+                          className="text-red-400 font-black text-base mr-2"
+                          title="Drop from before 1.7 to first days after update"
+                        >
                           −{row.dropPct}%
                         </span>
                       )}
+                      Before 1.7: <strong>{row.beforeAvg ?? '—'}</strong>/day
                     </div>
                     <div>
                       After 1.7 update: <strong>{row.earlyAfterAvg ?? '—'}</strong>/day

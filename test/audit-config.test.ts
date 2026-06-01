@@ -312,6 +312,55 @@ describe('sortAuditRowsWorstFirst', () => {
     assert.equal(sorted[1].status, 'warning');
     assert.equal(sorted[2].status, 'ok');
   });
+
+  it('puts zero on BM now before higher drop% with players', () => {
+    const sorted = sortAuditRowsWorstFirst([
+      {
+        modId: 'AAAAAAAAAAAAAAAA',
+        name: 'Dead',
+        status: 'dead',
+        title: '',
+        detail: '',
+        beforeAvg: 500,
+        earlyAfterAvg: 0,
+        afterAvg: 0,
+        dropPct: 99,
+        currentPlayers: 3,
+        serverCount: 0,
+        trendPhase: 'declining',
+        trendLabel: '',
+        trendDetail: '',
+        recentAvg: 2,
+        rankBefore: null,
+        rankRecent: null,
+        classificationHint: null,
+        alternatives: [],
+      },
+      {
+        modId: 'BBBBBBBBBBBBBBBB',
+        name: 'Warn zero',
+        status: 'warning',
+        title: '',
+        detail: '',
+        beforeAvg: 200,
+        earlyAfterAvg: 5,
+        afterAvg: 5,
+        dropPct: 60,
+        currentPlayers: 0,
+        serverCount: 0,
+        trendPhase: 'declining',
+        trendLabel: '',
+        trendDetail: '',
+        recentAvg: 4,
+        rankBefore: null,
+        rankRecent: null,
+        classificationHint: null,
+        alternatives: [],
+      },
+    ]);
+    assert.equal(sorted[0].currentPlayers, 0);
+    assert.equal(sorted[1].dropPct, 99);
+  });
 });
 
 describe('avgPlayersInRange', () => {
