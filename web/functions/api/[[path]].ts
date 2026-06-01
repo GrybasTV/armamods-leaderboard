@@ -343,6 +343,91 @@ function scanHistoryPoints(historyText: string, modId: string): any[] {
   return modHistory;
 }
 
+/** Vieno shard skenuojami keli modId vienu praejimu (mažiau CPU nei 91× scanHistoryPoints) */
+function scanMultipleModsHistory(historyText: string, modIds: Set<string>): Map<string, any[]> {
+  const modHistory = new Map<string, any[]>();
+  for (const id of modIds) modHistory.set(id, []);
+
+  const searchStr = '"time":"';
+  let pos = historyText.indexOf(searchStr);
+
+  while (pos !== -1) {
+    const timeStart = pos + searchStr.length;
+    const timeEnd = historyText.indexOf('"', timeStart);
+    if (timeEnd === -1) break;
+    const time = historyText.slice(timeStart, timeEnd);
+
+    const modsKeyStr = '"mods":{';
+    const modsStartPos = historyText.indexOf(modsKeyStr, timeEnd);
+    if (modsStartPos === -1) break;
+
+    let nextTimePos = historyText.indexOf(searchStr, modsStartPos);
+    if (nextTimePos === -1) nextTimePos = historyText.length;
+
+    const pointBlock = historyText.slice(modsStartPos, nextTimePos);
+
+    for (const modId of modIds) {
+      const list = modHistory.get(modId)!;
+      const modStrPos = pointBlock.indexOf(`"${modId}":{`);
+      if (modStrPos !== -1) {
+        const startStats = pointBlock.indexOf('{', modStrPos);
+        const endStats = pointBlock.indexOf('}', startStats);
+        if (startStats !== -1 && endStats !== -1) {
+          try {
+            const stats = JSON.parse(pointBlock.slice(startStats, endStats + 1));
+            list.push({
+              date: time,
+              totalPlayers: stats.p || 0,
+              serverCount: stats.s || 0,
+              overallRank: stats.r || 9999,
+            });
+          } catch {
+            list.push({ date: time, totalPlayers: 0, serverCount: 0, overallRank: 9999 });
+          }
+        }
+      } else {
+        list.push({ date: time, totalPlayers: 0, serverCount: 0, overallRank: 9999 });
+      }
+    }
+
+    pos = historyText.indexOf(searchStr, nextTimePos - 1);
+    if (pos === -1) break;
+    if (pos <= modsStartPos) pos = historyText.indexOf(searchStr, nextTimePos + 1);
+  }
+  return modHistory;
+}
+
+async function lookupModsByIds(
+  kv: KVNamespace,
+  keys: ReturnType<typeof getKVKeys>,
+  modIds: Set<string>
+): Promise<Map<string, any>> {
+  const found = new Map<string, any>();
+  const meta = (await kv.get(`${keys.MODS}:meta`, 'json')) as { chunks?: number } | null;
+  if (!meta?.chunks) return found;
+
+  for (let i = 0; i < meta.chunks && found.size < modIds.size; i++) {
+    const chunkText = await kv.get(`${keys.MODS}:${i}`, 'text');
+    if (!chunkText) continue;
+    for (const modId of modIds) {
+      if (found.has(modId)) continue;
+      const searchStr = `"id":"${modId}"`;
+      if (!chunkText.includes(searchStr)) continue;
+      const idPos = chunkText.indexOf(searchStr);
+      const startPos = chunkText.lastIndexOf('{', idPos);
+      const endPos = findMatchingBrace(chunkText, startPos);
+      if (startPos !== -1 && endPos !== -1) {
+        try {
+          found.set(modId, JSON.parse(chunkText.slice(startPos, endPos + 1)));
+        } catch {
+          /* skip */
+        }
+      }
+    }
+  }
+  return found;
+}
+
 // Helper to fill gaps (zeros) in history data with average values
 /**
  * smoothHistoryData
@@ -795,20 +880,20 @@ app.post('/audit/config', async (c) => {
   }
 
   const keys = getKVKeys(game);
-  const modsList = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
-  const modMap = new Map(
-    modsList.map(
-      (m: {
-        id: string;
-        name?: string;
-        totalPlayers?: number;
-        serverCount?: number;
-        coDeployed?: { id: string; name: string; count: number }[];
-      }) => [String(m.id).toUpperCase(), m]
-    )
-  );
-
   const configIds = new Set(parsedMods.map((m) => m.modId));
+
+  const modMapRaw = await lookupModsByIds(c.env.TRENDING_KV, keys, configIds);
+  const modMap = new Map(
+    [...modMapRaw.entries()].map(([id, m]) => [
+      id,
+      {
+        totalPlayers: m.totalPlayers,
+        serverCount: m.serverCount,
+        coDeployed: m.coDeployed,
+        name: m.name,
+      },
+    ])
+  );
 
   const baseKey = keys.HISTORY_DAILY;
   const meta = (await c.env.TRENDING_KV.get(`${baseKey}:meta`, 'json')) as { chunks?: number } | null;
@@ -825,21 +910,24 @@ app.post('/audit/config', async (c) => {
     if (legacy) shards.push(legacy);
   }
 
-  const historyCache = new Map<string, HistoryPoint[]>();
+  const mergedHistory = new Map<string, HistoryPoint[]>();
+  for (const id of configIds) mergedHistory.set(id, []);
 
-  const historyFor = (modId: string): HistoryPoint[] => {
-    const key = modId.toUpperCase();
-    if (historyCache.has(key)) return historyCache.get(key)!;
-    let modHistory: ReturnType<typeof scanHistoryPoints> = [];
-    for (const shardText of shards) {
-      if (shardText.includes(`"${key}":{`)) {
-        modHistory.push(...scanHistoryPoints(shardText, key));
-      }
+  for (const shardText of shards) {
+    const partial = scanMultipleModsHistory(shardText, configIds);
+    for (const [modId, points] of partial) {
+      mergedHistory.get(modId)!.push(...points);
     }
-    const history = smoothHistoryData(modHistory.slice(-31));
-    historyCache.set(key, history);
-    return history;
-  };
+  }
+
+  const historyCache = new Map<string, HistoryPoint[]>();
+  for (const [modId, points] of mergedHistory) {
+    const sorted = points.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    historyCache.set(modId, smoothHistoryData(sorted.slice(-31)));
+  }
+
+  const historyFor = (modId: string): HistoryPoint[] =>
+    historyCache.get(modId.toUpperCase()) ?? [];
 
   const buildOpts = { configIds, modMap, historyFor };
 

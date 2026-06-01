@@ -22,7 +22,10 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "paths": {
+      "@audit-config": ["./functions/api/audit-config.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "functions/api/audit-config.ts"]
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { SEO } from './ui/SEO';
 import type { GameType } from '../api/client';
 import { parseServerConfig } from '../lib/parseServerConfig';
+import { parseApiJson, runClientSideAudit } from '../lib/clientAudit';
 
 type AuditStatus = 'dead' | 'risky' | 'warning' | 'ok' | 'niche' | 'unknown';
 type TrendPhase = 'rising' | 'recovering' | 'declining' | 'stable' | 'unknown';
@@ -48,6 +49,7 @@ interface AuditResponse {
     durationMs: number;
     disclaimer: string;
     privacy?: string;
+    mode?: 'client-fallback';
   };
 }
 
@@ -130,6 +132,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AuditResponse | null>(null);
   const [filter, setFilter] = useState<AuditStatus | 'all'>('all');
+  const [progress, setProgress] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const grouped = useMemo(() => {
@@ -204,25 +207,48 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
   async function runAudit() {
     setError(null);
     setResult(null);
+    setProgress(null);
     setLoading(true);
     try {
       const mods = parseServerConfig(configText);
       setParsedCount(mods.length);
 
-      const r = await fetch(`/api/audit/config?game=${game}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        body: JSON.stringify({ mods }),
-      });
-      const json = await r.json();
-      if (!r.ok) throw new Error(json.message || json.error || `HTTP ${r.status}`);
-      setResult(json);
+      let auditResult: AuditResponse | null = null;
+
+      try {
+        const r = await fetch(`/api/audit/config?game=${game}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({ mods }),
+        });
+        const json = (await parseApiJson(r)) as AuditResponse & {
+          message?: string;
+          error?: string;
+        };
+        if (!r.ok) {
+          throw new Error(json.message || json.error || `HTTP ${r.status}`);
+        }
+        auditResult = json;
+      } catch (batchErr) {
+        const useFallback =
+          batchErr instanceof Error &&
+          (batchErr.message === 'HTML_RESPONSE' || batchErr.message.includes('ne JSON'));
+        if (!useFallback) throw batchErr;
+
+        setProgress('Masinis auditas neprieinamas – skenuojama po modą (lėčiau)…');
+        auditResult = (await runClientSideAudit(mods, game, (done, total) => {
+          setProgress(`Skenuojama ${done}/${total} modų…`);
+        })) as AuditResponse;
+      }
+
+      setResult(auditResult);
       setFilter('all');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Nepavyko atlikti audito');
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
 
@@ -366,6 +392,10 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
           )}
         </div>
 
+        {progress && (
+          <p className="text-[11px] text-tactical-orange font-mono animate-pulse">{progress}</p>
+        )}
+
         {error && (
           <p className="text-red-400 text-sm border border-red-900/50 bg-red-950/20 p-4 rounded">{error}</p>
         )}
@@ -416,7 +446,12 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             Rodyti visus ({result.meta.modCount}) · {result.meta.durationMs}ms
           </button>
 
-          <div className="text-[11px] text-gray-500 border border-white/5 p-4 rounded bg-white/[0.02] space-y-2">
+          <div className="text-[11px] text-gray-500 border border-white/5 p-4 rounded bg-white/2 space-y-2">
+            {result.meta.mode === 'client-fallback' && (
+              <p className="text-yellow-500/90 font-bold uppercase text-[10px] tracking-widest">
+                Atsarginis režimas (po modą)
+              </p>
+            )}
             {result.meta.privacy && (
               <p className="text-emerald-600/90">{result.meta.privacy}</p>
             )}
