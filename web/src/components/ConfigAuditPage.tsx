@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { SEO } from './ui/SEO';
 import type { GameType } from '../api/client';
 import { parseServerConfig } from '../lib/parseServerConfig';
+import { sortAuditRowsWorstFirst } from '@audit-config';
 import { parseApiJson, runClientSideAudit } from '../lib/clientAudit';
 import { formatAuditReportJson, formatAuditReportText } from '../lib/auditReport';
 import { PAYPAL_DONATE_URL } from '../lib/siteLinks';
@@ -213,7 +214,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
       map.get(row.status)!.push(row);
     }
     for (const [, rows] of map) {
-      rows.sort((a, b) => (b.dropPct ?? 0) - (a.dropPct ?? 0));
+      sortAuditRowsWorstFirst(rows);
     }
     return map;
   }, [result]);
@@ -225,9 +226,10 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
 
   const visibleRows = useMemo(() => {
     if (!result) return [];
-    if (filter === 'all') return result.data;
-    if (filter === 'zero-now') return result.data.filter((r) => isZeroOnBm(r.currentPlayers));
-    return result.data.filter((r) => r.status === filter);
+    let rows = result.data;
+    if (filter === 'zero-now') rows = rows.filter((r) => isZeroOnBm(r.currentPlayers));
+    else if (filter !== 'all') rows = rows.filter((r) => r.status === filter);
+    return sortAuditRowsWorstFirst(rows);
   }, [result, filter]);
 
   const tryParsePreview = useCallback((text: string) => {

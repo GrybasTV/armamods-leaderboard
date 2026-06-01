@@ -484,6 +484,37 @@ export function buildModAuditRow(
   };
 }
 
+const STATUS_SORT_WORST_FIRST: Record<AuditStatus, number> = {
+  dead: 0,
+  risky: 1,
+  warning: 2,
+  unknown: 3,
+  ok: 4,
+  niche: 5,
+};
+
+/**
+ * Worst mods first: status severity → 0 on BM now → patch drop % → popularity before 1.7.
+ */
+export function compareAuditRowsWorstFirst(a: ModAuditRow, b: ModAuditRow): number {
+  const byStatus =
+    (STATUS_SORT_WORST_FIRST[a.status] ?? 9) - (STATUS_SORT_WORST_FIRST[b.status] ?? 9);
+  if (byStatus !== 0) return byStatus;
+
+  const zeroNowA = a.currentPlayers === 0 ? 0 : 1;
+  const zeroNowB = b.currentPlayers === 0 ? 0 : 1;
+  if (zeroNowA !== zeroNowB) return zeroNowA - zeroNowB;
+
+  const byDrop = (b.dropPct ?? 0) - (a.dropPct ?? 0);
+  if (byDrop !== 0) return byDrop;
+
+  return (b.beforeAvg ?? 0) - (a.beforeAvg ?? 0);
+}
+
+export function sortAuditRowsWorstFirst<T extends ModAuditRow>(rows: T[]): T[] {
+  return [...rows].sort(compareAuditRowsWorstFirst);
+}
+
 export function auditHighlights(rows: ModAuditRow[]) {
   return {
     rising: rows.filter((r) => r.trendPhase === 'rising' && (r.beforeAvg ?? 0) >= 10).slice(0, 8),

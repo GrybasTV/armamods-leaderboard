@@ -7,6 +7,7 @@ import {
   buildModAuditRow,
   analyzeTrend,
   pickAlternatives,
+  sortAuditRowsWorstFirst,
 } from '../web/functions/api/audit-config.ts';
 
 describe('parseServerConfig', () => {
@@ -161,6 +162,70 @@ describe('buildModAuditRow', () => {
     );
     assert.equal(row.status, 'dead');
     assert.ok((row.dropPct ?? 0) >= 90);
+  });
+});
+
+describe('sortAuditRowsWorstFirst', () => {
+  it('puts dead before warning and higher drop first', () => {
+    const sorted = sortAuditRowsWorstFirst([
+      {
+        modId: 'AAAAAAAAAAAAAAAA',
+        name: 'Ok',
+        status: 'ok',
+        title: '',
+        detail: '',
+        beforeAvg: 10,
+        earlyAfterAvg: 10,
+        afterAvg: 10,
+        dropPct: 10,
+        currentPlayers: 50,
+        serverCount: 0,
+        trendPhase: 'stable',
+        trendLabel: '',
+        trendDetail: '',
+        recentAvg: 10,
+        alternatives: [],
+      },
+      {
+        modId: 'BBBBBBBBBBBBBBBB',
+        name: 'Dead',
+        status: 'dead',
+        title: '',
+        detail: '',
+        beforeAvg: 200,
+        earlyAfterAvg: 0,
+        afterAvg: 0,
+        dropPct: 99,
+        currentPlayers: 0,
+        serverCount: 0,
+        trendPhase: 'declining',
+        trendLabel: '',
+        trendDetail: '',
+        recentAvg: 0,
+        alternatives: [],
+      },
+      {
+        modId: 'CCCCCCCCCCCCCCCC',
+        name: 'Warn',
+        status: 'warning',
+        title: '',
+        detail: '',
+        beforeAvg: 100,
+        earlyAfterAvg: 5,
+        afterAvg: 5,
+        dropPct: 80,
+        currentPlayers: 2,
+        serverCount: 0,
+        trendPhase: 'declining',
+        trendLabel: '',
+        trendDetail: '',
+        recentAvg: 4,
+        alternatives: [],
+      },
+    ]);
+    assert.equal(sorted[0].status, 'dead');
+    assert.equal(sorted[1].status, 'warning');
+    assert.equal(sorted[2].status, 'ok');
   });
 });
 

@@ -2,6 +2,7 @@ import {
   auditHighlights,
   buildModAuditRow,
   REFORGER_PATCH_17,
+  sortAuditRowsWorstFirst,
   type CoDeployedRef,
   type HistoryPoint,
   type LiveModSnapshot,
@@ -73,22 +74,10 @@ export async function runClientSideAudit(
     );
   }
 
-  const rows = mods.map((mod) =>
-    buildModAuditRow(mod, historyFor(mod.modId), modMap.get(mod.modId) ?? null, REFORGER_PATCH_17, buildOpts)
-  );
-
-  const statusOrder: Record<string, number> = {
-    dead: 0,
-    risky: 1,
-    warning: 2,
-    unknown: 3,
-    ok: 4,
-    niche: 5,
-  };
-  rows.sort(
-    (a, b) =>
-      (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9) ||
-      (b.dropPct ?? 0) - (a.dropPct ?? 0)
+  const rows = sortAuditRowsWorstFirst(
+    mods.map((mod) =>
+      buildModAuditRow(mod, historyFor(mod.modId), modMap.get(mod.modId) ?? null, REFORGER_PATCH_17, buildOpts)
+    )
   );
 
   const summary: Record<string, number> = {

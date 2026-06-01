@@ -18,6 +18,7 @@ import {
   buildModAuditRow,
   parseServerConfig,
   REFORGER_PATCH_17,
+  sortAuditRowsWorstFirst,
   type AuditStatus,
   type HistoryPoint,
 } from './audit-config';
@@ -932,24 +933,12 @@ app.post('/audit/config', async (c) => {
 
   const buildOpts = { configIds, modMap, historyFor };
 
-  const rows = parsedMods.map((mod) => {
-    const history = historyFor(mod.modId);
-    const live = modMap.get(mod.modId) ?? null;
-    return buildModAuditRow(mod, history, live, REFORGER_PATCH_17, buildOpts);
-  });
-
-  const statusOrder: Record<AuditStatus, number> = {
-    dead: 0,
-    risky: 1,
-    warning: 2,
-    unknown: 3,
-    ok: 4,
-    niche: 5,
-  };
-  rows.sort(
-    (a, b) =>
-      statusOrder[a.status] - statusOrder[b.status] ||
-      (b.dropPct ?? 0) - (a.dropPct ?? 0)
+  const rows = sortAuditRowsWorstFirst(
+    parsedMods.map((mod) => {
+      const history = historyFor(mod.modId);
+      const live = modMap.get(mod.modId) ?? null;
+      return buildModAuditRow(mod, history, live, REFORGER_PATCH_17, buildOpts);
+    })
   );
 
   const summary: Record<AuditStatus, number> = {
