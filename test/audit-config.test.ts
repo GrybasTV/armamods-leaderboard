@@ -20,6 +20,17 @@ describe('parseServerConfig', () => {
     assert.equal(mods[0].modId, '612F512CD4CB21D5');
   });
 
+  it('parses modId-only lines without name', () => {
+    const mods = parseServerConfig(`
+986617DEA6741547
+612F512CD4CB21D5
+not-a-valid-id
+`);
+    assert.equal(mods.length, 2);
+    assert.equal(mods[0].modId, '986617DEA6741547');
+    assert.equal(mods[0].name, '986617DEA6741547');
+  });
+
   it('parses mods[] fragment copied from middle of config', () => {
     const fragment = `
     },

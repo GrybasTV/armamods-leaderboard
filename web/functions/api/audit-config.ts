@@ -87,20 +87,51 @@ const TREND_LABEL: Record<TrendPhase, string> = {
   unknown: 'Unknown',
 };
 
-/** Extract modId + name from partial paste (middle of mods[] list). */
+/** Arma / BM mod GUID – always 16 hex chars (case-insensitive in files). */
+export function isValidModId(id: string): boolean {
+  return /^[0-9A-F]{16}$/.test(id.trim().toUpperCase());
+}
+
+/** Extract mods from free-form paste – only modId required; name optional. */
 function extractModsFromText(text: string): ParsedConfigMod[] | null {
   const seen = new Set<string>();
-  const out: ParsedConfigMod[] = [];
-  const re =
+  const names = new Map<string, string>();
+
+  const withName =
     /"modId"\s*:\s*"([0-9a-fA-F]{16})"[\s\S]*?"name"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(text))) {
+  while ((m = withName.exec(text))) {
     const modId = m[1].toUpperCase();
-    if (seen.has(modId)) continue;
-    seen.add(modId);
-    out.push({ modId, name: m[2].replace(/\\"/g, '"') });
+    names.set(modId, m[2].replace(/\\"/g, '"'));
   }
-  return out.length ? out : null;
+
+  const idPatterns = [
+    /"modId"\s*:\s*"([0-9a-fA-F]{16})"/gi,
+    /"id"\s*:\s*"([0-9a-fA-F]{16})"/gi,
+    /\bmodId\s*[=:]\s*([0-9a-fA-F]{16})\b/gi,
+  ];
+
+  for (const re of idPatterns) {
+    re.lastIndex = 0;
+    while ((m = re.exec(text))) {
+      const modId = m[1].toUpperCase();
+      if (!isValidModId(modId) || seen.has(modId)) continue;
+      seen.add(modId);
+    }
+  }
+
+  // Plain list: one 16-char hex per line (or audit report lines)
+  for (const line of text.split(/\r?\n/)) {
+    const hit = line.match(/\b([0-9a-fA-F]{16})\b/i);
+    if (hit && isValidModId(hit[1])) seen.add(hit[1].toUpperCase());
+  }
+
+  if (!seen.size) return null;
+
+  return [...seen].map((modId) => ({
+    modId,
+    name: names.get(modId) ?? modId,
+  }));
 }
 
 /** Repair common copy-paste fragments into valid JSON before parse. */
@@ -156,7 +187,7 @@ export function parseModsFromRaw(modsRaw: unknown): ParsedConfigMod[] {
     const modId = String(row.modId ?? row.id ?? '')
       .trim()
       .toUpperCase();
-    if (!/^[0-9A-F]{16}$/.test(modId) || seen.has(modId)) continue;
+    if (!isValidModId(modId) || seen.has(modId)) continue;
     seen.add(modId);
     out.push({
       modId,

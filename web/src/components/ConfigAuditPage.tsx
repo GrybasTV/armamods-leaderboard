@@ -464,8 +464,9 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
         role="note"
       >
         <strong className="text-emerald-300">Privacy:</strong> config is parsed in your browser. Only{' '}
-        <code className="text-emerald-400">modId</code> + <code className="text-emerald-400">name</code> are sent to
-        the server – no passwords, IPs, or full JSON are stored.
+        <code className="text-emerald-400">modId</code> (+ name when present) are sent to the server – no passwords,
+        IPs, or full JSON are stored. Mod ID is always <strong className="text-white">16 hex characters</strong>{' '}
+        (e.g. <code className="text-emerald-400">986617DEA6741547</code>).
       </div>
 
       <AuditDonateBanner />
@@ -504,7 +505,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                 setFileName(null);
                 tryParsePreview(e.target.value);
               }}
-              placeholder='Full config.json or paste part of game.mods[] (modId + name)'
+              placeholder='config.json, mods[] fragment, or one modId per line (16 hex chars)'
               className="w-full h-56 bg-black/60 border border-white/10 rounded-lg p-4 text-xs text-gray-200 font-mono focus:border-tactical-orange outline-none resize-y"
               spellCheck={false}
             />
