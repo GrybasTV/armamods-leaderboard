@@ -236,8 +236,8 @@ function addDays(isoDate: string, days: number): string {
 
 const MIN_SIGNAL_AVG = 15;
 const DEAD_AFTER_MAX = 3;
-/** Below this = effectively no players after 1.7 (WARNING core rule) */
-const NO_PLAYERS_AFTER_MAX = 5;
+/** Below this = effectively no players after 1.7 on BM scale (WARNING core rule) */
+const NO_PLAYERS_AFTER_MAX = 10;
 /** Recent avg players/day – recovery is real when the ecosystem is coming back */
 const MIN_RECOVERY_RECENT = 10;
 
