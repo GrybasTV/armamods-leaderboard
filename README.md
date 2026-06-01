@@ -12,7 +12,7 @@ A production-grade, ultra-high-performance data aggregation and visualization pl
 
 ## 🚀 Key Engineering & Architectural Highlights
 
-### 1. Zero-Overhead Co-Deployment Analytics (Sinergijos Analitika)
+### 1. Zero-Overhead Co-Deployment Analytics
 * **Problem**: Storing custom co-occurrence matrices for hundreds of mods in a serverless key-value store would exponentially increase Cloudflare KV transaction counts and storage costs.
 * **Solution**: Developed a memory-optimized in-memory analytics engine inside the data collector. It calculates the top 5 co-deployed mods (frequently deployed together) and injects this metadata directly into pre-existing mod data shards.
 * **Result**: Implemented complex graph-like association rule mining with **exactly zero (0) additional KV read or write operations**.
@@ -134,8 +134,8 @@ npm test
 
 ---
 
-## 📝 License & Enterprise Contact
-Copyright © 2026 Saulėspro. Distributed under the [Creative Commons CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) License. 
-For enterprise commercial licensing or integrations, please contact `info@saulespro.lt`.
+## 📝 License & Contact
+Copyright © 2026 Paulius Medžiukevičius. Distributed under the [Creative Commons CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) License. 
+For inquiries or collaborations, please reach out via GitHub or [LinkedIn](https://www.linkedin.com/).
 
 

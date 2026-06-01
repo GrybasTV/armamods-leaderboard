@@ -4,6 +4,7 @@
 - **Profesionalus inžinerinis profilis**: Perrašytas `README.md` failas akcentuojant architektūrinius, serverless ir paskirstytų sistemų iššūkius bei jų sprendimus (Edge Caching, Dynamic KV Sharding, Surgical Parser).
 - **Techninių sprendimų išryškinimas**: Pirmame plane pateikti svarbiausi projekto pasiekimai – EMA reitingavimo formulė ir in-memory co-deployment analitika su 0 KV transakcijų kaštais.
 - **Interviu pasirengimas**: Supaprastintas lokalaus paleidimo gidas bei pridėtos nuorodos į testų vykdymą (`npm test`), leidžiančios CTO ir Lead programuotojams iškart matyti kodo patikimumą.
+- **Korekcijos**: Pašalinti lietuviški intarpai iš techninių aprašymų ir patikslintos autorystės/kontaktų teisės (perkelta iš įmonės prekinio ženklo į asmeninius Pauliaus Medžiukevičiaus rekvizitus).
 
 ## [1.10.0] - 2026-05-18
 
