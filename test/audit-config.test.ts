@@ -72,10 +72,10 @@ describe('classifyModAudit', () => {
       phase: 'declining' as const,
       label: 'Still declining',
       detail: 'x',
-      recentAvg: 2,
+      recentAvg: 4,
       earlyAfterAvg: 3,
     };
-    const r = classifyModAudit({ beforeAvg: 120, afterAvg: 4, currentPlayers: 0, trend });
+    const r = classifyModAudit({ beforeAvg: 80, afterAvg: 4, currentPlayers: 0, trend });
     assert.equal(r.status, 'warning');
     assert.match(r.title, /empty after update/i);
   });
