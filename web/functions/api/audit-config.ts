@@ -236,6 +236,20 @@ function addDays(isoDate: string, days: number): string {
 
 const MIN_SIGNAL_AVG = 15;
 const DEAD_AFTER_MAX = 3;
+/** Recent avg players/day – recovery is real when the ecosystem is coming back */
+const MIN_RECOVERY_RECENT = 10;
+
+function isHealthyRecovery(trend: TrendInsight, currentPlayers: number): boolean {
+  const recent = trend.recentAvg ?? 0;
+  if (trend.phase === 'recovering' && recent >= MIN_RECOVERY_RECENT) {
+    // Admins re-add mods that work; recovering + players = not broken
+    return currentPlayers > 0 || recent >= 15;
+  }
+  if (trend.phase === 'rising' && recent >= 15) {
+    return true;
+  }
+  return false;
+}
 
 export function classifyModAudit(params: {
   beforeAvg: number | null;
@@ -266,45 +280,34 @@ export function classifyModAudit(params: {
     };
   }
 
+  // Recovering / rising = servers are bringing the mod back → not broken (broken mods stay removed)
+  if (isHealthyRecovery(trend, currentPlayers)) {
+    return {
+      status: 'ok',
+      title:
+        trend.phase === 'recovering' ? 'Recovering after 1.7' : 'Growing after 1.7',
+      detail:
+        trend.phase === 'recovering'
+          ? `${trend.detail} Ecosystem is re-adopting this mod – likely updated for 1.7, not abandoned.`
+          : `${trend.detail} Usage is increasing again across servers.`,
+      dropPct,
+    };
+  }
+
   const deadAfter =
     afterAvg <= DEAD_AFTER_MAX && currentPlayers <= DEAD_AFTER_MAX && dropPct >= 70;
 
   if (deadAfter) {
-    if (trend.phase === 'recovering') {
-      return {
-        status: 'risky',
-        title: 'Dropped after 1.7 but recovering',
-        detail:
-          'Nearly zero in the ecosystem, but the last week shows growth – author may have updated; still test on your server.',
-        dropPct,
-      };
-    }
-    if (trend.phase === 'rising') {
-      return {
-        status: 'warning',
-        title: 'Had a drop, now rising',
-        detail: 'Mod looks recovered on BattleMetrics – worth keeping and watching, not removing immediately.',
-        dropPct,
-      };
-    }
     return {
       status: 'dead',
       title: 'Likely broken after 1.7',
       detail:
-        'Was active before 1.7; after the patch almost no players in the ecosystem and trend is not improving.',
+        'Was active before 1.7; after the patch almost no players in the ecosystem and no recovery trend.',
       dropPct,
     };
   }
 
   if (dropPct >= 60 || (currentPlayers === 0 && beforeAvg >= 30)) {
-    if (trend.phase === 'recovering' || trend.phase === 'rising') {
-      return {
-        status: 'warning',
-        title: 'Dropped but trend is positive',
-        detail: trend.detail,
-        dropPct,
-      };
-    }
     return {
       status: 'risky',
       title: 'High risk',

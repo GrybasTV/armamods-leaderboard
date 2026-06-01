@@ -41,16 +41,30 @@ describe('classifyModAudit', () => {
     assert.equal(r.status, 'dead');
   });
 
-  it('downgrades dead to risky when recovering', () => {
+  it('marks recovering ecosystem trend as ok even after a big drop', () => {
     const trend = {
       phase: 'recovering' as const,
-      label: 'Atgyja',
-      detail: 'x',
+      label: 'Recovering',
+      detail: 'Usage is coming back.',
       recentAvg: 50,
       earlyAfterAvg: 5,
     };
-    const r = classifyModAudit({ beforeAvg: 200, afterAvg: 2, currentPlayers: 0, trend });
-    assert.equal(r.status, 'risky');
+    const r = classifyModAudit({ beforeAvg: 200, afterAvg: 2, currentPlayers: 12, trend });
+    assert.equal(r.status, 'ok');
+    assert.match(r.title, /Recovering/i);
+  });
+
+  it('high drop with recovering trend is ok not warning', () => {
+    const trend = {
+      phase: 'recovering' as const,
+      label: 'Recovering',
+      detail: 'After 1.7 dip, last week improved.',
+      recentAvg: 19,
+      earlyAfterAvg: 4,
+    };
+    const r = classifyModAudit({ beforeAvg: 208, afterAvg: 16, currentPlayers: 10, trend });
+    assert.equal(r.status, 'ok');
+    assert.equal(r.dropPct, 92);
   });
 });
 
