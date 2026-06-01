@@ -236,8 +236,15 @@ function addDays(isoDate: string, days: number): string {
 
 const MIN_SIGNAL_AVG = 15;
 const DEAD_AFTER_MAX = 3;
+/** Below this = effectively no players after 1.7 (WARNING core rule) */
+const NO_PLAYERS_AFTER_MAX = 5;
 /** Recent avg players/day – recovery is real when the ecosystem is coming back */
 const MIN_RECOVERY_RECENT = 10;
+
+/** Had usage before patch, but ecosystem is empty after 1.7 (now or post-patch average) */
+function isEmptyAfterUpdate(afterAvg: number, currentPlayers: number): boolean {
+  return currentPlayers <= NO_PLAYERS_AFTER_MAX || afterAvg <= NO_PLAYERS_AFTER_MAX;
+}
 
 function isHealthyRecovery(trend: TrendInsight, currentPlayers: number): boolean {
   const recent = trend.recentAvg ?? 0;
@@ -294,50 +301,52 @@ export function classifyModAudit(params: {
     };
   }
 
-  const deadAfter =
-    afterAvg <= DEAD_AFTER_MAX && currentPlayers <= DEAD_AFTER_MAX && dropPct >= 70;
+  // Core WARNING: players before 1.7, practically none after the update
+  if (isEmptyAfterUpdate(afterAvg, currentPlayers)) {
+    const isDead =
+      afterAvg <= DEAD_AFTER_MAX &&
+      currentPlayers <= DEAD_AFTER_MAX &&
+      dropPct >= 70 &&
+      trend.phase !== 'recovering';
 
-  if (deadAfter) {
+    if (isDead) {
+      return {
+        status: 'dead',
+        title: 'Likely broken after 1.7',
+        detail:
+          `Averaged ~${beforeAvg} players/day before 1.7; after the update ~${afterAvg} and now ${currentPlayers} – ecosystem removed this mod.`,
+        dropPct,
+      };
+    }
+
     return {
-      status: 'dead',
-      title: 'Likely broken after 1.7',
+      status: 'warning',
+      title: 'Players before 1.7, empty after update',
       detail:
-        'Was active before 1.7; after the patch almost no players in the ecosystem and no recovery trend.',
+        `Had ~${beforeAvg} players/day before 1.7, but after the update only ~${afterAvg} avg and ${currentPlayers} now. ` +
+        'Servers likely dropped this mod – check Workshop 1.7 update and your server logs.',
       dropPct,
     };
   }
 
-  if (dropPct >= 60 || (currentPlayers === 0 && beforeAvg >= 30)) {
+  // Still on servers after 1.7 but usage fell hard (not a “empty after” case)
+  if (dropPct >= 55 && currentPlayers > NO_PLAYERS_AFTER_MAX) {
     return {
       status: 'risky',
-      title: 'High risk',
-      detail: 'Sharp drop or currently 0 players across BattleMetrics servers.',
-      dropPct,
-    };
-  }
-
-  if (dropPct >= 35) {
-    return {
-      status: 'warning',
-      title: 'Dropped but still used',
-      detail: 'Ecosystem shrank after 1.7 – check server logs and Workshop gameVersion.',
-      dropPct,
-    };
-  }
-
-  if (trend.phase === 'declining' && beforeAvg >= 40) {
-    return {
-      status: 'warning',
-      title: 'OK average but declining',
-      detail: 'Overall usage still decent, but the last week is weaker – watch for updates.',
+      title: 'Heavy drop, still some players',
+      detail:
+        `Down ~${dropPct}% since 1.7 but ~${currentPlayers} players still on BattleMetrics – monitor, not necessarily broken.`,
       dropPct,
     };
   }
 
   return {
     status: 'ok',
-    title: 'Healthy in ecosystem',
-    detail: 'Usage after 1.7 is similar or a normal ecosystem-wide drop (not a dead mod).',
+    title: 'Still used after 1.7',
+    detail:
+      currentPlayers > NO_PLAYERS_AFTER_MAX
+        ? `~${currentPlayers} players now – ecosystem still runs this mod after the update.`
+        : 'Usage after 1.7 is within normal range for this mod.',
     dropPct,
   };
 }
@@ -409,7 +418,7 @@ export function buildModAuditRow(
   const needsAlternatives =
     classified.status === 'dead' ||
     classified.status === 'risky' ||
-    (classified.status === 'warning' && trend.phase === 'declining');
+    classified.status === 'warning';
 
   const alternatives =
     needsAlternatives && opts

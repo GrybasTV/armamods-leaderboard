@@ -66,6 +66,31 @@ describe('classifyModAudit', () => {
     assert.equal(r.status, 'ok');
     assert.equal(r.dropPct, 92);
   });
+
+  it('warning when players before 1.7 but empty after update', () => {
+    const trend = {
+      phase: 'declining' as const,
+      label: 'Still declining',
+      detail: 'x',
+      recentAvg: 2,
+      earlyAfterAvg: 3,
+    };
+    const r = classifyModAudit({ beforeAvg: 120, afterAvg: 4, currentPlayers: 0, trend });
+    assert.equal(r.status, 'warning');
+    assert.match(r.title, /empty after update/i);
+  });
+
+  it('big drop but still players after 1.7 is ok not warning', () => {
+    const trend = {
+      phase: 'stable' as const,
+      label: 'Stable',
+      detail: 'x',
+      recentAvg: 900,
+      earlyAfterAvg: 800,
+    };
+    const r = classifyModAudit({ beforeAvg: 1500, afterAvg: 800, currentPlayers: 1035, trend });
+    assert.equal(r.status, 'ok');
+  });
 });
 
 describe('pickAlternatives', () => {
