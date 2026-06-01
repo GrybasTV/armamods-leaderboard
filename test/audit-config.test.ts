@@ -8,6 +8,7 @@ import {
   analyzeTrend,
   pickAlternatives,
   sortAuditRowsWorstFirst,
+  buildClassificationHint,
 } from '../web/functions/api/audit-config.ts';
 
 describe('parseServerConfig', () => {
@@ -162,6 +163,21 @@ describe('buildModAuditRow', () => {
     );
     assert.equal(row.status, 'dead');
     assert.ok((row.dropPct ?? 0) >= 90);
+  });
+});
+
+describe('buildClassificationHint', () => {
+  it('explains niche instead of warning', () => {
+    const hint = buildClassificationHint({
+      status: 'niche',
+      beforeAvg: 8,
+      earlyAfterAvg: 0,
+      recentAvg: 0,
+      currentPlayers: 0,
+      trendPhase: 'declining',
+      trendLabel: 'Still declining',
+    });
+    assert.match(hint ?? '', /under 15/i);
   });
 });
 

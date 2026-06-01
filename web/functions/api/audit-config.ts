@@ -68,6 +68,8 @@ export interface ModAuditRow {
   trendDetail: string;
   /** Last 7 days after patch – trend / recovery */
   recentAvg: number | null;
+  /** Why not WARNING/dead – shown when status is ok / niche / risky */
+  classificationHint: string | null;
   alternatives: ModAlternative[];
 }
 
@@ -467,7 +469,7 @@ export function buildModAuditRow(
       ? pickAlternatives(mod.modId, live, opts.modMap, opts.configIds, opts.historyFor)
       : [];
 
-  return {
+  return withClassificationHint({
     modId: mod.modId,
     name: mod.name,
     beforeAvg,
@@ -481,6 +483,14 @@ export function buildModAuditRow(
     recentAvg: trend.recentAvg,
     alternatives,
     ...classified,
+    classificationHint: null,
+  });
+}
+
+function withClassificationHint(row: ModAuditRow): ModAuditRow {
+  return {
+    ...row,
+    classificationHint: buildClassificationHint(row),
   };
 }
 
@@ -515,12 +525,89 @@ export function sortAuditRowsWorstFirst<T extends ModAuditRow>(rows: T[]): T[] {
   return [...rows].sort(compareAuditRowsWorstFirst);
 }
 
+function modPopularityScore(r: ModAuditRow): number {
+  return Math.max(r.recentAvg ?? 0, r.currentPlayers, r.afterAvg ?? 0);
+}
+
+/** Plain-language reason when a mod is not WARNING/dead (helps explain edge cases). */
+export function buildClassificationHint(
+  row: Pick<
+    ModAuditRow,
+    | 'status'
+    | 'beforeAvg'
+    | 'earlyAfterAvg'
+    | 'recentAvg'
+    | 'currentPlayers'
+    | 'trendPhase'
+    | 'trendLabel'
+  >
+): string | null {
+  if (row.status === 'dead' || row.status === 'warning') return null;
+
+  const before = row.beforeAvg ?? 0;
+  const early = row.earlyAfterAvg;
+  const recent = row.recentAvg;
+
+  if (before < MIN_SIGNAL_AVG) {
+    return `Not WARNING: only ~${before} players/day before 1.7 (under ${MIN_SIGNAL_AVG} on BM – counted as niche, not a mass-market drop).`;
+  }
+  if (early !== null && early > EFFECTIVELY_EMPTY_MAX) {
+    return `Not WARNING: ~${early}/day right after the 1.7 update – still had ecosystem traffic (not “empty after patch”).`;
+  }
+  if (recent !== null && recent > EFFECTIVELY_EMPTY_MAX * 2) {
+    return `Not WARNING: ~${recent}/day in the last 7 days – looks recovered compared to the first days after 1.7.`;
+  }
+  if (row.trendPhase === 'recovering' || row.trendPhase === 'rising') {
+    return `Not WARNING: trend “${row.trendLabel}” – servers are bringing usage back.`;
+  }
+  if (row.status === 'risky') {
+    return `RISKY (not WARNING): ~${row.currentPlayers} players on BM now – dropped but not empty.`;
+  }
+  if (!isEffectivelyEmpty(row.currentPlayers) && (recent === null || !isEffectivelyEmpty(recent))) {
+    return `OK: still active on BM (now ${row.currentPlayers}, last 7d ~${recent ?? '—'}).`;
+  }
+  return null;
+}
+
+export function auditDiscovery(rows: ModAuditRow[]) {
+  const MIN_GEM_POPULARITY = 25;
+
+  const gems = rows
+    .filter(
+      (r) =>
+        r.status === 'ok' &&
+        (r.trendPhase === 'rising' || r.trendPhase === 'recovering') &&
+        modPopularityScore(r) >= MIN_GEM_POPULARITY
+    )
+    .sort((a, b) => modPopularityScore(b) - modPopularityScore(a))
+    .slice(0, 15);
+
+  const risingPopular = rows
+    .filter((r) => r.trendPhase === 'rising' && modPopularityScore(r) >= MIN_GEM_POPULARITY)
+    .sort((a, b) => modPopularityScore(b) - modPopularityScore(a))
+    .slice(0, 12);
+
+  const trash = sortAuditRowsWorstFirst(
+    rows.filter(
+      (r) =>
+        r.status === 'dead' ||
+        r.status === 'warning' ||
+        (r.status === 'risky' &&
+          (r.trendPhase === 'declining' || isEffectivelyEmpty(r.currentPlayers)))
+    )
+  ).slice(0, 15);
+
+  return { gems, trash, risingPopular };
+}
+
 export function auditHighlights(rows: ModAuditRow[]) {
+  const discovery = auditDiscovery(rows);
   return {
     rising: rows.filter((r) => r.trendPhase === 'rising' && (r.beforeAvg ?? 0) >= 10).slice(0, 8),
     recovering: rows.filter((r) => r.trendPhase === 'recovering').slice(0, 8),
     declining: rows
       .filter((r) => r.trendPhase === 'declining' && r.status !== 'niche')
       .slice(0, 8),
+    ...discovery,
   };
 }

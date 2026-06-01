@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { SEO } from './ui/SEO';
 import type { GameType } from '../api/client';
 import { parseServerConfig } from '../lib/parseServerConfig';
-import { sortAuditRowsWorstFirst } from '@audit-config';
+import { auditDiscovery, sortAuditRowsWorstFirst } from '@audit-config';
 import { parseApiJson, runClientSideAudit } from '../lib/clientAudit';
 import { formatAuditReportJson, formatAuditReportText } from '../lib/auditReport';
 import { PAYPAL_DONATE_URL } from '../lib/siteLinks';
@@ -36,6 +36,7 @@ interface ModAuditRow {
   trendLabel: string;
   trendDetail: string;
   recentAvg: number | null;
+  classificationHint: string | null;
   alternatives: ModAlternative[];
 }
 
@@ -49,6 +50,9 @@ interface AuditResponse {
       rising: ModAuditRow[];
       recovering: ModAuditRow[];
       declining: ModAuditRow[];
+      gems?: ModAuditRow[];
+      trash?: ModAuditRow[];
+      risingPopular?: ModAuditRow[];
     };
     durationMs: number;
     disclaimer: string;
@@ -58,7 +62,7 @@ interface AuditResponse {
 }
 
 type InputMode = 'paste' | 'file';
-type AuditFilter = AuditStatus | 'all' | 'zero-now';
+type AuditFilter = AuditStatus | 'all' | 'zero-now' | 'gems' | 'trash';
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 
 const STATUS_ORDER: AuditStatus[] = ['dead', 'risky', 'warning', 'ok', 'niche', 'unknown'];
@@ -125,42 +129,121 @@ function AuditDonateBanner() {
   );
 }
 
-function HighlightStrip({
-  title,
-  rows,
-  empty,
-}: {
-  title: string;
-  rows: ModAuditRow[];
-  empty: string;
-}) {
-  if (!rows.length) {
-    return (
-      <p className="text-[11px] text-gray-600">
-        {title}: {empty}
-      </p>
-    );
-  }
+function DiscoveryModCard({ row, tone }: { row: ModAuditRow; tone: 'gem' | 'trash' }) {
+  const border =
+    tone === 'gem'
+      ? 'border-emerald-600/40 bg-emerald-950/20'
+      : 'border-red-600/40 bg-red-950/15';
   return (
-    <div className="space-y-2">
-      <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{title}</h3>
-      <div className="flex flex-wrap gap-2">
-        {rows.map((r) => (
-          <Link
-            key={r.modId}
-            to={`/mod/${r.modId}`}
-            title={r.modId}
-            className={`text-[10px] px-2 py-1 border rounded font-mono ${TREND_STYLE[r.trendPhase]}`}
-          >
-            <span className="text-white/90">{r.name}</span>
-            <span className="opacity-60 mx-1">·</span>
-            <span className="opacity-80">{r.modId}</span>
-            <span className="opacity-60 mx-1">·</span>
-            {r.recentAvg ?? r.currentPlayers} players
-          </Link>
-        ))}
+    <Link
+      to={`/mod/${row.modId}`}
+      className={`block border rounded-lg p-3 hover:bg-white/5 transition-colors ${border}`}
+    >
+      <div className="text-[9px] font-mono text-tactical-orange break-all">{row.modId}</div>
+      <div className="font-bold text-white text-sm truncate mt-0.5">{row.name}</div>
+      <div className="text-[10px] text-gray-400 mt-1 font-mono">
+        {STATUS_LABEL[row.status]} · {row.trendLabel} · now {row.currentPlayers} · 7d ~
+        {row.recentAvg ?? '—'}/day
       </div>
-    </div>
+      {row.classificationHint && tone === 'trash' && (
+        <p className="text-[10px] text-amber-300/80 mt-1">{row.classificationHint}</p>
+      )}
+    </Link>
+  );
+}
+
+function AuditDiscoverySection({
+  gems,
+  trash,
+  risingPopular,
+  onFilterGems,
+  onFilterTrash,
+}: {
+  gems: ModAuditRow[];
+  trash: ModAuditRow[];
+  risingPopular: ModAuditRow[];
+  onFilterGems: () => void;
+  onFilterTrash: () => void;
+}) {
+  return (
+    <section className="border border-white/15 rounded-xl p-5 sm:p-6 space-y-6 bg-gradient-to-b from-white/[0.03] to-transparent">
+      <div>
+        <h2 className="text-sm font-black uppercase tracking-widest text-white">
+          Find gems vs trash
+        </h2>
+        <p className="text-[11px] text-gray-500 mt-1 max-w-2xl">
+          Popular rising/recovering mods in your list (ecosystem still wants them) vs mods worth removing
+          after 1.7. Click a column header to filter the full list.
+        </p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={onFilterGems}
+            className="w-full text-left border border-emerald-600/50 bg-emerald-950/25 rounded-lg px-4 py-3 hover:ring-1 hover:ring-emerald-500/50"
+          >
+            <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
+              Gems — popular & rising / recovering
+            </div>
+            <div className="text-2xl font-black text-white mt-1">{gems.length}</div>
+            <div className="text-[10px] text-gray-500">≥25 players (now or last 7d) · OK status</div>
+          </button>
+          {gems.length ? (
+            <div className="grid sm:grid-cols-2 gap-2">
+              {gems.map((r) => (
+                <DiscoveryModCard key={r.modId} row={r} tone="gem" />
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] text-gray-600">No clear “gem” signal in this config.</p>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={onFilterTrash}
+            className="w-full text-left border border-red-600/50 bg-red-950/25 rounded-lg px-4 py-3 hover:ring-1 hover:ring-red-500/50"
+          >
+            <div className="text-[10px] font-black uppercase tracking-widest text-red-300">
+              Trash — remove or verify first
+            </div>
+            <div className="text-2xl font-black text-white mt-1">{trash.length}</div>
+            <div className="text-[10px] text-gray-500">Dead, warning, or risky + declining</div>
+          </button>
+          {trash.length ? (
+            <div className="grid sm:grid-cols-2 gap-2">
+              {trash.map((r) => (
+                <DiscoveryModCard key={r.modId} row={r} tone="trash" />
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] text-gray-600">Nothing in the trash bucket.</p>
+          )}
+        </div>
+      </div>
+
+      {risingPopular.length > 0 && (
+        <div className="border-t border-white/10 pt-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-2">
+            Rising + popular (strongest growth)
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {risingPopular.map((r) => (
+              <Link
+                key={r.modId}
+                to={`/mod/${r.modId}`}
+                className={`text-[10px] px-2 py-1 border rounded font-mono ${TREND_STYLE.rising}`}
+              >
+                {r.name} · {r.recentAvg ?? r.currentPlayers}/day · {r.modId}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -224,13 +307,28 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
     [result]
   );
 
+  const discovery = useMemo(() => {
+    if (!result) return { gems: [] as ModAuditRow[], trash: [] as ModAuditRow[], risingPopular: [] as ModAuditRow[] };
+    const h = result.meta.highlights;
+    if (h?.gems && h?.trash) {
+      return {
+        gems: h.gems,
+        trash: h.trash,
+        risingPopular: h.risingPopular ?? [],
+      };
+    }
+    return auditDiscovery(result.data);
+  }, [result]);
+
   const visibleRows = useMemo(() => {
     if (!result) return [];
+    if (filter === 'gems') return discovery.gems;
+    if (filter === 'trash') return discovery.trash;
     let rows = result.data;
     if (filter === 'zero-now') rows = rows.filter((r) => isZeroOnBm(r.currentPlayers));
     else if (filter !== 'all') rows = rows.filter((r) => r.status === filter);
     return sortAuditRowsWorstFirst(rows);
-  }, [result, filter]);
+  }, [result, filter, discovery]);
 
   const tryParsePreview = useCallback((text: string) => {
     if (!text.trim()) {
@@ -549,29 +647,6 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             </button>
           </div>
 
-          <section className="border border-white/10 rounded-lg p-4 space-y-4 bg-white/[0.02]">
-            <h2 className="text-[10px] font-black uppercase tracking-widest text-tactical-orange">
-              Trends in your config
-            </h2>
-            <HighlightStrip
-              title="Rising (after 1.7)"
-              rows={result.meta.highlights?.rising ?? []}
-              empty="no clear growth"
-            />
-            <HighlightStrip
-              title="Recovering (hit by 1.7, last 7 days improving)"
-              rows={result.meta.highlights?.recovering ?? []}
-              empty="no recovery signal"
-            />
-            <HighlightStrip
-              title="Still declining"
-              rows={result.meta.highlights?.declining ?? []}
-              empty="all stable or unknown"
-            />
-          </section>
-
-          <AuditDonateBanner />
-
           <button
             type="button"
             onClick={() => setFilter('all')}
@@ -629,6 +704,11 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                     <p className="text-xs opacity-90 mt-1 font-semibold">{row.title}</p>
                     <p className="text-xs opacity-75 mt-1">{row.detail}</p>
                     <p className="text-[11px] opacity-60 mt-1 italic">{row.trendDetail}</p>
+                    {row.classificationHint && (
+                      <p className="text-[11px] text-amber-300/90 mt-2 border-l-2 border-amber-500/40 pl-2">
+                        {row.classificationHint}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right text-xs font-mono shrink-0 space-y-0.5 max-w-[20rem]">
                     <div>
@@ -709,12 +789,32 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             ))}
           </div>
 
-          {filter !== 'all' && filter !== 'zero-now' && grouped.get(filter)?.length === 0 && (
-            <p className="text-gray-500 text-sm">No mods in this category.</p>
-          )}
+          {filter !== 'all' &&
+            filter !== 'zero-now' &&
+            filter !== 'gems' &&
+            filter !== 'trash' &&
+            grouped.get(filter)?.length === 0 && (
+              <p className="text-gray-500 text-sm">No mods in this category.</p>
+            )}
           {filter === 'zero-now' && zeroNowCount === 0 && (
             <p className="text-gray-500 text-sm">No mods with exactly 0 players on BattleMetrics right now.</p>
           )}
+          {filter === 'gems' && discovery.gems.length === 0 && (
+            <p className="text-gray-500 text-sm">No popular rising/recovering mods in this config.</p>
+          )}
+          {filter === 'trash' && discovery.trash.length === 0 && (
+            <p className="text-gray-500 text-sm">No trash-tier mods detected.</p>
+          )}
+
+          <AuditDiscoverySection
+            gems={discovery.gems}
+            trash={discovery.trash}
+            risingPopular={discovery.risingPopular}
+            onFilterGems={() => setFilter('gems')}
+            onFilterTrash={() => setFilter('trash')}
+          />
+
+          <AuditDonateBanner />
         </>
       )}
     </div>
