@@ -4,6 +4,8 @@ import { SEO } from './ui/SEO';
 import type { GameType } from '../api/client';
 import { parseServerConfig } from '../lib/parseServerConfig';
 import { parseApiJson, runClientSideAudit } from '../lib/clientAudit';
+import { formatAuditReportJson, formatAuditReportText } from '../lib/auditReport';
+import { PAYPAL_DONATE_URL } from '../lib/siteLinks';
 
 type AuditStatus = 'dead' | 'risky' | 'warning' | 'ok' | 'niche' | 'unknown';
 type TrendPhase = 'rising' | 'recovering' | 'declining' | 'stable' | 'unknown';
@@ -88,6 +90,34 @@ interface ConfigAuditPageProps {
   game?: GameType;
 }
 
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function AuditDonateBanner() {
+  return (
+    <div className="border border-tactical-orange/35 bg-tactical-orange/5 rounded-lg px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <p className="text-sm text-gray-300 leading-relaxed">
+        <strong className="text-white">Found this useful?</strong> Daily BattleMetrics scans and hosting
+        cost real money – help keep reforgermods.com free for all server owners.
+      </p>
+      <a
+        href={PAYPAL_DONATE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 px-5 py-2.5 bg-tactical-orange text-black text-center font-black uppercase tracking-widest text-[10px] hover:bg-white transition-colors"
+      >
+        Donate via PayPal
+      </a>
+    </div>
+  );
+}
+
 function HighlightStrip({
   title,
   rows,
@@ -112,9 +142,14 @@ function HighlightStrip({
           <Link
             key={r.modId}
             to={`/mod/${r.modId}`}
-            className={`text-[10px] px-2 py-1 border rounded ${TREND_STYLE[r.trendPhase]}`}
+            title={r.modId}
+            className={`text-[10px] px-2 py-1 border rounded font-mono ${TREND_STYLE[r.trendPhase]}`}
           >
-            {r.name} · {r.recentAvg ?? r.currentPlayers} players
+            <span className="text-white/90">{r.name}</span>
+            <span className="opacity-60 mx-1">·</span>
+            <span className="opacity-80">{r.modId}</span>
+            <span className="opacity-60 mx-1">·</span>
+            {r.recentAvg ?? r.currentPlayers} players
           </Link>
         ))}
       </div>
@@ -133,7 +168,36 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
   const [result, setResult] = useState<AuditResponse | null>(null);
   const [filter, setFilter] = useState<AuditStatus | 'all'>('all');
   const [progress, setProgress] = useState<string | null>(null);
+  const [copyHint, setCopyHint] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showCopyHint = useCallback((msg: string) => {
+    setCopyHint(msg);
+    window.setTimeout(() => setCopyHint(null), 2500);
+  }, []);
+
+  const copyReport = useCallback(
+    async (kind: 'text' | 'json') => {
+      if (!result) return;
+      const payload = {
+        patchDate: result.meta.patchDate,
+        summary: result.meta.summary,
+        rows: result.data,
+      };
+      const text = kind === 'text' ? formatAuditReportText(payload) : formatAuditReportJson(payload);
+      const ok = await copyToClipboard(text);
+      showCopyHint(ok ? `Copied ${kind} report to clipboard` : 'Copy failed – allow clipboard access');
+    },
+    [result, showCopyHint]
+  );
+
+  const copyModId = useCallback(
+    async (modId: string) => {
+      const ok = await copyToClipboard(modId);
+      showCopyHint(ok ? `Copied ${modId}` : 'Copy failed');
+    },
+    [showCopyHint]
+  );
 
   const grouped = useMemo(() => {
     if (!result) return new Map<AuditStatus, ModAuditRow[]>();
@@ -286,6 +350,8 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
         the server – no passwords, IPs, or full JSON are stored.
       </div>
 
+      <AuditDonateBanner />
+
       <div className="space-y-4">
         <div className="flex gap-2 border-b border-white/10 pb-2">
           <button
@@ -405,10 +471,38 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
         {error && (
           <p className="text-red-400 text-sm border border-red-900/50 bg-red-950/20 p-4 rounded">{error}</p>
         )}
+        {copyHint && (
+          <p className="text-emerald-400 text-[11px] font-mono border border-emerald-900/40 bg-emerald-950/20 px-3 py-2 rounded">
+            {copyHint}
+          </p>
+        )}
       </div>
 
       {result && (
         <>
+          <div className="flex flex-wrap items-center gap-2 border border-white/10 rounded-lg p-3 bg-black/40">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 w-full sm:w-auto">
+              Export report
+            </span>
+            <button
+              type="button"
+              onClick={() => void copyReport('text')}
+              className="px-4 py-2 border border-white/15 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white/5"
+            >
+              Copy text report (with modId)
+            </button>
+            <button
+              type="button"
+              onClick={() => void copyReport('json')}
+              className="px-4 py-2 border border-white/15 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/5"
+            >
+              Copy JSON report
+            </button>
+            <span className="text-[10px] text-gray-600 sm:ml-auto">
+              Each line: <code className="text-tactical-orange">modId | name | …</code> — not config.json
+            </span>
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {STATUS_ORDER.map((st) => (
               <button
@@ -443,6 +537,8 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
               empty="all stable or unknown"
             />
           </section>
+
+          <AuditDonateBanner />
 
           <button
             type="button"
@@ -479,9 +575,20 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                       >
                         {row.trendLabel}
                       </span>
-                      <span className="text-[10px] opacity-60">{row.modId}</span>
                     </div>
                     <h3 className="font-bold text-white truncate">{row.name}</h3>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      <code className="text-[11px] font-mono text-tactical-orange break-all select-all">
+                        {row.modId}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => void copyModId(row.modId)}
+                        className="text-[9px] font-bold uppercase tracking-widest text-gray-500 hover:text-white border border-white/10 px-2 py-0.5"
+                      >
+                        Copy modId
+                      </button>
+                    </div>
                     <p className="text-xs opacity-90 mt-1 font-semibold">{row.title}</p>
                     <p className="text-xs opacity-75 mt-1">{row.detail}</p>
                     <p className="text-[11px] opacity-60 mt-1 italic">{row.trendDetail}</p>

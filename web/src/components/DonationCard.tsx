@@ -1,8 +1,9 @@
 import { Card, CardContent } from './ui/Card';
+import { PAYPAL_DONATE_URL } from '../lib/siteLinks';
 
 export function DonationCard() {
   const goal = 100;
-  const paypalUrl = 'https://www.paypal.com/paypalme/sachta2023';
+  const paypalUrl = PAYPAL_DONATE_URL;
 
   return (
     <Card className="border-l-4 border-l-tactical-orange bg-gradient-to-br from-zinc-900 to-black">

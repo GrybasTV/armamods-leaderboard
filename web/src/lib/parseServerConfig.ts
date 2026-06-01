@@ -13,7 +13,21 @@ export function parseServerConfig(input: unknown): ParsedConfigMod[] {
   if (typeof input === 'string') {
     const trimmed = input.trim();
     if (!trimmed) throw new Error('Empty JSON');
-    data = JSON.parse(trimmed);
+    if (trimmed.startsWith('Rising') || trimmed.startsWith('Arma Reforger mod audit')) {
+      throw new Error(
+        'This looks like an audit report, not config.json. Paste your original server config.json, or use “Copy text report” after running an audit.'
+      );
+    }
+    try {
+      data = JSON.parse(trimmed);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        throw new Error(
+          `Invalid config.json: ${e.message}. Expected JSON with game.mods[] (modId + name).`
+        );
+      }
+      throw e;
+    }
   }
 
   const root = data as Record<string, unknown>;

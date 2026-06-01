@@ -128,7 +128,16 @@ export async function parseApiJson(response: Response): Promise<unknown> {
   }
   try {
     return JSON.parse(text);
-  } catch {
-    throw new Error('Server returned a non-JSON response.');
+  } catch (e) {
+    const hint =
+      trimmed.startsWith('Rising') || trimmed.includes('Recovering (')
+        ? ' Received page text instead of API JSON – try again in a minute or refresh.'
+        : '';
+    const snippet = text.slice(0, 120).replace(/\s+/g, ' ');
+    throw new Error(
+      `Server returned non-JSON (${response.status}): ${e instanceof SyntaxError ? e.message : 'parse error'}.` +
+        (snippet ? ` Start: “${snippet}…”` : '') +
+        hint
+    );
   }
 }
