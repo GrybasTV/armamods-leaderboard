@@ -19,6 +19,23 @@ describe('parseServerConfig', () => {
     assert.equal(mods.length, 1);
     assert.equal(mods[0].modId, '612F512CD4CB21D5');
   });
+
+  it('parses mods[] fragment copied from middle of config', () => {
+    const fragment = `
+    },
+    {
+        "modId": "661EEDA988CC4930",
+        "name": "WCS Armbands for PvE"
+    },
+    {
+        "modId": "697AEA9D9CC89A0A",
+        "name": "MBS Rank save"
+    }`;
+    const mods = parseServerConfig(fragment);
+    assert.equal(mods.length, 2);
+    assert.equal(mods[0].modId, '661EEDA988CC4930');
+    assert.equal(mods[1].name, 'MBS Rank save');
+  });
 });
 
 describe('analyzeTrend', () => {

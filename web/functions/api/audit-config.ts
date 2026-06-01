@@ -87,20 +87,65 @@ const TREND_LABEL: Record<TrendPhase, string> = {
   unknown: 'Unknown',
 };
 
-export function parseServerConfig(input: unknown): ParsedConfigMod[] {
-  let data: unknown = input;
-  if (typeof input === 'string') {
-    const trimmed = input.trim();
-    if (!trimmed) throw new Error('Empty JSON');
-    data = JSON.parse(trimmed);
+/** Extract modId + name from partial paste (middle of mods[] list). */
+function extractModsFromText(text: string): ParsedConfigMod[] | null {
+  const seen = new Set<string>();
+  const out: ParsedConfigMod[] = [];
+  const re =
+    /"modId"\s*:\s*"([0-9a-fA-F]{16})"[\s\S]*?"name"\s*:\s*"((?:[^"\\]|\\.)*)"/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    const modId = m[1].toUpperCase();
+    if (seen.has(modId)) continue;
+    seen.add(modId);
+    out.push({ modId, name: m[2].replace(/\\"/g, '"') });
+  }
+  return out.length ? out : null;
+}
+
+/** Repair common copy-paste fragments into valid JSON before parse. */
+function parseConfigJsonString(text: string): unknown {
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('Empty JSON');
+  if (trimmed.startsWith('Rising') || trimmed.startsWith('Arma Reforger mod audit')) {
+    throw new Error(
+      'This looks like an audit report, not config.json. Paste your original server config.json, or use “Copy text report” after running an audit.'
+    );
   }
 
-  const root = data as Record<string, unknown>;
-  const game = root?.game as Record<string, unknown> | undefined;
-  const modsRaw = (game?.mods ?? root?.mods ?? data) as unknown;
+  const extracted = extractModsFromText(trimmed);
+  if (extracted) return extracted;
 
+  const candidates = [trimmed];
+  if (/"modId"\s*:/i.test(trimmed)) {
+    let inner = trimmed
+      .replace(/^\s*\}\s*,\s*/s, '')
+      .replace(/^\s*,\s*/, '')
+      .replace(/,\s*$/s, '');
+    if (!inner.startsWith('[')) inner = `[${inner}]`;
+    candidates.push(inner);
+  }
+
+  let lastErr: SyntaxError | null = null;
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch (e) {
+      if (e instanceof SyntaxError) lastErr = e;
+    }
+  }
+
+  const fallback = extractModsFromText(trimmed);
+  if (fallback) return fallback;
+
+  throw new Error(
+    `Invalid config.json: ${lastErr?.message ?? 'parse failed'}. Paste full config.json, or at least a mods[] fragment with modId + name.`
+  );
+}
+
+export function parseModsFromRaw(modsRaw: unknown): ParsedConfigMod[] {
   if (!Array.isArray(modsRaw)) {
-    throw new Error('Missing mods array (expected path: game.mods)');
+    throw new Error('Missing mods array (expected path: game.mods or a JSON array of mods)');
   }
 
   const seen = new Set<string>();
@@ -121,6 +166,33 @@ export function parseServerConfig(input: unknown): ParsedConfigMod[] {
 
   if (!out.length) throw new Error('No valid modId found (expected 16 hex characters)');
   return out;
+}
+
+export function parseServerConfig(input: unknown): ParsedConfigMod[] {
+  let data: unknown = input;
+  if (typeof input === 'string') {
+    data = parseConfigJsonString(input);
+  }
+
+  if (
+    Array.isArray(data) &&
+    data.length > 0 &&
+    typeof data[0] === 'object' &&
+    data[0] !== null &&
+    'modId' in (data[0] as object)
+  ) {
+    return parseModsFromRaw(data);
+  }
+
+  const root = data as Record<string, unknown>;
+  const game = root?.game as Record<string, unknown> | undefined;
+  const modsRaw = (game?.mods ?? root?.mods) as unknown;
+
+  if (!Array.isArray(modsRaw)) {
+    throw new Error('Missing mods array (expected path: game.mods or [...] array of mods)');
+  }
+
+  return parseModsFromRaw(modsRaw);
 }
 
 export function avgPlayersInRange(

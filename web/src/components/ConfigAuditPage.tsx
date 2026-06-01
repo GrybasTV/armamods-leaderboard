@@ -504,7 +504,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                 setFileName(null);
                 tryParsePreview(e.target.value);
               }}
-              placeholder='{"game":{"mods":[{"modId":"612F512CD4CB21D5","name":"WCS_Earplugs"}]}}'
+              placeholder='Full config.json or paste part of game.mods[] (modId + name)'
               className="w-full h-56 bg-black/60 border border-white/10 rounded-lg p-4 text-xs text-gray-200 font-mono focus:border-tactical-orange outline-none resize-y"
               spellCheck={false}
             />
