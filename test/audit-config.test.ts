@@ -64,7 +64,7 @@ describe('classifyModAudit', () => {
     };
     const r = classifyModAudit({ beforeAvg: 208, afterAvg: 16, currentPlayers: 10, trend });
     assert.equal(r.status, 'ok');
-    assert.equal(r.dropPct, 92);
+    assert.equal(r.dropPct, 98);
   });
 
   it('warning when players before 1.7 but empty after update', () => {
@@ -90,6 +90,18 @@ describe('classifyModAudit', () => {
     };
     const r = classifyModAudit({ beforeAvg: 1500, afterAvg: 800, currentPlayers: 1035, trend });
     assert.equal(r.status, 'ok');
+  });
+
+  it('treats a handful of players same as zero for warning', () => {
+    const trend = {
+      phase: 'declining' as const,
+      label: 'Still declining',
+      detail: 'x',
+      recentAvg: 6,
+      earlyAfterAvg: 4,
+    };
+    const r = classifyModAudit({ beforeAvg: 100, afterAvg: 8, currentPlayers: 3, trend });
+    assert.equal(r.status, 'warning');
   });
 
   it('current zero but high recent post-patch usage is ok not warning', () => {

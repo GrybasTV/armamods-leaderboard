@@ -26,6 +26,7 @@ interface ModAuditRow {
   title: string;
   detail: string;
   beforeAvg: number | null;
+  earlyAfterAvg: number | null;
   afterAvg: number | null;
   dropPct: number | null;
   currentPlayers: number;
@@ -527,7 +528,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
               empty="no clear growth"
             />
             <HighlightStrip
-              title="Recovering (dropped, last week improving)"
+              title="Recovering (hit by 1.7, last 7 days improving)"
               rows={result.meta.highlights?.recovering ?? []}
               empty="no recovery signal"
             />
@@ -593,13 +594,26 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                     <p className="text-xs opacity-75 mt-1">{row.detail}</p>
                     <p className="text-[11px] opacity-60 mt-1 italic">{row.trendDetail}</p>
                   </div>
-                  <div className="text-right text-xs font-mono shrink-0 space-y-0.5">
+                  <div className="text-right text-xs font-mono shrink-0 space-y-0.5 max-w-[20rem]">
                     <div>
-                      Before 1.7: <strong>{row.beforeAvg ?? '—'}</strong> → After: <strong>{row.afterAvg ?? '—'}</strong>
-                      {row.dropPct != null && <span className="ml-2 text-red-400">−{row.dropPct}%</span>}
+                      Before 1.7: <strong>{row.beforeAvg ?? '—'}</strong>/day
+                      {row.dropPct != null && (
+                        <span className="ml-2 text-red-400" title="Drop from before 1.7 to first days after update">
+                          −{row.dropPct}%
+                        </span>
+                      )}
                     </div>
                     <div>
-                      Last week: <strong>{row.recentAvg ?? '—'}</strong> · Now: {row.currentPlayers} players
+                      After 1.7 update: <strong>{row.earlyAfterAvg ?? '—'}</strong>/day
+                      <span className="text-gray-600 ml-1">(first ~4d)</span>
+                    </div>
+                    <div>
+                      Last 7 days: <strong>{row.recentAvg ?? '—'}</strong>/day
+                      <span className="text-gray-600 ml-1">· trend</span>
+                    </div>
+                    <div>
+                      Since patch avg: <strong>{row.afterAvg ?? '—'}</strong>/day · Now:{' '}
+                      <strong>{row.currentPlayers}</strong>
                     </div>
                     <Link
                       to={`/mod/${row.modId}`}

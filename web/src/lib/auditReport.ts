@@ -12,6 +12,7 @@ export interface ReportModRow {
   title: string;
   detail: string;
   beforeAvg: number | null;
+  earlyAfterAvg: number | null;
   afterAvg: number | null;
   dropPct: number | null;
   currentPlayers: number;
@@ -39,7 +40,8 @@ const STATUS_HEADING: Record<AuditStatus, string> = {
 
 function lineForMod(r: ReportModRow): string {
   const drop = r.dropPct != null ? ` | drop ${r.dropPct}%` : '';
-  const stats = `before ${r.beforeAvg ?? '—'} → after ${r.afterAvg ?? '—'} | recent ${r.recentAvg ?? '—'} | now ${r.currentPlayers}`;
+  const stats =
+    `before ${r.beforeAvg ?? '—'} | after 1.7 update ${r.earlyAfterAvg ?? '—'} | last 7d ${r.recentAvg ?? '—'} | since patch ${r.afterAvg ?? '—'} | now ${r.currentPlayers}`;
   return `${r.modId} | ${r.name} | ${r.title}${drop}\n  ${stats}\n  ${r.detail}`;
 }
 
@@ -84,6 +86,7 @@ export function formatAuditReportJson(input: AuditReportInput): string {
         title: r.title,
         detail: r.detail,
         beforeAvg: r.beforeAvg,
+        earlyAfterAvg: r.earlyAfterAvg,
         afterAvg: r.afterAvg,
         dropPct: r.dropPct,
         currentPlayers: r.currentPlayers,

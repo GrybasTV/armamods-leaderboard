@@ -55,13 +55,18 @@ export interface ModAuditRow {
   title: string;
   detail: string;
   beforeAvg: number | null;
+  /** Avg players/day in first ~4 days after 1.7 – patch impact */
+  earlyAfterAvg: number | null;
+  /** Avg players/day from patch through today (includes recovery) */
   afterAvg: number | null;
+  /** Drop %: before 1.7 → first days after patch */
   dropPct: number | null;
   currentPlayers: number;
   serverCount: number;
   trendPhase: TrendPhase;
   trendLabel: string;
   trendDetail: string;
+  /** Last 7 days after patch – trend / recovery */
   recentAvg: number | null;
   alternatives: ModAlternative[];
 }
@@ -191,7 +196,7 @@ export function analyzeTrend(
     return {
       phase: 'recovering',
       label: TREND_LABEL.recovering,
-      detail: `After 1.7 dipped to ~${early} players/day, now ~${recentAvg} – ecosystem is recovering.`,
+      detail: `After 1.7 update dipped to ~${early} players/day (first days); last 7 days ~${recentAvg} – recovering.`,
       recentAvg,
       earlyAfterAvg: early,
     };
@@ -202,7 +207,7 @@ export function analyzeTrend(
     return {
       phase: 'rising',
       label: TREND_LABEL.rising,
-      detail: `Usage is growing or holding steady (~${recentAvg} players/day last week).`,
+      detail: `Usage is growing or holding steady (~${recentAvg} players/day in the last 7 days).`,
       recentAvg,
       earlyAfterAvg: early,
     };
@@ -213,7 +218,7 @@ export function analyzeTrend(
     return {
       phase: 'declining',
       label: TREND_LABEL.declining,
-      detail: `Decline continues after 1.7 (${early} → ${recentAvg} players/day).`,
+      detail: `Still declining: ~${early}/day right after 1.7 update → ~${recentAvg}/day last 7 days.`,
       recentAvg,
       earlyAfterAvg: early,
     };
@@ -222,7 +227,7 @@ export function analyzeTrend(
   return {
     phase: 'stable',
     label: TREND_LABEL.stable,
-    detail: 'No major change in the last week after 1.7.',
+    detail: 'No major change between post-1.7 update window and the last 7 days.',
     recentAvg,
     earlyAfterAvg: early,
   };
@@ -235,22 +240,39 @@ function addDays(isoDate: string, days: number): string {
 }
 
 const MIN_SIGNAL_AVG = 15;
+/**
+ * On BattleMetrics scale, 0 and “a few” players/day are the same bucket – not a living mod.
+ */
+const EFFECTIVELY_EMPTY_MAX = 10;
 const DEAD_AFTER_MAX = 3;
-/** Below this = effectively no players after 1.7 on BM scale (WARNING core rule) */
-const NO_PLAYERS_AFTER_MAX = 10;
 /** Recent avg players/day – recovery is real when the ecosystem is coming back */
 const MIN_RECOVERY_RECENT = 10;
 
+function isEffectivelyEmpty(players: number): boolean {
+  return players <= EFFECTIVELY_EMPTY_MAX;
+}
+
 /**
- * Post-1.7 ecosystem is effectively empty (not “today=0” while last week still had thousands).
- * Uses recent post-patch avg from trend, not full-period afterAvg (that mixes recovery back in).
+ * Mod was hurt by 1.7: empty right after the update and/or still empty (0 ≈ handful).
+ * Does not flag mods that dipped then recovered (high last-7-days avg).
  */
-function isEmptyAfterUpdate(trend: TrendInsight, currentPlayers: number): boolean {
+function isDamagedAfter17Update(trend: TrendInsight, currentPlayers: number): boolean {
+  const early = trend.earlyAfterAvg;
   const recent = trend.recentAvg;
-  if (recent === null) {
-    return currentPlayers <= NO_PLAYERS_AFTER_MAX;
-  }
-  return recent <= NO_PLAYERS_AFTER_MAX && currentPlayers <= NO_PLAYERS_AFTER_MAX;
+
+  const hitByPatch = early !== null && isEffectivelyEmpty(early);
+  const stillEmpty =
+    (recent !== null && isEffectivelyEmpty(recent) && isEffectivelyEmpty(currentPlayers)) ||
+    (recent === null && isEffectivelyEmpty(currentPlayers));
+
+  if (!hitByPatch && !stillEmpty) return false;
+
+  // Recovered since patch window – ecosystem came back
+  if (recent !== null && recent > EFFECTIVELY_EMPTY_MAX * 2) return false;
+  if (trend.phase === 'recovering' && (recent ?? 0) >= MIN_RECOVERY_RECENT) return false;
+  if (trend.phase === 'rising' && (recent ?? 0) >= 15) return false;
+
+  return hitByPatch || stillEmpty;
 }
 
 function isHealthyRecovery(trend: TrendInsight, currentPlayers: number): boolean {
@@ -282,8 +304,15 @@ export function classifyModAudit(params: {
     };
   }
 
+  const early = trend.earlyAfterAvg;
   const dropPct =
-    beforeAvg > 0 ? Math.round(((beforeAvg - afterAvg) / beforeAvg) * 100) : afterAvg === 0 ? 100 : 0;
+    beforeAvg > 0 && early !== null
+      ? Math.round(((beforeAvg - early) / beforeAvg) * 100)
+      : beforeAvg > 0
+        ? Math.round(((beforeAvg - afterAvg) / beforeAvg) * 100)
+        : afterAvg === 0
+          ? 100
+          : 0;
 
   if (beforeAvg < MIN_SIGNAL_AVG) {
     return {
@@ -308,12 +337,13 @@ export function classifyModAudit(params: {
     };
   }
 
-  const postPatchAvg = trend.recentAvg ?? trend.earlyAfterAvg ?? afterAvg;
+  const patchWindowAvg = early ?? trend.recentAvg ?? afterAvg;
 
-  // Core WARNING: players before 1.7, practically none after the update
-  if (isEmptyAfterUpdate(trend, currentPlayers)) {
+  // Core WARNING: popular before 1.7, effectively empty after patch (0 ≈ a few players/day)
+  if (isDamagedAfter17Update(trend, currentPlayers)) {
     const isDead =
-      postPatchAvg <= DEAD_AFTER_MAX &&
+      (patchWindowAvg ?? 999) <= DEAD_AFTER_MAX &&
+      (trend.recentAvg ?? 999) <= DEAD_AFTER_MAX &&
       currentPlayers <= DEAD_AFTER_MAX &&
       dropPct >= 70 &&
       trend.phase !== 'recovering';
@@ -323,7 +353,8 @@ export function classifyModAudit(params: {
         status: 'dead',
         title: 'Likely broken after 1.7',
         detail:
-          `Averaged ~${beforeAvg} players/day before 1.7; after the update ~${postPatchAvg} and now ${currentPlayers} – ecosystem removed this mod.`,
+          `~${beforeAvg} players/day before 1.7 → ~${patchWindowAvg ?? 0}/day right after the update, ` +
+          `~${trend.recentAvg ?? 0}/day last 7 days, ${currentPlayers} now – ecosystem removed this mod.`,
         dropPct,
       };
     }
@@ -332,14 +363,15 @@ export function classifyModAudit(params: {
       status: 'warning',
       title: 'Players before 1.7, empty after update',
       detail:
-        `Had ~${beforeAvg} players/day before 1.7, but after the update only ~${postPatchAvg} avg recently and ${currentPlayers} now. ` +
-        'Servers likely dropped this mod – check Workshop 1.7 update and your server logs.',
+        `Had ~${beforeAvg} players/day before 1.7. After the update ~${early ?? '—'}/day (first days), ` +
+        `~${trend.recentAvg ?? '—'}/day last 7 days, ${currentPlayers} now (0 and a few/day count the same on BM). ` +
+        'Check Workshop 1.7 update and server logs.',
       dropPct,
     };
   }
 
   // Still on servers after 1.7 but usage fell hard (not a “empty after” case)
-  if (dropPct >= 55 && currentPlayers > NO_PLAYERS_AFTER_MAX) {
+  if (dropPct >= 55 && !isEffectivelyEmpty(currentPlayers)) {
     return {
       status: 'risky',
       title: 'Heavy drop, still some players',
@@ -353,7 +385,7 @@ export function classifyModAudit(params: {
     status: 'ok',
     title: 'Still used after 1.7',
     detail:
-      currentPlayers > NO_PLAYERS_AFTER_MAX
+      !isEffectivelyEmpty(currentPlayers)
         ? `~${currentPlayers} players now – ecosystem still runs this mod after the update.`
         : 'Usage after 1.7 is within normal range for this mod.',
     dropPct,
@@ -418,6 +450,7 @@ export function buildModAuditRow(
   opts?: AuditBuildOptions
 ): ModAuditRow {
   const beforeAvg = avgPlayersInRange(history, '2026-05-02', patchDate);
+  const earlyAfterAvg = avgPlayersInRange(history, patchDate, addDays(patchDate, 4));
   const afterAvg = avgPlayersInRange(history, patchDate, '2026-12-31');
   const currentPlayers = live?.totalPlayers ?? 0;
   const serverCount = live?.serverCount ?? 0;
@@ -438,6 +471,7 @@ export function buildModAuditRow(
     modId: mod.modId,
     name: mod.name,
     beforeAvg,
+    earlyAfterAvg,
     afterAvg,
     currentPlayers,
     serverCount,
