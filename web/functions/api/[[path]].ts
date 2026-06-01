@@ -13,6 +13,14 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { handle } from 'hono/cloudflare-pages';
+import {
+  auditHighlights,
+  buildModAuditRow,
+  parseServerConfig,
+  REFORGER_PATCH_17,
+  type AuditStatus,
+  type HistoryPoint,
+} from './audit-config';
 
 type Bindings = {
   TRENDING_KV: KVNamespace;
@@ -736,6 +744,157 @@ app.get('/servers/:serverId/history', async (c) => {
   finalResponse.headers.set('Cache-Control', 'public, max-age=300');
   c.executionCtx.waitUntil(cache.put(c.req.raw, finalResponse.clone()));
   return finalResponse;
+});
+
+/**
+ * POST /audit/config
+ * Tik modId + name (client-side parse) arba legacy pilnas config.
+ * Config NEĮRAŠOMAS į KV / cache – tik atsakymas naršyklėje.
+ */
+app.post('/audit/config', async (c) => {
+  const start = Date.now();
+  const game = getGameFromQuery(c);
+  if (game !== 'reforger') {
+    return c.json(
+      { error: 'Unsupported game', message: 'Config auditas šiuo metu tik Reforger (1.7 Partisan).' },
+      400
+    );
+  }
+
+  let body: { config?: unknown; mods?: { modId: string; name?: string }[] } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  let parsedMods;
+  try {
+    if (Array.isArray(body.mods) && body.mods.length > 0) {
+      parsedMods = body.mods
+        .map((m) => ({
+          modId: String(m.modId ?? '').trim().toUpperCase(),
+          name: String(m.name ?? m.modId ?? ''),
+        }))
+        .filter((m) => /^[0-9A-F]{16}$/.test(m.modId));
+      if (!parsedMods.length) throw new Error('Netinkami modId formatas');
+    } else {
+      parsedMods = parseServerConfig(body.config ?? body);
+    }
+  } catch (err: any) {
+    return c.json({ error: 'Invalid config', message: err?.message || 'Parse failed' }, 400);
+  }
+
+  console.log(`[AUDIT] ${parsedMods.length} mods (config body not stored)`);
+
+  if (parsedMods.length > 120) {
+    return c.json(
+      { error: 'Too many mods', message: 'Daugiausiai 120 modų viename audite.' },
+      400
+    );
+  }
+
+  const keys = getKVKeys(game);
+  const modsList = await getChunkedData(c.env.TRENDING_KV, keys.MODS);
+  const modMap = new Map(
+    modsList.map(
+      (m: {
+        id: string;
+        name?: string;
+        totalPlayers?: number;
+        serverCount?: number;
+        coDeployed?: { id: string; name: string; count: number }[];
+      }) => [String(m.id).toUpperCase(), m]
+    )
+  );
+
+  const configIds = new Set(parsedMods.map((m) => m.modId));
+
+  const baseKey = keys.HISTORY_DAILY;
+  const meta = (await c.env.TRENDING_KV.get(`${baseKey}:meta`, 'json')) as { chunks?: number } | null;
+  const shards: string[] = [];
+  if (meta?.chunks) {
+    const texts = await Promise.all(
+      Array.from({ length: meta.chunks }, (_, i) =>
+        c.env.TRENDING_KV.get(`${baseKey}:${i}`, 'text')
+      )
+    );
+    for (const t of texts) if (t) shards.push(t);
+  } else {
+    const legacy = await c.env.TRENDING_KV.get(baseKey, 'text');
+    if (legacy) shards.push(legacy);
+  }
+
+  const historyCache = new Map<string, HistoryPoint[]>();
+
+  const historyFor = (modId: string): HistoryPoint[] => {
+    const key = modId.toUpperCase();
+    if (historyCache.has(key)) return historyCache.get(key)!;
+    let modHistory: ReturnType<typeof scanHistoryPoints> = [];
+    for (const shardText of shards) {
+      if (shardText.includes(`"${key}":{`)) {
+        modHistory.push(...scanHistoryPoints(shardText, key));
+      }
+    }
+    const history = smoothHistoryData(modHistory.slice(-31));
+    historyCache.set(key, history);
+    return history;
+  };
+
+  const buildOpts = { configIds, modMap, historyFor };
+
+  const rows = parsedMods.map((mod) => {
+    const history = historyFor(mod.modId);
+    const live = modMap.get(mod.modId) ?? null;
+    return buildModAuditRow(mod, history, live, REFORGER_PATCH_17, buildOpts);
+  });
+
+  const statusOrder: Record<AuditStatus, number> = {
+    dead: 0,
+    risky: 1,
+    warning: 2,
+    unknown: 3,
+    ok: 4,
+    niche: 5,
+  };
+  rows.sort(
+    (a, b) =>
+      statusOrder[a.status] - statusOrder[b.status] ||
+      (b.dropPct ?? 0) - (a.dropPct ?? 0)
+  );
+
+  const summary: Record<AuditStatus, number> = {
+    dead: 0,
+    risky: 0,
+    warning: 0,
+    ok: 0,
+    niche: 0,
+    unknown: 0,
+  };
+  for (const r of rows) summary[r.status] += 1;
+
+  const highlights = auditHighlights(rows);
+
+  const response = c.json({
+    data: rows,
+    meta: {
+      patchDate: REFORGER_PATCH_17,
+      modCount: rows.length,
+      summary,
+      highlights,
+      durationMs: Date.now() - start,
+      privacy:
+        'Tavo config.json nesaugomas. Serveris apdoroja tik modų ID sąrašą ir grąžina ataskaitą – niekas neįrašoma į duomenų bazę.',
+      disclaimer:
+        'Heuristika pagal visų Reforger serverių BattleMetrics duomenis (reforgermods kolektorius). ' +
+        '„Atgyja“ / „kyla“ – ekosistemos tendencija, ne garantija kad veiks tavo serveryje. ' +
+        'Alternatyvos – modai dažnai kartu su šiuo modu kituose serveriuose (co-deploy). ' +
+        'Workshop gameVersion ir RPT logai – galutinis patvirtinimas.',
+    },
+  });
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  return response;
 });
 
 export const onRequest = handle(app);

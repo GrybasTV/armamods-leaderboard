@@ -58,6 +58,11 @@ export function Layout({ children }: LayoutProps) {
             <Link to={`${gp}/trending`} className={navItemClass(`${gp}/trending`)}>
               [ 📈 Trending Intel ]
             </Link>
+            {!isArma3 && (
+              <Link to="/audit" className={navItemClass('/audit')}>
+                [ 🔍 Config Audit ]
+              </Link>
+            )}
             <Link to={`${gp}/hosting`} className={navItemClass(`${gp}/hosting`)}>
               [ 🚀 Get Hosting ]
             </Link>
@@ -167,6 +172,17 @@ export function Layout({ children }: LayoutProps) {
               >
                 [ 📈 Trending Intel ]
               </Link>
+              {!isArma3 && (
+                <Link
+                  to="/audit"
+                  className={`block px-4 py-3 font-bold uppercase tracking-[0.2em] text-[10px] transition-all ${
+                    isActive('/audit') ? 'text-tactical-orange bg-white/5' : 'text-gray-500'
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  [ 🔍 Config Audit ]
+                </Link>
+              )}
               <Link
                 to={`${gp}/hosting`}
                 className={`block px-4 py-3 font-bold uppercase tracking-[0.2em] text-[10px] transition-all ${

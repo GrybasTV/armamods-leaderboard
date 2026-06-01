@@ -9,6 +9,7 @@ import { SupportPage } from './components/SupportPage';
 import { ReforgerHosting } from './components/ReforgerHosting';
 import { Arma3Hosting } from './components/Arma3Hosting';
 import { StatusPage } from './components/StatusPage';
+import { ConfigAuditPage } from './components/ConfigAuditPage';
 import { Layout } from './components/Layout';
 
 interface Props {
@@ -73,6 +74,7 @@ function App() {
             <Route path="/trending" element={<TrendingPage game="reforger" />} />
             <Route path="/hosting" element={<ReforgerHosting />} />
             <Route path="/status" element={<StatusPage game="reforger" />} />
+            <Route path="/audit" element={<ConfigAuditPage game="reforger" />} />
             <Route path="/support" element={<SupportPage />} />
 
             {/* Arma 3 routes */}
