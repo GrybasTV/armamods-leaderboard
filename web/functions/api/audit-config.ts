@@ -73,18 +73,18 @@ export interface AuditBuildOptions {
 }
 
 const TREND_LABEL: Record<TrendPhase, string> = {
-  rising: 'Kyla',
-  recovering: 'Atgyja',
-  declining: 'Krenta toliau',
-  stable: 'Stabilu',
-  unknown: 'Nežinoma',
+  rising: 'Rising',
+  recovering: 'Recovering',
+  declining: 'Still declining',
+  stable: 'Stable',
+  unknown: 'Unknown',
 };
 
 export function parseServerConfig(input: unknown): ParsedConfigMod[] {
   let data: unknown = input;
   if (typeof input === 'string') {
     const trimmed = input.trim();
-    if (!trimmed) throw new Error('Tuščias JSON');
+    if (!trimmed) throw new Error('Empty JSON');
     data = JSON.parse(trimmed);
   }
 
@@ -93,7 +93,7 @@ export function parseServerConfig(input: unknown): ParsedConfigMod[] {
   const modsRaw = (game?.mods ?? root?.mods ?? data) as unknown;
 
   if (!Array.isArray(modsRaw)) {
-    throw new Error('Nerastas mods masyvas (tikėtinas kelias: game.mods)');
+    throw new Error('Missing mods array (expected path: game.mods)');
   }
 
   const seen = new Set<string>();
@@ -112,7 +112,7 @@ export function parseServerConfig(input: unknown): ParsedConfigMod[] {
     });
   }
 
-  if (!out.length) throw new Error('Nėra galiojančių modId (16 hex simbolių)');
+  if (!out.length) throw new Error('No valid modId found (expected 16 hex characters)');
   return out;
 }
 
@@ -173,7 +173,7 @@ export function analyzeTrend(
     return {
       phase: 'unknown',
       label: TREND_LABEL.unknown,
-      detail: 'Per mažai istorijos taškų tendencijai.',
+      detail: 'Not enough history points for trend analysis.',
       recentAvg,
       earlyAfterAvg,
     };
@@ -191,7 +191,7 @@ export function analyzeTrend(
     return {
       phase: 'recovering',
       label: TREND_LABEL.recovering,
-      detail: `Po 1.7 buvo ~${early} žaid./d., dabar ~${recentAvg} – ekosistema grįžta.`,
+      detail: `After 1.7 dipped to ~${early} players/day, now ~${recentAvg} – ecosystem is recovering.`,
       recentAvg,
       earlyAfterAvg: early,
     };
@@ -202,7 +202,7 @@ export function analyzeTrend(
     return {
       phase: 'rising',
       label: TREND_LABEL.rising,
-      detail: `Populiarumas auga arba laikomas (~${recentAvg} žaid./d. paskutinė savaitė).`,
+      detail: `Usage is growing or holding steady (~${recentAvg} players/day last week).`,
       recentAvg,
       earlyAfterAvg: early,
     };
@@ -213,7 +213,7 @@ export function analyzeTrend(
     return {
       phase: 'declining',
       label: TREND_LABEL.declining,
-      detail: `Po 1.7 nuosmukis tęsiasi (${early} → ${recentAvg} žaid./d.).`,
+      detail: `Decline continues after 1.7 (${early} → ${recentAvg} players/day).`,
       recentAvg,
       earlyAfterAvg: early,
     };
@@ -222,7 +222,7 @@ export function analyzeTrend(
   return {
     phase: 'stable',
     label: TREND_LABEL.stable,
-    detail: 'Po 1.7 didelių pokyčių paskutinėje savaitėje nėra.',
+    detail: 'No major change in the last week after 1.7.',
     recentAvg,
     earlyAfterAvg: early,
   };
@@ -248,8 +248,8 @@ export function classifyModAudit(params: {
   if (beforeAvg === null || afterAvg === null) {
     return {
       status: 'unknown',
-      title: 'Nėra istorijos',
-      detail: 'Per mažai daily duomenų prieš/po 1.7 – negalima įvertinti.',
+      title: 'No history',
+      detail: 'Not enough daily data before/after 1.7 to assess this mod.',
       dropPct: null,
     };
   }
@@ -260,8 +260,8 @@ export function classifyModAudit(params: {
   if (beforeAvg < MIN_SIGNAL_AVG) {
     return {
       status: 'niche',
-      title: 'Nišinis modas',
-      detail: `Vid. <${MIN_SIGNAL_AVG} žaid. prieš 1.7 – kritimas gali būti triukšmas, ne „lūžimas“.`,
+      title: 'Niche mod',
+      detail: `Avg. <${MIN_SIGNAL_AVG} players before 1.7 – drop may be noise, not a broken mod.`,
       dropPct,
     };
   }
@@ -273,25 +273,25 @@ export function classifyModAudit(params: {
     if (trend.phase === 'recovering') {
       return {
         status: 'risky',
-        title: 'Krito po 1.7, bet atsigauna',
+        title: 'Dropped after 1.7 but recovering',
         detail:
-          'Ekosistemoje buvo beveik 0, bet paskutinė savaitė rodo augimą – galbūt autorius atnaujino; vis tiek testuok serveryje.',
+          'Nearly zero in the ecosystem, but the last week shows growth – author may have updated; still test on your server.',
         dropPct,
       };
     }
     if (trend.phase === 'rising') {
       return {
         status: 'warning',
-        title: 'Buvo kritimas, dabar kyla',
-        detail: 'Modas atrodo atsigavęs BM – verta palikti ir stebėti, ne išmesti iš karto.',
+        title: 'Had a drop, now rising',
+        detail: 'Mod looks recovered on BattleMetrics – worth keeping and watching, not removing immediately.',
         dropPct,
       };
     }
     return {
       status: 'dead',
-      title: 'Tikėtina nebeveikia po 1.7',
+      title: 'Likely broken after 1.7',
       detail:
-        'Buvo aktyvus prieš 1.7, po patch ekosistemoje beveik 0 žaidėjų ir tendencija negerėja.',
+        'Was active before 1.7; after the patch almost no players in the ecosystem and trend is not improving.',
       dropPct,
     };
   }
@@ -300,15 +300,15 @@ export function classifyModAudit(params: {
     if (trend.phase === 'recovering' || trend.phase === 'rising') {
       return {
         status: 'warning',
-        title: 'Krito, bet tendencija teigiama',
+        title: 'Dropped but trend is positive',
         detail: trend.detail,
         dropPct,
       };
     }
     return {
       status: 'risky',
-      title: 'Didelė rizika',
-      detail: 'Stiprus kritimas arba šiuo metu 0 žaidėjų visuose BM serveriuose.',
+      title: 'High risk',
+      detail: 'Sharp drop or currently 0 players across BattleMetrics servers.',
       dropPct,
     };
   }
@@ -316,8 +316,8 @@ export function classifyModAudit(params: {
   if (dropPct >= 35) {
     return {
       status: 'warning',
-      title: 'Krito, bet dar naudojamas',
-      detail: 'Ekosistema sumažėjo po 1.7 – patikrink logus / Workshop gameVersion.',
+      title: 'Dropped but still used',
+      detail: 'Ecosystem shrank after 1.7 – check server logs and Workshop gameVersion.',
       dropPct,
     };
   }
@@ -325,16 +325,16 @@ export function classifyModAudit(params: {
   if (trend.phase === 'declining' && beforeAvg >= 40) {
     return {
       status: 'warning',
-      title: 'OK vidurkis, bet krenta',
-      detail: 'Bendras lygis dar geras, bet paskutinė savaitė silpnėja – stebėk atnaujinimus.',
+      title: 'OK average but declining',
+      detail: 'Overall usage still decent, but the last week is weaker – watch for updates.',
       dropPct,
     };
   }
 
   return {
     status: 'ok',
-    title: 'Ekosistemoje OK',
-    detail: 'Po 1.7 naudojimas panašus arba normalus kritimas (ne „miręs“ modas).',
+    title: 'Healthy in ecosystem',
+    detail: 'Usage after 1.7 is similar or a normal ecosystem-wide drop (not a dead mod).',
     dropPct,
   };
 }
@@ -363,10 +363,10 @@ export function pickAlternatives(
     const trend = analyzeTrend(historyFor(id));
     if (trend.phase === 'declining' && players < 80) continue;
 
-    let reason = `Dažnai tame pačiame serverių stack'e (co-deploy ×${co.count})`;
-    if (trend.phase === 'rising') reason += ' · šiuo metu kyla';
-    else if (trend.phase === 'recovering') reason += ' · atsigauna po 1.7';
-    else if (trend.phase === 'stable') reason += ' · stabilus';
+    let reason = `Often on similar server stacks (co-deploy ×${co.count})`;
+    if (trend.phase === 'rising') reason += ' · rising now';
+    else if (trend.phase === 'recovering') reason += ' · recovering after 1.7';
+    else if (trend.phase === 'stable') reason += ' · stable';
 
     candidates.push({
       modId: id,

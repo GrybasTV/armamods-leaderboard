@@ -68,12 +68,12 @@ const STATUS_STYLE: Record<AuditStatus, string> = {
 };
 
 const STATUS_LABEL: Record<AuditStatus, string> = {
-  dead: 'NEVEIKIA PO 1.7',
-  risky: 'RIZIKA',
-  warning: 'ĮSPĖJIMAS',
+  dead: 'BROKEN AFTER 1.7',
+  risky: 'HIGH RISK',
+  warning: 'WARNING',
   ok: 'OK',
-  niche: 'NIŠA',
-  unknown: 'NEŽINOMA',
+  niche: 'NICHE',
+  unknown: 'UNKNOWN',
 };
 
 const TREND_STYLE: Record<TrendPhase, string> = {
@@ -114,7 +114,7 @@ function HighlightStrip({
             to={`/mod/${r.modId}`}
             className={`text-[10px] px-2 py-1 border rounded ${TREND_STYLE[r.trendPhase]}`}
           >
-            {r.name} · {r.recentAvg ?? r.currentPlayers} žaid.
+            {r.name} · {r.recentAvg ?? r.currentPlayers} players
           </Link>
         ))}
       </div>
@@ -174,11 +174,11 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
       setError(null);
       setResult(null);
       if (!file.name.toLowerCase().endsWith('.json') && file.type !== 'application/json') {
-        setError('Leidžiamas tik .json failas');
+        setError('Only .json files are allowed');
         return;
       }
       if (file.size > MAX_FILE_BYTES) {
-        setError('Failas per didelis (max 2 MB)');
+        setError('File too large (max 2 MB)');
         return;
       }
       const reader = new FileReader();
@@ -189,7 +189,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
         setInputMode('file');
         tryParsePreview(text);
       };
-      reader.onerror = () => setError('Nepavyko nuskaityti failo');
+      reader.onerror = () => setError('Failed to read file');
       reader.readAsText(file);
     },
     [tryParsePreview]
@@ -240,16 +240,16 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             batchErr.message.includes('503'));
         if (!useFallback) throw batchErr;
 
-        setProgress('Masinis auditas neprieinamas – skenuojama po modą (lėčiau)…');
+        setProgress('Batch audit unavailable – scanning per mod (slower)…');
         auditResult = (await runClientSideAudit(mods, game, (done, total) => {
-          setProgress(`Skenuojama ${done}/${total} modų…`);
+          setProgress(`Scanning ${done}/${total} mods…`);
         })) as AuditResponse;
       }
 
       setResult(auditResult);
       setFilter('all');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Nepavyko atlikti audito');
+      setError(e instanceof Error ? e.message : 'Audit failed');
     } finally {
       setLoading(false);
       setProgress(null);
@@ -259,8 +259,8 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
   return (
     <div className="max-w-5xl mx-auto px-4 py-16 space-y-10">
       <SEO
-        title="Serverio config audit | Arma Mods"
-        description="Įklijuok Reforger config.json – modų rizika po 1.7, tendencijos ir alternatyvos iš panašių serverių."
+        title="Server config audit | Arma Mods"
+        description="Paste your Reforger config.json for post-1.7 mod risk, trends, and alternatives from similar servers."
       />
 
       <header className="space-y-4 border-b border-white/10 pb-8">
@@ -268,12 +268,12 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
           // Config intelligence
         </p>
         <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight">
-          Serverio modų auditas
+          Server mod audit
         </h1>
         <p className="text-gray-400 text-sm leading-relaxed max-w-3xl">
-          <strong className="text-white">Įklijuok</strong> arba <strong className="text-white">įkelk</strong>{' '}
-          <code className="text-tactical-orange">config.json</code> – gausi ataskaitą naršyklėje. Failas{' '}
-          <strong className="text-white">nesaugomas</strong> serveryje; siunčiami tik modų ID ir pavadinimai.
+          <strong className="text-white">Paste</strong> or <strong className="text-white">upload</strong>{' '}
+          <code className="text-tactical-orange">config.json</code> – get a report in your browser. Your file is{' '}
+          <strong className="text-white">not stored</strong> on the server; only mod IDs and names are sent.
         </p>
       </header>
 
@@ -281,9 +281,9 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
         className="border border-emerald-800/40 bg-emerald-950/20 rounded-lg px-4 py-3 text-[11px] text-emerald-200/90 leading-relaxed"
         role="note"
       >
-        <strong className="text-emerald-300">Privatumas:</strong> config apdorojamas tavo naršyklėje. Į serverį
-        keliauja tik <code className="text-emerald-400">modId</code> + <code className="text-emerald-400">name</code>{' '}
-        sąrašas – jokie slaptažodžiai, IP ar pilnas JSON neįrašomi ir nesaugomi.
+        <strong className="text-emerald-300">Privacy:</strong> config is parsed in your browser. Only{' '}
+        <code className="text-emerald-400">modId</code> + <code className="text-emerald-400">name</code> are sent to
+        the server – no passwords, IPs, or full JSON are stored.
       </div>
 
       <div className="space-y-4">
@@ -295,7 +295,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
               inputMode === 'paste' ? 'text-tactical-orange border-b-2 border-tactical-orange' : 'text-gray-500'
             }`}
           >
-            Įklijuoti
+            Paste
           </button>
           <button
             type="button"
@@ -304,14 +304,14 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
               inputMode === 'file' ? 'text-tactical-orange border-b-2 border-tactical-orange' : 'text-gray-500'
             }`}
           >
-            Įkelti failą
+            Upload file
           </button>
         </div>
 
         {inputMode === 'paste' ? (
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-              config.json turinys (Ctrl+V)
+              config.json content (Ctrl+V)
             </label>
             <textarea
               value={configText}
@@ -343,14 +343,14 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             }}
           >
             <p className="text-gray-400 text-sm mb-4">
-              Nutempk <code className="text-tactical-orange">config.json</code> čia arba pasirink failą
+              Drop <code className="text-tactical-orange">config.json</code> here or choose a file
             </p>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="px-6 py-3 border border-white/20 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white/5"
             >
-              Pasirinkti failą
+              Choose file
             </button>
             <input
               ref={fileInputRef}
@@ -364,12 +364,14 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             />
             {fileName && (
               <p className="mt-4 text-[11px] text-tactical-orange font-mono">
-                Įkelta: {fileName}
-                {parsedCount != null && ` · ${parsedCount} modų`}
+                Loaded: {fileName}
+                {parsedCount != null && ` · ${parsedCount} mods`}
               </p>
             )}
             {configText && fileName && (
-              <p className="mt-2 text-[10px] text-gray-500">Failo turinys paruoštas analizei (peržiūrėti – skiltis „Įklijuoti“)</p>
+              <p className="mt-2 text-[10px] text-gray-500">
+                File content ready (view in Paste tab)
+              </p>
             )}
           </div>
         )}
@@ -381,7 +383,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             disabled={loading || !configText.trim()}
             className="px-8 py-3 bg-tactical-orange text-black font-black text-[10px] uppercase tracking-widest disabled:opacity-40 hover:bg-white transition-colors"
           >
-            {loading ? 'Skenuojama…' : 'Gauti ataskaitą'}
+            {loading ? 'Scanning…' : 'Run audit'}
           </button>
           <button
             type="button"
@@ -389,10 +391,10 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             disabled={loading || (!configText && !fileName)}
             className="px-6 py-3 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-white disabled:opacity-30"
           >
-            Išvalyti
+            Clear
           </button>
           {parsedCount != null && configText.trim() && (
-            <span className="text-[10px] text-gray-500 font-mono">Paruošta: {parsedCount} modų</span>
+            <span className="text-[10px] text-gray-500 font-mono">Ready: {parsedCount} mods</span>
           )}
         </div>
 
@@ -423,22 +425,22 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
 
           <section className="border border-white/10 rounded-lg p-4 space-y-4 bg-white/[0.02]">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-tactical-orange">
-              Tavo config tendencijos
+              Trends in your config
             </h2>
             <HighlightStrip
-              title="Kyla (po 1.7)"
+              title="Rising (after 1.7)"
               rows={result.meta.highlights?.rising ?? []}
-              empty="nėra aiškaus augimo"
+              empty="no clear growth"
             />
             <HighlightStrip
-              title="Atgyja (krito, bet paskutinė savaitė gerėja)"
+              title="Recovering (dropped, last week improving)"
               rows={result.meta.highlights?.recovering ?? []}
-              empty="nėra atsigavimo signalo"
+              empty="no recovery signal"
             />
             <HighlightStrip
-              title="Krenta toliau"
+              title="Still declining"
               rows={result.meta.highlights?.declining ?? []}
-              empty="visi stabilūs arba nežinoma"
+              empty="all stable or unknown"
             />
           </section>
 
@@ -447,13 +449,13 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
             onClick={() => setFilter('all')}
             className={`text-[10px] uppercase tracking-widest ${filter === 'all' ? 'text-tactical-orange' : 'text-gray-500'}`}
           >
-            Rodyti visus ({result.meta.modCount}) · {result.meta.durationMs}ms
+            Show all ({result.meta.modCount}) · {result.meta.durationMs}ms
           </button>
 
           <div className="text-[11px] text-gray-500 border border-white/5 p-4 rounded bg-white/2 space-y-2">
             {result.meta.mode === 'client-fallback' && (
               <p className="text-yellow-500/90 font-bold uppercase text-[10px] tracking-widest">
-                Atsarginis režimas (po modą)
+                Fallback mode (per mod)
               </p>
             )}
             {result.meta.privacy && (
@@ -486,17 +488,17 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                   </div>
                   <div className="text-right text-xs font-mono shrink-0 space-y-0.5">
                     <div>
-                      Prieš 1.7: <strong>{row.beforeAvg ?? '—'}</strong> → Po: <strong>{row.afterAvg ?? '—'}</strong>
+                      Before 1.7: <strong>{row.beforeAvg ?? '—'}</strong> → After: <strong>{row.afterAvg ?? '—'}</strong>
                       {row.dropPct != null && <span className="ml-2 text-red-400">−{row.dropPct}%</span>}
                     </div>
                     <div>
-                      Savaitė: <strong>{row.recentAvg ?? '—'}</strong> · Dabar: {row.currentPlayers} žaid.
+                      Last week: <strong>{row.recentAvg ?? '—'}</strong> · Now: {row.currentPlayers} players
                     </div>
                     <Link
                       to={`/mod/${row.modId}`}
                       className="inline-block mt-2 text-tactical-orange hover:underline text-[10px] uppercase tracking-widest"
                     >
-                      Modo istorija →
+                      Mod history →
                     </Link>
                   </div>
                 </div>
@@ -504,7 +506,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                 {row.alternatives.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-white/10">
                     <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                      Panašūs serveriai naudoja (alternatyvos, ne tavo config)
+                      Used on similar servers (alternatives, not in your config)
                     </p>
                     <ul className="space-y-2">
                       {row.alternatives.map((alt) => (
@@ -521,14 +523,14 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                               className={`ml-2 text-[9px] px-1 border rounded ${TREND_STYLE[alt.trendPhase]}`}
                             >
                               {alt.trendPhase === 'rising'
-                                ? 'kyla'
+                                ? 'rising'
                                 : alt.trendPhase === 'recovering'
-                                  ? 'atgyja'
+                                  ? 'recovering'
                                   : alt.trendPhase}
                             </span>
                           </div>
                           <div className="text-gray-400 sm:text-right">
-                            {alt.currentPlayers} žaid. · co-deploy ×{alt.coDeployCount}
+                            {alt.currentPlayers} players · co-deploy ×{alt.coDeployCount}
                             <span className="block text-[10px] opacity-80">{alt.reason}</span>
                           </div>
                         </li>
@@ -541,7 +543,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
           </div>
 
           {filter !== 'all' && grouped.get(filter)?.length === 0 && (
-            <p className="text-gray-500 text-sm">Šioje kategorijoje modų nėra.</p>
+            <p className="text-gray-500 text-sm">No mods in this category.</p>
           )}
         </>
       )}

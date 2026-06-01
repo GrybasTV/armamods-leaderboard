@@ -842,7 +842,7 @@ app.post('/audit/config', async (c) => {
   const game = getGameFromQuery(c);
   if (game !== 'reforger') {
     return c.json(
-      { error: 'Unsupported game', message: 'Config auditas šiuo metu tik Reforger (1.7 Partisan).' },
+      { error: 'Unsupported game', message: 'Config audit is only available for Reforger (1.7 Partisan).' },
       400
     );
   }
@@ -863,7 +863,7 @@ app.post('/audit/config', async (c) => {
           name: String(m.name ?? m.modId ?? ''),
         }))
         .filter((m) => /^[0-9A-F]{16}$/.test(m.modId));
-      if (!parsedMods.length) throw new Error('Netinkami modId formatas');
+      if (!parsedMods.length) throw new Error('Invalid modId format');
     } else {
       parsedMods = parseServerConfig(body.config ?? body);
     }
@@ -875,7 +875,7 @@ app.post('/audit/config', async (c) => {
 
   if (parsedMods.length > 120) {
     return c.json(
-      { error: 'Too many mods', message: 'Daugiausiai 120 modų viename audite.' },
+      { error: 'Too many mods', message: 'Maximum 120 mods per audit request.' },
       400
     );
   }
@@ -973,12 +973,12 @@ app.post('/audit/config', async (c) => {
       highlights,
       durationMs: Date.now() - start,
       privacy:
-        'Tavo config.json nesaugomas. Serveris apdoroja tik modų ID sąrašą ir grąžina ataskaitą – niekas neįrašoma į duomenų bazę.',
+        'Your config.json is not stored. The server only processes the mod ID list and returns a report – nothing is written to the database.',
       disclaimer:
-        'Heuristika pagal visų Reforger serverių BattleMetrics duomenis (reforgermods kolektorius). ' +
-        '„Atgyja“ / „kyla“ – ekosistemos tendencija, ne garantija kad veiks tavo serveryje. ' +
-        'Alternatyvos – modai dažnai kartu su šiuo modu kituose serveriuose (co-deploy). ' +
-        'Workshop gameVersion ir RPT logai – galutinis patvirtinimas.',
+        'Heuristic based on BattleMetrics data from all Reforger servers (reforgermods collector). ' +
+        '“Recovering” / “rising” reflect ecosystem trends, not a guarantee they work on your server. ' +
+        'Alternatives are mods often used alongside this one on other servers (co-deploy). ' +
+        'Workshop gameVersion and server RPT logs are the final confirmation.',
     },
   });
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -990,7 +990,7 @@ app.post('/audit/config', async (c) => {
       {
         error: 'Audit failed',
         message:
-          'Audito apdorojimas per ilgas arba KV laikinai nepasiekiamas. Pabandyk po kelių minučių – naršyklėje veiks atsarginis režimas (po modą).',
+          'Audit processing timed out or KV is temporarily unavailable. Try again in a few minutes – the browser will use fallback mode (per mod).',
       },
       500
     );

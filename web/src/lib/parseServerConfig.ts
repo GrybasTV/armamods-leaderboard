@@ -1,6 +1,6 @@
 /**
- * Lokaliai naršyklėje – iš config.json ištraukiami tik modId + name.
- * Visas failas nebekeliaują į serverį (tik šis masyvas).
+ * Parse config.json in the browser – extracts only modId + name.
+ * The full file is not sent to the server (only this array).
  */
 
 export interface ParsedConfigMod {
@@ -12,7 +12,7 @@ export function parseServerConfig(input: unknown): ParsedConfigMod[] {
   let data: unknown = input;
   if (typeof input === 'string') {
     const trimmed = input.trim();
-    if (!trimmed) throw new Error('Tuščias JSON');
+    if (!trimmed) throw new Error('Empty JSON');
     data = JSON.parse(trimmed);
   }
 
@@ -21,7 +21,7 @@ export function parseServerConfig(input: unknown): ParsedConfigMod[] {
   const modsRaw = (game?.mods ?? root?.mods ?? data) as unknown;
 
   if (!Array.isArray(modsRaw)) {
-    throw new Error('Nerastas mods masyvas (tikėtina: game.mods)');
+    throw new Error('Missing mods array (expected path: game.mods)');
   }
 
   const seen = new Set<string>();
@@ -40,6 +40,6 @@ export function parseServerConfig(input: unknown): ParsedConfigMod[] {
     });
   }
 
-  if (!out.length) throw new Error('Nėra galiojančių modId (16 hex simbolių)');
+  if (!out.length) throw new Error('No valid modId found (expected 16 hex characters)');
   return out;
 }

@@ -25,7 +25,7 @@ async function fetchJsonSafe(url: string): Promise<{ ok: boolean; status: number
   }
 }
 
-/** Atsarginis auditas per esamus GET endpointus (kai POST /audit/config grąžina HTML/503) */
+/** Fallback audit via existing GET endpoints when POST /audit/config returns HTML/503 */
 export async function runClientSideAudit(
   mods: ParsedConfigMod[],
   game: GameType = 'reforger',
@@ -69,7 +69,7 @@ export async function runClientSideAudit(
 
   if (historyHits < Math.max(3, Math.floor(mods.length * 0.05))) {
     throw new Error(
-      'Duomenų API laikinai nepasiekiamas (503). Palauk 5–10 min. ir bandyk dar kartą – tai Cloudflare/KV apkrova, ne tavo config klaida.'
+      'Data API temporarily unavailable (503). Wait 5–10 minutes and try again – Cloudflare/KV load, not a config error.'
     );
   }
 
@@ -111,9 +111,9 @@ export async function runClientSideAudit(
       durationMs: 0,
       mode: 'client-fallback' as const,
       privacy:
-        'Tavo config.json nesaugomas. Auditas atliktas naršyklėje (po modą) – į serverį siųsti tik modId.',
+        'Your config.json is not stored. Audit ran in the browser (per mod) – only modId was sent to the server.',
       disclaimer:
-        'Atsarginis režimas: lėtesnis, bet veikia kai masinis auditas neprieinamas. Duomenys iš BM istorijos API.',
+        'Fallback mode: slower but works when batch audit is unavailable. Data from BattleMetrics history API.',
     },
   };
 }
@@ -129,6 +129,6 @@ export async function parseApiJson(response: Response): Promise<unknown> {
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error('Serveris grąžino ne JSON formatą.');
+    throw new Error('Server returned a non-JSON response.');
   }
 }
