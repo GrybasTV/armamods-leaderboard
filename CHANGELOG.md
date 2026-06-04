@@ -1,3 +1,8 @@
+## [1.12.1] - 2026-05-30
+
+### 📈 Performance Timeline – numatytasis rėžis 1M
+- **ModDetail** ir **ServerDetail**: grafikas pagal nutylėjimą atidaromas su **1M** (30d), ne 7D – geriau matosi tendencija po 1.7, kai savaitė per trumpa.
+
 ## [1.12.0] - 2026-05-30
 
 ### 🔍 Reforger serverio `config.json` auditas po 1.7 Partisan (2026-05-28)

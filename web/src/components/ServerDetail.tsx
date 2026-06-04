@@ -20,7 +20,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
   const [totalServers, setTotalServers] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDays, setSelectedDays] = useState(7);
+  const [selectedDays, setSelectedDays] = useState(30);
 
   const [modSearch, setModSearch] = useState('');
   const [modSort, setModSort] = useState<'rank' | 'name' | 'players'>('players');

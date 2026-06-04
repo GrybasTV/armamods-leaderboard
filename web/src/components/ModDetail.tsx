@@ -26,7 +26,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
   const [history, setHistory] = useState<ModHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDays, setSelectedDays] = useState(7);
+  const [selectedDays, setSelectedDays] = useState(30);
 
   const loadMod = useCallback(async (days: number, signal?: AbortSignal) => {
     if (!modId) return;
