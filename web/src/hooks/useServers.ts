@@ -4,6 +4,9 @@ import type { Server } from '../types';
 
 export type ServerSortBy = 'rank' | 'players' | 'name' | 'mods';
 
+/** API paieška tik po pauzės – leidžia ramiai baigti rašyti */
+const SEARCH_DEBOUNCE_MS = 800;
+
 interface UseServersOptions {
   game?: GameType;
 }
@@ -16,6 +19,9 @@ export function useServers(options: UseServersOptions = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /** Kas rodoma input'e – keičiasi iš karto, be API */
+  const [searchInput, setSearchInput] = useState('');
+  /** Patvirtinta paieška – tik ji kviečia API */
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<ServerSortBy>('rank');
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,23 +32,25 @@ export function useServers(options: UseServersOptions = {}) {
       setLoading(true);
       const [serversData, statsData] = await Promise.all([
         serversApi.getList(1000, 0, searchQuery, game),
-        modsApi.getGlobalStats(game)
+        modsApi.getGlobalStats(game),
       ]);
       const fetchedServers = serversData?.data || [];
       setServers(fetchedServers);
       setTotalServers(serversData?.meta?.total || 0);
 
-      // Calculate full servers from loaded sample
-      const fullCount = fetchedServers.length > 0
-        ? fetchedServers.filter((s: Server) => s.maxPlayers > 0 && (s.players / s.maxPlayers) >= 0.8).length
-        : 0;
-      
+      const fullCount =
+        fetchedServers.length > 0
+          ? fetchedServers.filter(
+              (s: Server) => s.maxPlayers > 0 && s.players / s.maxPlayers >= 0.8
+            ).length
+          : 0;
+
       const fullRatio = fetchedServers.length > 0 ? fullCount / fetchedServers.length : 0;
       const estimatedFull = Math.round((serversData?.meta?.total || 0) * fullRatio);
 
       setGlobalStats({
         totalPlayers: statsData?.totalPlayers || 0,
-        fullServers: estimatedFull || 0
+        fullServers: estimatedFull || 0,
       });
       setError(null);
     } catch (err) {
@@ -52,33 +60,50 @@ export function useServers(options: UseServersOptions = {}) {
     }
   }, [game, searchQuery]);
 
+  /** Po pauzės – paleidžiame tikrą paiešką */
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadServers();
-    }, 300); // Debounce search
+      setSearchQuery(searchInput.trim());
+    }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const commitSearch = useCallback(() => {
+    setSearchQuery(searchInput.trim());
+  }, [searchInput]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy]);
+
+  useEffect(() => {
+    loadServers();
   }, [loadServers]);
 
   const filteredServers = useMemo(() => {
     if (!Array.isArray(servers)) return [];
 
-    return servers.filter(server => {
-      if (searchQuery && !server.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'rank') {
-        const rankA = a.sqeRank || 99999;
-        const rankB = b.sqeRank || 99999;
-        return rankA - rankB;
-      }
-      if (sortBy === 'players') return b.players - a.players;
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'mods') return (b.mods?.length ?? 0) - (a.mods?.length ?? 0);
-      return 0;
-    });
-  }, [servers, searchQuery, sortBy]);
+    const needle = searchInput.trim().toLowerCase();
+
+    return servers
+      .filter((server) => {
+        if (needle && !server.name.toLowerCase().includes(needle)) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'rank') {
+          const rankA = a.sqeRank || 99999;
+          const rankB = b.sqeRank || 99999;
+          return rankA - rankB;
+        }
+        if (sortBy === 'players') return b.players - a.players;
+        if (sortBy === 'name') return a.name.localeCompare(b.name);
+        if (sortBy === 'mods') return (b.mods?.length ?? 0) - (a.mods?.length ?? 0);
+        return 0;
+      });
+  }, [servers, searchInput, sortBy]);
 
   const paginatedServers = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -87,27 +112,37 @@ export function useServers(options: UseServersOptions = {}) {
 
   const totalPages = Math.ceil(filteredServers.length / itemsPerPage);
 
-  const stats = useMemo(() => ({
-    totalServers: totalServers,
-    totalPlayers: globalStats.totalPlayers,
-    fullServers: globalStats.fullServers,
-    totalPages
-  }), [totalServers, globalStats, totalPages]);
+  const stats = useMemo(
+    () => ({
+      totalServers: totalServers,
+      totalPlayers: globalStats.totalPlayers,
+      fullServers: globalStats.fullServers,
+      totalPages,
+    }),
+    [totalServers, globalStats, totalPages]
+  );
 
   const resetFilters = () => {
+    setSearchInput('');
     setSearchQuery('');
     setSortBy('players');
     setCurrentPage(1);
   };
+
+  const searchPending = searchInput.trim() !== searchQuery;
 
   return {
     servers,
     filteredServers: paginatedServers,
     totalItems: filteredServers.length,
     loading,
+    initialLoading: loading && servers.length === 0,
+    searchPending,
     error,
+    searchInput,
+    setSearchInput,
+    commitSearch,
     searchQuery,
-    setSearchQuery,
     sortBy,
     setSortBy,
     currentPage,
@@ -115,6 +150,6 @@ export function useServers(options: UseServersOptions = {}) {
     totalPages,
     resetFilters,
     stats,
-    refresh: loadServers
+    refresh: loadServers,
   };
 }

@@ -14,9 +14,13 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
   const {
     filteredServers,
     loading,
+    initialLoading,
+    searchPending,
     error,
+    searchInput,
+    setSearchInput,
+    commitSearch,
     searchQuery,
-    setSearchQuery,
     sortBy,
     setSortBy,
     currentPage,
@@ -32,9 +36,9 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
-  if (loading) return <StatusState type="loading" />;
+  if (initialLoading) return <StatusState type="loading" />;
   if (error) return <StatusState type="error" details={error} onAction={refresh} actionText="Try Again" />;
-  if (stats.totalServers === 0) return <StatusState type="empty" message="No servers active" details="Check your filters or wait for the system to scan more servers." onAction={resetFilters} actionText="Reset Filters" />;
+  if (stats.totalServers === 0 && !searchQuery) return <StatusState type="empty" message="No servers active" details="Check your filters or wait for the system to scan more servers." onAction={resetFilters} actionText="Reset Filters" />;
 
   return (
     <div className="space-y-12 animate-in fade-in duration-700">
@@ -55,11 +59,19 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
             <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4 group-hover:text-tactical-orange transition-colors italic">// SCAN_REMOTE_SERVERS</label>
             <input
               type="text"
-              placeholder="Broadcasting search pulse..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Type server name, search after pause or Enter…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitSearch();
+              }}
               className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-tactical-orange focus:bg-black transition-all font-black text-white placeholder-gray-700 uppercase tracking-widest text-[11px] rounded-none outline-none"
             />
+            {loading && !searchPending && searchQuery && (
+              <p className="mt-2 text-[9px] font-black uppercase tracking-[0.3em] text-tactical-orange animate-pulse">
+                Scanning network…
+              </p>
+            )}
           </div>
 
           <div>
