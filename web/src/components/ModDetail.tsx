@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { modsApi, type GameType } from '../api/client';
 import { StatusState } from './ui/StatusState';
@@ -6,8 +6,37 @@ import { SEO } from './ui/SEO';
 import { AffiliateBanner } from './ui/AffiliateBanner';
 import { Card, CardContent } from './ui/Card';
 import { StatsHero } from './ui/StatsHero';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  ReferenceArea,
+} from 'recharts';
+import { buildModAuditRow, REFORGER_PATCH_17, type AuditStatus } from '@audit-config';
 import type { Mod, Server, ModHistory } from '../types';
+
+const PATCH_STATUS_STYLE: Record<AuditStatus, string> = {
+  dead: 'border-red-500/60 bg-red-950/40 text-red-300',
+  warning: 'border-yellow-600/50 bg-yellow-950/25 text-yellow-100',
+  risky: 'border-orange-500/50 bg-orange-950/25 text-orange-200',
+  ok: 'border-emerald-600/40 bg-emerald-950/20 text-emerald-200',
+  niche: 'border-gray-600/40 bg-gray-900/40 text-gray-400',
+  unknown: 'border-gray-700/40 bg-black/40 text-gray-500',
+};
+
+const PATCH_STATUS_LABEL: Record<AuditStatus, string> = {
+  dead: 'Likely broken after 1.7',
+  warning: 'Warning after 1.7',
+  risky: 'High risk after 1.7',
+  ok: 'OK after 1.7',
+  niche: 'Niche – low signal',
+  unknown: 'Insufficient history',
+};
 
 interface ModDetailData extends Mod {
   stats: Mod & { totalMods: number };
@@ -74,6 +103,22 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
       }
     }
   }, [modId, game]);
+
+  const patchInsight = useMemo(() => {
+    if (game !== 'reforger' || !modId || !mod || history.length < 4) return null;
+    const row = buildModAuditRow(
+      { modId: modId.toUpperCase(), name: mod.name },
+      history,
+      { totalPlayers: mod.totalPlayers, serverCount: mod.serverCount, name: mod.name }
+    );
+    const sorted = [...history].map((h) => h.date).sort();
+    const minDate = sorted[0];
+    const maxDate = sorted[sorted.length - 1];
+    const showPatchLine =
+      minDate <= REFORGER_PATCH_17 && maxDate >= REFORGER_PATCH_17;
+    const broken = row.status === 'dead' || row.status === 'warning';
+    return { row, showPatchLine, maxDate, broken };
+  }, [game, modId, mod, history]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -167,6 +212,31 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
               ))}
             </div>
           </div>
+
+          {patchInsight && (
+            <div
+              className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 border rounded-lg ${PATCH_STATUS_STYLE[patchInsight.row.status]}`}
+            >
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                {PATCH_STATUS_LABEL[patchInsight.row.status]}
+              </span>
+              <p className="text-[11px] opacity-90 flex-1">{patchInsight.row.title}</p>
+              {patchInsight.row.dropPct != null && (
+                <span className="text-sm font-black text-red-400 shrink-0">
+                  −{patchInsight.row.dropPct}%
+                </span>
+              )}
+              {patchInsight.broken && (
+                <Link
+                  to="/audit"
+                  className="text-[9px] font-bold uppercase tracking-widest text-tactical-orange hover:underline shrink-0"
+                >
+                  Config audit →
+                </Link>
+              )}
+            </div>
+          )}
+
           <Card className="border-l-4 border-l-tactical-orange bg-zinc-900/50 backdrop-blur-sm">
             <CardContent className="p-4 sm:p-6 lg:p-8 h-[400px]">
               {!history || history.length === 0 ? (
@@ -239,6 +309,34 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                         return [value, name];
                       }}
                     />
+                    {patchInsight?.showPatchLine && (
+                      <>
+                        {patchInsight.broken && (
+                          <ReferenceArea
+                            x1={REFORGER_PATCH_17}
+                            x2={patchInsight.maxDate}
+                            yAxisId="players"
+                            fill="#ef4444"
+                            fillOpacity={0.06}
+                            strokeOpacity={0}
+                          />
+                        )}
+                        <ReferenceLine
+                          x={REFORGER_PATCH_17}
+                          yAxisId="players"
+                          stroke="#fbbf24"
+                          strokeWidth={2}
+                          strokeDasharray="6 4"
+                          label={{
+                            value: '1.7 Partisan',
+                            position: 'insideTopLeft',
+                            fill: '#fbbf24',
+                            fontSize: 10,
+                            fontWeight: 700,
+                          }}
+                        />
+                      </>
+                    )}
                     <Line 
                       yAxisId="players"
                       type="monotone" 

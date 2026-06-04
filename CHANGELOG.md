@@ -1,3 +1,9 @@
+## [1.12.2] - 2026-05-30
+
+### 📈 Mod detail – 1.7 Partisan ant timeline
+- **Performance Timeline**: geltona vertikali linija **1.7 Partisan** (2026-05-28), kai istorija apima patch datą.
+- **Broken / warning**: ta pati audit logika kaip `/audit` – statuso juosta virš grafiko + raudonas fonas po patch, jei modas **dead** ar **warning**.
+
 ## [1.12.1] - 2026-05-30
 
 ### 📈 Performance Timeline – numatytasis rėžis 1M

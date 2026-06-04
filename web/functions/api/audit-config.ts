@@ -31,6 +31,7 @@ export interface CoDeployedRef {
 export interface LiveModSnapshot {
   totalPlayers?: number;
   serverCount?: number;
+  name?: string;
   coDeployed?: CoDeployedRef[];
 }
 
