@@ -251,9 +251,9 @@ export function Layout({ children }: LayoutProps) {
             <div className="md:col-span-2 space-y-6 sm:space-y-8">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-1.5 h-8 sm:w-2 sm:h-10 bg-tactical-orange"></div>
-                <h3 className="text-lg sm:text-2xl font-black text-white tracking-widest uppercase">
+                <h2 className="text-lg sm:text-2xl font-black text-white tracking-widest uppercase">
                   Operation: <span className="text-tactical-orange">Mods Analysis</span>
-                </h3>
+                </h2>
               </div>
               <p className="text-gray-500 text-xs sm:text-sm font-medium leading-[2] max-w-lg uppercase tracking-wider">
                 This platform provides strategic overview of the Arma Reforger ecosystem. We track

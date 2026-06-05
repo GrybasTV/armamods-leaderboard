@@ -94,6 +94,7 @@ export function useMods(options: UseModsOptions = {}) {
     mods,
     filteredMods,
     loading,
+    initialLoading: loading && mods.length === 0,
     error,
     searchQuery,
     setSearchQuery,

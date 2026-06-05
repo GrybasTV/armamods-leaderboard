@@ -58,13 +58,14 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
           <div className="group">
             <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4 group-hover:text-tactical-orange transition-colors italic">// SCAN_REMOTE_SERVERS</label>
             <input
-              type="text"
+              type="search"
               placeholder="Type server name, search after pause or Enter…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') commitSearch();
               }}
+              aria-label="Search servers by name"
               className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-tactical-orange focus:bg-black transition-all font-black text-white placeholder-gray-700 uppercase tracking-widest text-[11px] rounded-none outline-none"
             />
             {loading && !searchPending && searchQuery && (
@@ -79,6 +80,7 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
+              aria-label="Sort servers by"
               className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-tactical-orange focus:bg-black transition-all font-black text-white appearance-none cursor-pointer uppercase tracking-widest text-[11px] rounded-none outline-none"
             >
               <option value="rank">SQE_LEADERBOARD</option>

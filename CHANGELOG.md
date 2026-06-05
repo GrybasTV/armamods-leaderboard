@@ -1,3 +1,10 @@
+## [1.13.1] - 2026-06-04
+
+### ⚡ Lighthouse – CLS ir accessibility (mod sąrašas)
+- **Skeleton grid** vietoj pilno „LOADING INTEL“ – footer nebešokinėja (mažesnis CLS).
+- **`aria-label`** paieškos laukams ir select filtrams (ModList, ServerList).
+- **Heading**: mod kortelės `h2`, footer „Operation“ → `h2` (h1 → h2 hierarchija).
+
 ## [1.13.0] - 2026-06-04
 
 ### 🔗 Social share previews (Discord / OG)

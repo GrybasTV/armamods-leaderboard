@@ -31,9 +31,9 @@ export function ModCard({ mod, rank, game = 'reforger' }: ModCardProps) {
           </div>
 
           <Link to={`${gp}/mod/${mod.id}`}>
-            <h3 className="text-base sm:text-lg font-black text-white leading-tight uppercase tracking-tight group-hover:translate-x-1 transition-transform hover:text-tactical-orange line-clamp-1" title={mod.name}>
+            <h2 className="text-base sm:text-lg font-black text-white leading-tight uppercase tracking-tight group-hover:translate-x-1 transition-transform hover:text-tactical-orange line-clamp-1" title={mod.name}>
               {mod.name}
-            </h3>
+            </h2>
           </Link>
         </div>
 
