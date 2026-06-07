@@ -421,6 +421,8 @@ const MIN_SIGNAL_AVG = 15;
  */
 const EFFECTIVELY_EMPTY_MAX = 10;
 const DEAD_AFTER_MAX = 3;
+/** Mod still on N BM server configs but 0 players – likely broken / stale config after 1.7 */
+const GHOST_DEPLOYMENT_MIN_SERVERS = 3;
 /** Recent avg players/day – recovery is real when the ecosystem is coming back */
 const MIN_RECOVERY_RECENT = 10;
 
@@ -463,13 +465,27 @@ function isHealthyRecovery(trend: TrendInsight, currentPlayers: number): boolean
   return false;
 }
 
+/** 0 players now but mod still on multiple BM server lists – typical stale/broken 1.7 config. */
+function isGhostBrokenAfter17(
+  serverCount: number,
+  currentPlayers: number,
+  trend: TrendInsight
+): boolean {
+  return (
+    serverCount >= GHOST_DEPLOYMENT_MIN_SERVERS &&
+    currentPlayers <= DEAD_AFTER_MAX &&
+    trend.phase !== 'recovering'
+  );
+}
+
 export function classifyModAudit(params: {
   beforeAvg: number | null;
   afterAvg: number | null;
   currentPlayers: number;
+  serverCount?: number;
   trend: TrendInsight;
 }): Pick<ModAuditRow, 'status' | 'title' | 'detail' | 'dropPct'> {
-  const { beforeAvg, afterAvg, currentPlayers, trend } = params;
+  const { beforeAvg, afterAvg, currentPlayers, serverCount = 0, trend } = params;
 
   if (beforeAvg === null || afterAvg === null) {
     return {
@@ -546,20 +562,26 @@ export function classifyModAudit(params: {
 
   // Core WARNING: popular before 1.7, effectively empty after patch (0 ≈ a few players/day)
   if (isDamagedAfter17Update(trend, currentPlayers)) {
-    const isDead =
+    const isGhostDead = isGhostBrokenAfter17(serverCount, currentPlayers, trend);
+
+    const isClassicDead =
       (patchWindowAvg ?? 999) <= DEAD_AFTER_MAX &&
       (trend.recentAvg ?? 999) <= DEAD_AFTER_MAX &&
       currentPlayers <= DEAD_AFTER_MAX &&
       dropPct >= 70 &&
       trend.phase !== 'recovering';
 
-    if (isDead) {
+    if (isGhostDead || isClassicDead) {
+      const ghostNote = isGhostDead
+        ? `Still on ~${serverCount} BattleMetrics server configs but ${currentPlayers} players now – ` +
+          'likely broken with 1.7 (stale config, no restart, or outdated Workshop build). Remove from config and check RPT.'
+        : `~${beforeAvg} players/day before 1.7 → ~${patchWindowAvg ?? 0}/day right after the update, ` +
+          `~${trend.recentAvg ?? 0}/day last 7 days, ${currentPlayers} now – ecosystem removed this mod.`;
+
       return {
         status: 'dead',
-        title: 'Likely broken after 1.7',
-        detail:
-          `~${beforeAvg} players/day before 1.7 → ~${patchWindowAvg ?? 0}/day right after the update, ` +
-          `~${trend.recentAvg ?? 0}/day last 7 days, ${currentPlayers} now – ecosystem removed this mod.`,
+        title: isGhostDead ? 'Likely broken after 1.7 (ghost on servers)' : 'Likely broken after 1.7',
+        detail: ghostNote,
         dropPct,
       };
     }
@@ -570,7 +592,9 @@ export function classifyModAudit(params: {
       detail:
         `Had ~${beforeAvg} players/day before 1.7. After the update ~${early ?? '—'}/day (first days), ` +
         `~${trend.recentAvg ?? '—'}/day last 7 days, ${currentPlayers} now (0 and a few/day count the same on BM). ` +
-        'Check Workshop 1.7 update and server logs.',
+        (serverCount > 0
+          ? `Listed on ~${serverCount} BM servers – if still in your config, verify Workshop 1.7 version, restart, and server RPT.`
+          : 'Check Workshop 1.7 update and server logs.'),
       dropPct,
     };
   }
@@ -673,7 +697,13 @@ export function buildModAuditRow(
   const currentPlayers = live?.totalPlayers ?? 0;
   const serverCount = live?.serverCount ?? 0;
   const trend = analyzeTrend(history, patchDate);
-  const classified = classifyModAudit({ beforeAvg, afterAvg, currentPlayers, trend });
+  const classified = classifyModAudit({
+    beforeAvg,
+    afterAvg,
+    currentPlayers,
+    serverCount,
+    trend,
+  });
 
   const needsAlternatives =
     classified.status === 'dead' ||

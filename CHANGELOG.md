@@ -28,6 +28,12 @@
 - **Rank-based dropPct**: Audito klasifikacijoje populiarumo kritimas skaičiuojamas pagal Zipf'o dėsnį santykinio reitingo (BM rank) pokyčiui (`1 - rankBefore / rankRecent`), o ne pagal absoliutų žaidėjų skaičių. Tai apsaugo populiarius modus nuo klaidingų neigiamų įspėjimų (pvz., populiariausias modas, likęs #1 reitinge, rodo 0% kritimą, nepaisant sumažėjusios bendros Reforger žaidėjų populiacijos).
 - **Fallback**: Jeigu reitingo duomenų nėra, automatiškai grįžtama prie absoliutaus žaidėjų skaičiaus vidurkio pokyčio skaičiavimo.
 
+## [1.13.2] - 2026-06-04
+
+### 🔍 Audit – „ghost“ broken modai po 1.7
+- **Remove (dead)**: 0 žaidėjų BM, modas vis dar ≥3 serverių config'e, tuščia po 1.7 – tipinis neveikiantis/stale modas (restart, RPT, Workshop versija).
+- **Empty after 1.7 (warning)**: aiškesnis hint, jei modas vis dar tavo config'e.
+
 ## [1.13.1] - 2026-06-04
 
 ### ⚡ Lighthouse – CLS ir accessibility (mod sąrašas)

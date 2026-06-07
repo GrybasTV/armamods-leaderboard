@@ -12,8 +12,8 @@ export const AUDIT_STATUS_SHORT: Record<AuditStatus, string> = {
 
 /** One-line explanation for tooltips / report sections. */
 export const AUDIT_STATUS_HINT: Record<AuditStatus, string> = {
-  dead: 'Ecosystem dropped this mod – remove from your server first',
-  warning: 'Was popular before 1.7, almost no players after the update',
+  dead: 'Ecosystem dropped this mod – or ghost on BM servers with 0 players (remove from config)',
+  warning: 'Was popular before 1.7, almost no players after – verify Workshop / restart if still in config',
   risky: 'Big drop since 1.7 but still on some BattleMetrics servers',
   ok: 'Still used on BM (or normal post-1.7 network dip)',
   niche: 'Too few players before 1.7 – drop may be noise',

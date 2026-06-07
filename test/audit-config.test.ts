@@ -122,9 +122,37 @@ describe('classifyModAudit', () => {
       recentAvg: 4,
       earlyAfterAvg: 3,
     };
-    const r = classifyModAudit({ beforeAvg: 80, afterAvg: 4, currentPlayers: 0, trend });
+    const r = classifyModAudit({
+      beforeAvg: 80,
+      afterAvg: 4,
+      currentPlayers: 0,
+      serverCount: 1,
+      trend,
+    });
     assert.equal(r.status, 'warning');
     assert.match(r.title, /empty after update/i);
+  });
+
+  it('marks ghost deployment as dead when 0 players but mod on many BM servers', () => {
+    const trend = {
+      phase: 'declining' as const,
+      label: 'Still declining',
+      detail: 'x',
+      recentAvg: 6,
+      earlyAfterAvg: 4,
+      rankBefore: 100,
+      rankRecent: 156,
+    };
+    const r = classifyModAudit({
+      beforeAvg: 80,
+      afterAvg: 4,
+      currentPlayers: 0,
+      serverCount: 12,
+      trend,
+    });
+    assert.equal(r.status, 'dead');
+    assert.match(r.title, /ghost on servers/i);
+    assert.match(r.detail, /12/);
   });
 
   it('big drop but still players after 1.7 is ok not warning', () => {
