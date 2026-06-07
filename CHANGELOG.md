@@ -1,7 +1,8 @@
 ## [1.13.3] - 2026-06-07
 
-### 🛠️ UI pataisymai (atsikratyta −0% užrašo)
+### 🛠️ UI pataisymai (atsikratyta −0% užrašo ir CLS mažinimas)
 - **dropPct sąlygos pataisymas**: Modifikacijų detalių ([ModDetail.tsx](file:///c:/Users/GrybasTv/Desktop/code/Archyvas/armamods/web/src/components/ModDetail.tsx)) ir bendro audito ([ConfigAuditPage.tsx](file:///c:/Users/GrybasTv/Desktop/code/Archyvas/armamods/web/src/components/ConfigAuditPage.tsx)) puslapiuose `dropPct` (populiarumo kritimo procentas) dabar atvaizduojamas tik tada, kai jo vertė yra griežtai didesnė už 0 (`dropPct > 0`). Tai išsprendžia problemą, kai modifikacijoms, kurios neprarado žaidėjų po 1.7 atnaujinimo, buvo rodomas klaidinantis ir matematiškai neteisingas `−0%` užrašas.
+- **CLS (Layout Shift) mažinimas**: Pagrindiniam puslapio `<main>` konteineriui faile [Layout.tsx](file:///c:/Users/GrybasTv/Desktop/code/Archyvas/armamods/web/src/components/Layout.tsx) priskirta `min-h-[60vh]` taisyklė. Tai užtikrina, kad krovimosi metu (kai turinys dar nėra gautas iš API) puslapio apačia (`footer`) nebus pritraukta prie pat viršaus ir vėliau staigiai nenustumta žemyn, taip drastiškai pagerinant svetainės CLS rodiklį.
 
 ## [1.13.2] - 2026-06-07
 
