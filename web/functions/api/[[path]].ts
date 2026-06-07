@@ -258,12 +258,21 @@ app.get('/mods/:modId', async (c) => {
             if (modServers.length >= MAX_SERVERS_PER_MOD) break;
             
             const chunkText = chunksText[i];
-            if (chunkText && chunkText.includes(`"id":"${modId}"`)) {
-                const chunk = JSON.parse(chunkText);
-                for (const s of chunk) {
-                    if (s.mods && s.mods.some((m: any) => m.id === modId)) {
-                        modServers.push(s);
-                        if (modServers.length >= MAX_SERVERS_PER_MOD) break;
+            if (chunkText && chunkText.includes(`"${modId}"`)) {
+                // Vietoj viso 2MB JSON parsinimo, išskaidome jį į atskirus serverius
+                // ir parsiname tik tuos, kurie turi ieškomą modId.
+                const serverStrings = splitJsonArray(chunkText);
+                for (const serverStr of serverStrings) {
+                    if (serverStr.includes(`"${modId}"`)) {
+                        try {
+                            const s = JSON.parse(serverStr);
+                            if (s.mods && s.mods.some((m: any) => m.id === modId)) {
+                                modServers.push(s);
+                                if (modServers.length >= MAX_SERVERS_PER_MOD) break;
+                            }
+                        } catch (e) {
+                            /* ignore parse errors for individual servers */
+                        }
                     }
                 }
             }
@@ -298,6 +307,36 @@ function findMatchingBrace(text: string, openPos: number): number {
     if (ch === '}') { depth--; if (depth === 0) return i; }
   }
   return -1;
+}
+
+// Splits a JSON array of objects into individual object strings without parsing it.
+// Extremely fast and low CPU memory overhead compared to JSON.parse on the entire chunk.
+function splitJsonArray(jsonText: string): string[] {
+  const results: string[] = [];
+  let depth = 0;
+  let startPos = -1;
+  let inStr = false;
+  
+  for (let i = 0; i < jsonText.length; i++) {
+    const ch = jsonText[i];
+    if (ch === '\\' && inStr) { i++; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    
+    if (ch === '{') {
+      if (depth === 0) {
+        startPos = i;
+      }
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0 && startPos !== -1) {
+        results.push(jsonText.slice(startPos, i + 1));
+        startPos = -1;
+      }
+    }
+  }
+  return results;
 }
 
 // Helper to scan history text for a specific modId (Used in shards)
