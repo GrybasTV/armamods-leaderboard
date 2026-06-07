@@ -28,6 +28,12 @@
 - **Rank-based dropPct**: Audito klasifikacijoje populiarumo kritimas skaičiuojamas pagal Zipf'o dėsnį santykinio reitingo (BM rank) pokyčiui (`1 - rankBefore / rankRecent`), o ne pagal absoliutų žaidėjų skaičių. Tai apsaugo populiarius modus nuo klaidingų neigiamų įspėjimų (pvz., populiariausias modas, likęs #1 reitinge, rodo 0% kritimą, nepaisant sumažėjusios bendros Reforger žaidėjų populiacijos).
 - **Fallback**: Jeigu reitingo duomenų nėra, automatiškai grįžtama prie absoliutaus žaidėjų skaičiaus vidurkio pokyčio skaičiavimo.
 
+## [1.13.5] - 2026-06-04
+
+### 🔍 Serverių paieška – žodžiai bet kokia tvarka
+- „ukraine relax“ randa **Relax Ukraine** (visi tokenai pavadinime, ne tik tikslus substring).
+- API + client filter; modų paieška – ta pati logika.
+
 ## [1.13.4] - 2026-06-04
 
 ### 🔍 Audit – 0–1 žaidėjų BM = Broken

@@ -28,6 +28,7 @@ import {
   resolveModPreviewImage,
   type ShareGame,
 } from '../lib/share-meta';
+import { matchesModSearch, matchesServerSearch } from '../lib/search-match';
 
 type Bindings = {
   TRENDING_KV: KVNamespace;
@@ -158,8 +159,7 @@ app.get('/mods', async (c) => {
   let filtered = [...mods];
 
   if (search) {
-    const low = search.toLowerCase();
-    filtered = filtered.filter(m => m.name?.toLowerCase().includes(low) || m.id?.toLowerCase().includes(low));
+    filtered = filtered.filter((m) => matchesModSearch(m, search));
   }
 
   // Sort logic
@@ -618,8 +618,7 @@ app.get('/servers', async (c) => {
   let filtered = [...servers];
 
   if (search) {
-    const low = search.toLowerCase();
-    filtered = filtered.filter(s => s.name?.toLowerCase().includes(low));
+    filtered = filtered.filter((s) => matchesServerSearch(s, search));
   }
 
   try {

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { serversApi, modsApi, type GameType } from '../api/client';
+import { matchesServerSearch } from '../lib/searchMatch';
 import type { Server } from '../types';
 
 export type ServerSortBy = 'rank' | 'players' | 'name' | 'mods';
@@ -87,7 +88,7 @@ export function useServers(options: UseServersOptions = {}) {
 
     return servers
       .filter((server) => {
-        if (needle && !server.name.toLowerCase().includes(needle)) {
+        if (needle && !matchesServerSearch(server, needle)) {
           return false;
         }
         return true;
