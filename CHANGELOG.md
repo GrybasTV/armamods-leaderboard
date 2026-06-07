@@ -1,3 +1,8 @@
+## [1.13.3] - 2026-06-07
+
+### 🛠️ UI pataisymai (atsikratyta −0% užrašo)
+- **dropPct sąlygos pataisymas**: Modifikacijų detalių ([ModDetail.tsx](file:///c:/Users/GrybasTv/Desktop/code/Archyvas/armamods/web/src/components/ModDetail.tsx)) ir bendro audito ([ConfigAuditPage.tsx](file:///c:/Users/GrybasTv/Desktop/code/Archyvas/armamods/web/src/components/ConfigAuditPage.tsx)) puslapiuose `dropPct` (populiarumo kritimo procentas) dabar atvaizduojamas tik tada, kai jo vertė yra griežtai didesnė už 0 (`dropPct > 0`). Tai išsprendžia problemą, kai modifikacijoms, kurios neprarado žaidėjų po 1.7 atnaujinimo, buvo rodomas klaidinantis ir matematiškai neteisingas `−0%` užrašas.
+
 ## [1.13.2] - 2026-06-07
 
 ### 📈 Audit – santykinio reitingo (populiarumo) pokytis procentais

@@ -726,7 +726,7 @@ export function ConfigAuditPage({ game = 'reforger' }: ConfigAuditPageProps) {
                   </div>
                   <div className="text-right text-xs font-mono shrink-0 space-y-0.5 max-w-[20rem]">
                     <div className="text-sm">
-                      {row.dropPct != null && (
+                      {row.dropPct != null && row.dropPct > 0 && (
                         <span
                           className="text-red-400 font-black text-base mr-2"
                           title="Drop from before 1.7 to first days after update"

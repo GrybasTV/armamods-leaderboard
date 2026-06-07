@@ -216,7 +216,7 @@ export function ModDetail({ game = 'reforger' }: ModDetailProps) {
                 {AUDIT_STATUS_SHORT[patchInsight.row.status]}
               </span>
               <p className="text-[11px] opacity-90 flex-1">{patchInsight.row.title}</p>
-              {patchInsight.row.dropPct != null && (
+              {patchInsight.row.dropPct != null && patchInsight.row.dropPct > 0 && (
                 <span className="text-sm font-black text-red-400 shrink-0">
                   −{patchInsight.row.dropPct}%
                 </span>
