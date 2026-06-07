@@ -5,9 +5,6 @@ import type { Server } from '../types';
 
 export type ServerSortBy = 'rank' | 'players' | 'name' | 'mods';
 
-/** API paieška tik po pauzės – leidžia ramiai baigti rašyti */
-const SEARCH_DEBOUNCE_MS = 800;
-
 interface UseServersOptions {
   game?: GameType;
 }
@@ -19,11 +16,7 @@ export function useServers(options: UseServersOptions = {}) {
   const [globalStats, setGlobalStats] = useState({ totalPlayers: 0, fullServers: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  /** Kas rodoma input'e – keičiasi iš karto, be API */
   const [searchInput, setSearchInput] = useState('');
-  /** Patvirtinta paieška – tik ji kviečia API */
-  const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<ServerSortBy>('rank');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24;
@@ -32,12 +25,12 @@ export function useServers(options: UseServersOptions = {}) {
     try {
       setLoading(true);
       const [serversData, statsData] = await Promise.all([
-        serversApi.getList(1000, 0, searchQuery, game),
+        serversApi.getList(5000, 0, game, { full: true }),
         modsApi.getGlobalStats(game),
       ]);
       const fetchedServers = serversData?.data || [];
       setServers(fetchedServers);
-      setTotalServers(serversData?.meta?.total || 0);
+      setTotalServers(serversData?.meta?.total || fetchedServers.length);
 
       const fullCount =
         fetchedServers.length > 0
@@ -59,23 +52,11 @@ export function useServers(options: UseServersOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [game, searchQuery]);
-
-  /** Po pauzės – paleidžiame tikrą paiešką */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchQuery(searchInput.trim());
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  const commitSearch = useCallback(() => {
-    setSearchQuery(searchInput.trim());
-  }, [searchInput]);
+  }, [game]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, sortBy]);
+  }, [searchInput, sortBy]);
 
   useEffect(() => {
     loadServers();
@@ -84,11 +65,11 @@ export function useServers(options: UseServersOptions = {}) {
   const filteredServers = useMemo(() => {
     if (!Array.isArray(servers)) return [];
 
-    const needle = searchInput.trim().toLowerCase();
+    const query = searchInput.trim();
 
     return servers
       .filter((server) => {
-        if (needle && !matchesServerSearch(server, needle)) {
+        if (query && !matchesServerSearch(server, query)) {
           return false;
         }
         return true;
@@ -112,25 +93,23 @@ export function useServers(options: UseServersOptions = {}) {
   }, [filteredServers, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredServers.length / itemsPerPage);
+  const searchQuery = searchInput.trim();
 
   const stats = useMemo(
     () => ({
-      totalServers: totalServers,
+      totalServers: searchQuery ? filteredServers.length : totalServers,
       totalPlayers: globalStats.totalPlayers,
       fullServers: globalStats.fullServers,
       totalPages,
     }),
-    [totalServers, globalStats, totalPages]
+    [totalServers, globalStats, totalPages, searchQuery, filteredServers.length]
   );
 
   const resetFilters = () => {
     setSearchInput('');
-    setSearchQuery('');
     setSortBy('players');
     setCurrentPage(1);
   };
-
-  const searchPending = searchInput.trim() !== searchQuery;
 
   return {
     servers,
@@ -138,11 +117,9 @@ export function useServers(options: UseServersOptions = {}) {
     totalItems: filteredServers.length,
     loading,
     initialLoading: loading && servers.length === 0,
-    searchPending,
     error,
     searchInput,
     setSearchInput,
-    commitSearch,
     searchQuery,
     sortBy,
     setSortBy,

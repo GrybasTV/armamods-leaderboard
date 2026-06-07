@@ -70,11 +70,18 @@ export const modsApi = {
 };
 
 export const serversApi = {
-  getList: async (limit = 100, offset = 0, search?: string, game: GameType = 'reforger') => {
-    const key = `servers:${game}:${limit}:${offset}:${search}`;
+  getList: async (
+    limit = 100,
+    offset = 0,
+    game: GameType = 'reforger',
+    options?: { full?: boolean; search?: string }
+  ) => {
+    const search = options?.search;
+    const full = options?.full;
+    const key = `servers:${game}:${limit}:${offset}:${full ? 'full' : 'paged'}:${search ?? ''}`;
     return getCached(key, async () => {
       const response = await api.get<ApiResponse<Server>>('servers', {
-        params: { limit, offset, search, game },
+        params: { limit, offset, search, game, ...(full ? { full: '1' } : {}) },
       });
       return response.data;
     }, 60000); // Servers cached for 1 min

@@ -28,6 +28,13 @@
 - **Rank-based dropPct**: Audito klasifikacijoje populiarumo kritimas skaičiuojamas pagal Zipf'o dėsnį santykinio reitingo (BM rank) pokyčiui (`1 - rankBefore / rankRecent`), o ne pagal absoliutų žaidėjų skaičių. Tai apsaugo populiarius modus nuo klaidingų neigiamų įspėjimų (pvz., populiariausias modas, likęs #1 reitinge, rodo 0% kritimą, nepaisant sumažėjusios bendros Reforger žaidėjų populiacijos).
 - **Fallback**: Jeigu reitingo duomenų nėra, automatiškai grįžtama prie absoliutaus žaidėjų skaičiaus vidurkio pokyčio skaičiavimo.
 
+## [1.13.6] - 2026-06-04
+
+### 🔍 Serverių paieška – momentinė, visame tinkle
+- `/servers` krauna visą serverių sąrašą (`full=1`) ir filtruoja naršyklėje – rezultatai matomi iš karto rašant.
+- Pašalintas 800 ms debounce + lėtas KV skenavimas kiekvienai paieškai.
+- „No servers match“ pranešimas, jei niekas netinka.
+
 ## [1.13.5] - 2026-06-04
 
 ### 🔍 Serverių paieška – žodžiai bet kokia tvarka

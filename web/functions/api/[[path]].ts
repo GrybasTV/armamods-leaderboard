@@ -94,19 +94,17 @@ async function getChunkedData(kv: KVNamespace, baseKey: string, maxChunks?: numb
 
     const chunksToFetch = maxChunks ? Math.min(maxChunks, meta.chunks) : meta.chunks;
     console.log(`[KV] Fetching ${chunksToFetch} of ${meta.chunks} chunks for ${baseKey}`);
+    const chunkArrays = await Promise.all(
+      Array.from({ length: chunksToFetch }, (_, i) =>
+        kv.get(`${baseKey}:${i}`, 'json').then((chunk) =>
+          chunk && Array.isArray(chunk) ? (chunk as any[]) : []
+        )
+      )
+    );
     const chunks: any[] = [];
-    for (let i = 0; i < chunksToFetch; i++) {
-      const chunkStart = Date.now();
-      const chunk = await kv.get(`${baseKey}:${i}`, 'json') as any[];
-      if (chunk && Array.isArray(chunk)) {
-        // Use loop instead of spread to save memory/stack
-        for (const item of chunk) {
-          chunks.push(item);
-        }
-        const chunkTime = Date.now() - chunkStart;
-        if (chunkTime > 20) { 
-            console.log(`  [KV] Slow chunk ${i} for ${baseKey} took ${chunkTime}ms`);
-        }
+    for (const chunk of chunkArrays) {
+      for (const item of chunk) {
+        chunks.push(item);
       }
     }
     const totalTime = Date.now() - start;
@@ -602,13 +600,20 @@ app.get('/servers', async (c) => {
   const start = Date.now();
   const game = getGameFromQuery(c);
   const keys = getKVKeys(game);
-  const limit = Math.min(parseInt(c.req.query('limit') || '100'), 100);
-  const offset = parseInt(c.req.query('offset') || '0');
+  const full = c.req.query('full') === '1';
   const search = c.req.query('search') || '';
+  const requestedLimit = parseInt(c.req.query('limit') || '100', 10);
+  const limit = full || search
+    ? Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 100, 5000)
+    : Math.min(Number.isFinite(requestedLimit) ? requestedLimit : 100, 100);
+  const offset = parseInt(c.req.query('offset') || '0', 10);
 
   console.log(`[SERVERS] Fetching data for ${game}...`);
-  // OPTIMIZATION: If no search, only fetch the first chunk (enough for the first page)
-  const servers = await getChunkedData(c.env.TRENDING_KV, keys.SERVERS, !search ? 1 : undefined);
+  const servers = await getChunkedData(
+    c.env.TRENDING_KV,
+    keys.SERVERS,
+    full || search ? undefined : 1
+  );
   
   if (!servers || servers.length === 0) {
     console.log(`[SERVERS] No data found in KV for ${game}`);

@@ -40,7 +40,7 @@ export function ServerDetail({ game = 'reforger' }: ServerDetailProps) {
         serversApi.getById(serverId, game),
         serversApi.getHistory(serverId, days, game),
         modsApi.getGlobalStats(game),
-        serversApi.getList(100, 0, undefined, game).catch(() => ({ data: [] }))
+        serversApi.getList(100, 0, game).catch(() => ({ data: [] }))
       ]);
 
       if (signal?.aborted) return;

@@ -13,13 +13,12 @@ interface ServerListProps {
 export function ServerList({ game = 'reforger' }: ServerListProps) {
   const {
     filteredServers,
+    totalItems,
     loading,
     initialLoading,
-    searchPending,
     error,
     searchInput,
     setSearchInput,
-    commitSearch,
     searchQuery,
     sortBy,
     setSortBy,
@@ -59,18 +58,20 @@ export function ServerList({ game = 'reforger' }: ServerListProps) {
             <label className="block text-[8px] font-black uppercase tracking-[0.4em] text-gray-600 mb-4 group-hover:text-tactical-orange transition-colors italic">// SCAN_REMOTE_SERVERS</label>
             <input
               type="search"
-              placeholder="Type server name, search after pause or Enter…"
+              placeholder="Server name (any word order)…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitSearch();
-              }}
               aria-label="Search servers by name"
               className="w-full px-8 py-5 bg-black/60 border border-white/10 focus:border-tactical-orange focus:bg-black transition-all font-black text-white placeholder-gray-700 uppercase tracking-widest text-[11px] rounded-none outline-none"
             />
-            {loading && !searchPending && searchQuery && (
+            {initialLoading && (
               <p className="mt-2 text-[9px] font-black uppercase tracking-[0.3em] text-tactical-orange animate-pulse">
-                Scanning network…
+                Loading server network…
+              </p>
+            )}
+            {!initialLoading && searchQuery && totalItems === 0 && (
+              <p className="mt-2 text-[9px] font-black uppercase tracking-[0.3em] text-gray-500">
+                No servers match &quot;{searchQuery}&quot;
               </p>
             )}
           </div>
